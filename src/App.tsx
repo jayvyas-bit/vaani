@@ -561,7 +561,7 @@ function CreateShell({
   return (
     <div className="flex h-full flex-col bg-paper-50">
       <header className="border-b border-ink-950/10 bg-paper-0">
-        <div className="mx-auto flex w-full max-w-[640px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-0">
+        <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
