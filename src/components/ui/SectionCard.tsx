@@ -63,13 +63,21 @@ export function SectionCard({
 
       {guided != null && <div className={`px-6 ${quiet ? "pb-4" : "pb-6"}`}>{guided}</div>}
 
-      {advanced && open && (
-        <div className="border-t border-gray-200 bg-gray-50 px-6 py-5">
-          <div className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-gray-500">
-            <Icon name="wrench" className="size-3.5" />
-            Advanced settings
+      {advanced && (
+        <div
+          className={`grid transition-[grid-template-rows] duration-200 ease-[var(--ease-out-quart)] ${
+            open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          }`}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="border-t border-gray-200 bg-gray-50 px-6 py-5">
+              <div className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+                <Icon name="wrench" className="size-3.5" />
+                Advanced settings
+              </div>
+              {advanced}
+            </div>
           </div>
-          {advanced}
         </div>
       )}
     </section>

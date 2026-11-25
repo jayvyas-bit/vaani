@@ -67,10 +67,10 @@ export function CreateSuccess({
           {defaults.map((d) => (
             <div
               key={d.label}
-              className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6 sm:px-5"
+              className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-baseline sm:gap-6 sm:px-5"
             >
-              <dt className="shrink-0 text-[13px] text-ink-500">{d.label}</dt>
-              <dd className="text-[13px] font-medium text-ink-900 sm:text-right">{d.value}</dd>
+              <dt className="shrink-0 text-[13px] text-ink-500 sm:w-[170px]">{d.label}</dt>
+              <dd className="text-[13px] font-medium text-ink-900">{d.value}</dd>
             </div>
           ))}
         </dl>

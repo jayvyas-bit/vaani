@@ -1,5 +1,5 @@
 import { enabledTransferTool } from "./tools";
-import type { Agent, ToolDef, TranscriptTurn } from "./types";
+import type { Agent, CallDirection, ToolDef, TranscriptTurn } from "./types";
 
 /**
  * Persona "compiler": the greeting and system prompt are written from the
@@ -16,6 +16,27 @@ export const voiceOptions = [
   "Priya — bright, upbeat",
   "Owen — low, steady",
 ];
+
+const FORMAL_PURPOSE_WORDS = ["legal", "law", "attorney", "insurance", "collections", "collection", "compliance", "debt", "audit"];
+const WARM_PURPOSE_WORDS = ["spa", "concierge", "wellness", "support", "salon", "hospitality", "yoga"];
+
+/**
+ * A guess at starting voice/tone from the purpose text the user already
+ * typed, instead of every agent starting as the same Ava/Sam-at-50. Still
+ * fully editable afterward in Build -> Persona — this only changes what's
+ * pre-filled.
+ */
+export function inferPersonaDefaults(purpose: string, direction: CallDirection): { voice: string; tone: number } {
+  const text = purpose.toLowerCase();
+  const inbound = direction === "inbound";
+  if (FORMAL_PURPOSE_WORDS.some((w) => text.includes(w))) {
+    return { voice: inbound ? voiceOptions[3] : voiceOptions[5], tone: 20 };
+  }
+  if (WARM_PURPOSE_WORDS.some((w) => text.includes(w))) {
+    return { voice: inbound ? voiceOptions[4] : voiceOptions[2], tone: 80 };
+  }
+  return { voice: inbound ? voiceOptions[0] : voiceOptions[1], tone: 50 };
+}
 
 export function voiceFirstName(voice: string) {
   return voice.split(/\s+[—–-]\s+/)[0]?.trim() || "your assistant";

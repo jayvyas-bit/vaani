@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Stepper, type StepItem } from "@/components/ui/Stepper";
@@ -49,33 +49,66 @@ export function DeployWizardLayout({
   onNavigate?: (section: PrimarySection) => void;
   onExit?: () => void;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [hasMoreBelow, setHasMoreBelow] = useState(false);
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    const sentinel = sentinelRef.current;
+    if (!root || !sentinel) return;
+    const observer = new IntersectionObserver(([entry]) => setHasMoreBelow(!entry.isIntersecting), {
+      root,
+      threshold: 1,
+    });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [children]);
+
   return (
     <div className="flex h-full flex-col bg-paper-50">
-      <BuilderNav agent={agent} active="deploy" onNavigate={onNavigate} onBack={onExit} />
-      {!hideStepper && (
-        <div className="border-b border-ink-950/10 bg-paper-0 px-4 py-4 sm:px-6">
-          <Stepper steps={deployStepsFor(agent.direction)} activeId={activeId} completedIds={completedIds} />
+      <BuilderNav
+        agent={agent}
+        active="deploy"
+        onNavigate={onNavigate}
+        onBack={onExit}
+        center={
+          !hideStepper && (
+            <Stepper steps={deployStepsFor(agent.direction)} activeId={activeId} completedIds={completedIds} compact />
+          )
+        }
+      />
+      <div className="relative flex-1 overflow-hidden">
+        <div ref={scrollRef} className="h-full overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
+          <div className="mx-auto w-full max-w-[640px]">
+            <div key={activeId} className="animate-step-in">
+              {children}
+            </div>
+            <div ref={sentinelRef} className="h-px" />
+          </div>
         </div>
-      )}
-      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
-        <div className="mx-auto w-full max-w-[640px]">{children}</div>
+        {hasMoreBelow && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-paper-50 to-transparent" />
+        )}
       </div>
       {!hideFooter && (
-      <div className="flex items-center justify-between gap-3 border-t border-ink-950/10 bg-paper-0 px-4 py-3.5 sm:px-6">
-        {showBack ? (
-          <Button variant="ghost" className="gap-1.5" onClick={onStepBack}>
-            <Icon name="chevron-right" className="size-4 rotate-180" />
-            Back
-          </Button>
-        ) : (
-          <span />
-        )}
-        {showContinue && (
-          <Button disabled={continueDisabled} className="gap-1.5" onClick={onContinue}>
-            {continueLabel}
-            <Icon name="chevron-right" className="size-4" />
-          </Button>
-        )}
+      <div className="border-t border-ink-950/10 bg-paper-0 px-4 py-3.5 sm:px-6">
+        <div className="mx-auto flex w-full max-w-[640px] items-center justify-between gap-3">
+          {showBack ? (
+            <Button variant="ghost" className="gap-1.5" onClick={onStepBack}>
+              <Icon name="chevron-right" className="size-4 rotate-180" />
+              Back
+            </Button>
+          ) : (
+            <span />
+          )}
+          {showContinue && (
+            <Button disabled={continueDisabled} className="gap-1.5" onClick={onContinue}>
+              {continueLabel}
+              <Icon name="chevron-right" className="size-4" />
+            </Button>
+          )}
+        </div>
       </div>
       )}
     </div>

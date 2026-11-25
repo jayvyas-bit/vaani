@@ -192,15 +192,16 @@ function AddToolForm({
   };
 
   return (
-    <form
-      onSubmit={submit}
-      noValidate
-      aria-label="Add a tool"
-      className="flex flex-col gap-3 bg-paper-50 px-6 py-5"
-    >
+    <div className="m-6 flex flex-col gap-4 rounded-xl border border-ink-950/10 bg-paper-0 p-5 shadow-float">
+      <div className="flex items-center gap-2">
+        <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600">
+          <Icon name="plus" className="size-3.5" />
+        </div>
+        <p className="text-[13.5px] font-semibold text-ink-950">Add a tool</p>
+      </div>
       {available.length > 0 && (
         <div>
-          <p className="mb-1.5 text-sm font-medium text-gray-700">Built-in</p>
+          <p className="mb-1.5 text-[12.5px] font-medium text-ink-500">Quick add</p>
           <div className="flex flex-wrap gap-2">
             {available.map((p) => (
               <Button
@@ -221,66 +222,75 @@ function AddToolForm({
           </div>
         </div>
       )}
-      <div>
-        <FieldLabel htmlFor={`${id}-name`} required>
-          {available.length > 0 ? "Or name a custom tool" : "Tool name"}
-        </FieldLabel>
-        <Input
-          id={`${id}-name`}
-          name="toolName"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          aria-invalid={!!nameErr || undefined}
-          aria-describedby={nameErr ? `${id}-name-err` : undefined}
-          placeholder="e.g. Check order status"
-        />
-        <FieldError id={`${id}-name-err`}>{nameErr}</FieldError>
-      </div>
-      {needsDestination && (
+      <form onSubmit={submit} noValidate aria-label="Add a custom tool" className="flex flex-col gap-3">
+        {available.length > 0 && (
+          <div className="flex items-center gap-3 text-[12px] font-medium text-ink-400">
+            <span className="h-px flex-1 bg-ink-950/8" />
+            or build a custom one
+            <span className="h-px flex-1 bg-ink-950/8" />
+          </div>
+        )}
         <div>
-          <FieldLabel htmlFor={`${id}-dest`} required>
-            Transfer to
+          <FieldLabel htmlFor={`${id}-name`} required>
+            Tool name
           </FieldLabel>
           <Input
-            id={`${id}-dest`}
-            name="transferDestination"
-            autoFocus={focusDestination}
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            placeholder={TRANSFER_PLACEHOLDER}
-            aria-invalid={!!destErr || undefined}
-            aria-describedby={destErr ? `${id}-dest-err` : `${id}-dest-help`}
+            id={`${id}-name`}
+            name="toolName"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            aria-invalid={!!nameErr || undefined}
+            aria-describedby={nameErr ? `${id}-name-err` : undefined}
+            placeholder="e.g. Check order status"
           />
-          {destErr ? (
-            <FieldError id={`${id}-dest-err`}>{destErr}</FieldError>
-          ) : (
-            <p id={`${id}-dest-help`} className="mt-1.5 text-[12.5px] text-ink-500">
-              {TRANSFER_HELP}
-            </p>
-          )}
+          <FieldError id={`${id}-name-err`}>{nameErr}</FieldError>
         </div>
-      )}
-      <div>
-        <FieldLabel htmlFor={`${id}-desc`} hint="The agent reads this to decide when to call it">
-          What it does
-        </FieldLabel>
-        <Input
-          id={`${id}-desc`}
-          name="toolDescription"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder={preset?.description ?? "e.g. Looks up an order by number and returns its shipping status"}
-        />
-      </div>
-      <div className="flex justify-end gap-2">
-        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" size="sm">
-          {needsDestination ? "Add transfer" : "Add tool"}
-        </Button>
-      </div>
-    </form>
+        {needsDestination && (
+          <div>
+            <FieldLabel htmlFor={`${id}-dest`} required>
+              Transfer to
+            </FieldLabel>
+            <Input
+              id={`${id}-dest`}
+              name="transferDestination"
+              autoFocus={focusDestination}
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              placeholder={TRANSFER_PLACEHOLDER}
+              aria-invalid={!!destErr || undefined}
+              aria-describedby={destErr ? `${id}-dest-err` : `${id}-dest-help`}
+            />
+            {destErr ? (
+              <FieldError id={`${id}-dest-err`}>{destErr}</FieldError>
+            ) : (
+              <p id={`${id}-dest-help`} className="mt-1.5 text-[12.5px] text-ink-500">
+                {TRANSFER_HELP}
+              </p>
+            )}
+          </div>
+        )}
+        <div>
+          <FieldLabel htmlFor={`${id}-desc`} hint="The agent reads this to decide when to call it">
+            What it does
+          </FieldLabel>
+          <Input
+            id={`${id}-desc`}
+            name="toolDescription"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={preset?.description ?? "e.g. Looks up an order by number and returns its shipping status"}
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" size="sm">
+            {needsDestination ? "Add transfer" : "Add tool"}
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }
 

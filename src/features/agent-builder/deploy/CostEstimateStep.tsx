@@ -1,11 +1,19 @@
 import { useEffect, useId, useMemo, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { FieldLabel, Input } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { Slider } from "@/components/ui/Slider";
-import { costBreakdown, defaultDeployConfig, effectivePerMinRate, type DeployConfig } from "@/lib/deploy";
+import { costBreakdown, defaultDeployConfig, effectivePerMinRate, suggestCheaperProviders, type DeployConfig } from "@/lib/deploy";
 import { formatUsd } from "@/lib/format";
+import { llmTradeoff, sttTradeoff, ttsTradeoff } from "@/lib/providers";
 import type { Agent, CallDirection } from "@/lib/types";
 import { useControllable } from "@/lib/useControllable";
+
+const tradeoffByField: Record<"llmProvider" | "sttProvider" | "ttsProvider", Record<string, string>> = {
+  llmProvider: llmTradeoff,
+  sttProvider: sttTradeoff,
+  ttsProvider: ttsTradeoff,
+};
 
 export function CostEstimateStep({
   direction,
@@ -15,6 +23,7 @@ export function CostEstimateStep({
   acknowledged: acknowledgedProp,
   onAcknowledgedChange,
   onEstimateChange,
+  onApplyProviders,
 }: {
   direction: CallDirection;
   /** The agent's chosen AI providers — each one's own rate drives the breakdown below. */
@@ -25,6 +34,8 @@ export function CostEstimateStep({
   acknowledged?: boolean;
   onAcknowledgedChange?: (acknowledged: boolean) => void;
   onEstimateChange?: (monthlyCost: number) => void;
+  /** Lets the budget-overage suggestion swap providers on the agent — never applied automatically. */
+  onApplyProviders?: (patch: Partial<Pick<Agent, "llmProvider" | "sttProvider" | "ttsProvider">>) => void;
 }) {
   const id = useId();
   const [config, setConfig] = useControllable(configProp ?? defaultDeployConfig(direction), onConfigChange);
@@ -48,6 +59,15 @@ export function CostEstimateStep({
   }, [monthlyCost, onEstimateChange]);
 
   const breakdown = useMemo(() => costBreakdown(config, providers), [config, providers]);
+  const suggestion = useMemo(
+    () => (overBudget && providers ? suggestCheaperProviders(config, providers, budget ?? 0) : undefined),
+    [overBudget, providers, config, budget],
+  );
+
+  const applySuggestion = () => {
+    if (!suggestion || !onApplyProviders) return;
+    onApplyProviders(Object.fromEntries(suggestion.swaps.map((s) => [s.field, s.to])));
+  };
 
   return (
     <div className="flex flex-col gap-7">
@@ -143,10 +163,44 @@ export function CostEstimateStep({
             />
           </div>
           {overBudget && (
-            <p className="mt-2 flex items-start gap-1.5 text-[12.5px] font-medium text-error-600">
-              <Icon name="alert" className="mt-0.5 size-3.5 shrink-0" />
-              Projected to run {formatUsd(monthlyCost - (budget ?? 0))} over this budget at the volume set above.
-            </p>
+            <>
+              <p className="mt-2 flex items-start gap-1.5 text-[12.5px] font-medium text-error-600">
+                <Icon name="alert" className="mt-0.5 size-3.5 shrink-0" />
+                Projected to run {formatUsd(monthlyCost - (budget ?? 0))} over this budget at the volume set above.
+              </p>
+
+              {suggestion && (
+                <div className="mt-3 rounded-lg border border-ink-950/10 bg-paper-50 p-4">
+                  <p className="text-[12.5px] font-medium text-ink-800">
+                    Switch to lower-cost providers to save {formatUsd(suggestion.monthlySavings)}/mo
+                  </p>
+                  <ul className="mt-2.5 flex flex-col gap-2">
+                    {suggestion.swaps.map((swap) => (
+                      <li key={swap.field} className="text-[12.5px]">
+                        <div className="flex items-center gap-1.5 text-ink-700">
+                          <span className="text-ink-500">{swap.label}:</span>
+                          <span className="text-ink-500 line-through">{swap.from}</span>
+                          <Icon name="chevron-right" className="size-3 shrink-0 text-ink-400" />
+                          <span className="font-medium text-ink-900">{swap.to}</span>
+                        </div>
+                        <p className="mt-0.5 text-ink-500">{tradeoffByField[swap.field]?.[swap.to]}</p>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2.5 text-[12.5px] tabular-nums text-ink-600">
+                    New projected cost: <span className="font-medium text-ink-900">{formatUsd(suggestion.newMonthlyCost)}/mo</span>
+                  </p>
+                  {suggestion.stillOverBudget && (
+                    <p className="mt-1.5 text-[12.5px] text-ink-500">
+                      Still over budget even with our lowest-cost providers — consider lowering expected call volume above.
+                    </p>
+                  )}
+                  <Button type="button" variant="secondary" size="sm" className="mt-3" onClick={applySuggestion} disabled={!onApplyProviders}>
+                    Apply suggestion
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

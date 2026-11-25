@@ -1,7 +1,8 @@
 import { useId, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/Button";
-import { FieldError, FieldLabel, Input } from "@/components/ui/Field";
+import { FieldError, Input } from "@/components/ui/Field";
 import { Icon, type IconName } from "@/components/ui/Icon";
+import { RadioCard } from "@/components/ui/RadioCard";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Switch } from "@/components/ui/Switch";
 import { newId } from "@/lib/useControllable";
@@ -13,7 +14,25 @@ const kindIcon: Record<KnowledgeSource["kind"], IconName> = {
   text: "file",
 };
 
-export const defaultKnowledgeSettings: KnowledgeSettings = { chunkSize: 800, topK: 4 };
+/**
+ * "Chunk size" / "top-k" are raw RAG internals with no actionable meaning to
+ * any user — nobody, technical or not, can reason about "800 tokens" without
+ * already knowing how this agent's retrieval is implemented. These two
+ * presets give the same underlying tuning as an outcome instead.
+ */
+export const knowledgeAnswerStylePresets = {
+  quick: { chunkSize: 500, topK: 3 },
+  thorough: { chunkSize: 1200, topK: 6 },
+} satisfies Record<string, KnowledgeSettings>;
+
+export type KnowledgeAnswerStyle = keyof typeof knowledgeAnswerStylePresets;
+
+export const defaultKnowledgeSettings: KnowledgeSettings = knowledgeAnswerStylePresets.quick;
+
+/** Settings from before this preset existed won't match either exactly — nearest by topK. */
+function answerStyleOf(settings: KnowledgeSettings): KnowledgeAnswerStyle {
+  return settings.topK >= 5 ? "thorough" : "quick";
+}
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -177,36 +196,19 @@ export function KnowledgeSection({
         </div>
       }
       advanced={
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <FieldLabel htmlFor={`${id}-chunk`} hint="Tokens of text per lookup">
-              Chunk size
-            </FieldLabel>
-            <Input
-              id={`${id}-chunk`}
-              name="chunkSize"
-              type="number"
-              min={100}
-              max={4000}
-              step={50}
-              value={settings.chunkSize}
-              onChange={(e) => onSettingsChange?.({ ...settings, chunkSize: Number(e.target.value) || 0 })}
-            />
-          </div>
-          <div>
-            <FieldLabel htmlFor={`${id}-topk`} hint="How many chunks retrieved per turn">
-              Top-k retrieval
-            </FieldLabel>
-            <Input
-              id={`${id}-topk`}
-              name="topK"
-              type="number"
-              min={1}
-              max={20}
-              value={settings.topK}
-              onChange={(e) => onSettingsChange?.({ ...settings, topK: Number(e.target.value) || 0 })}
-            />
-          </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <RadioCard
+            selected={answerStyleOf(settings) === "quick"}
+            onSelect={() => onSettingsChange?.(knowledgeAnswerStylePresets.quick)}
+            title="Quick answers"
+            description="Short, fast lookups. Best for FAQs and simple info."
+          />
+          <RadioCard
+            selected={answerStyleOf(settings) === "thorough"}
+            onSelect={() => onSettingsChange?.(knowledgeAnswerStylePresets.thorough)}
+            title="Thorough search"
+            description="Reads more of your documents per question. Best for long manuals or detailed policies."
+          />
         </div>
       }
     />

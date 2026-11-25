@@ -8,6 +8,8 @@ import { BuildEditorPage, type BuildTab } from "@/features/agent-builder/build/B
 import { CreateSuccess } from "@/features/agent-builder/create/CreateSuccess";
 import { MethodChooser, type Method } from "@/features/agent-builder/create/MethodChooser";
 import { MinimalCreateForm, type CreateFormValues } from "@/features/agent-builder/create/MinimalCreateForm";
+import { TemplateGallery } from "@/features/agent-builder/create/TemplateGallery";
+import { agentTemplates } from "@/lib/templates";
 import { ChannelNumberStep } from "@/features/agent-builder/deploy/ChannelNumberStep";
 import { ComplianceStep } from "@/features/agent-builder/deploy/ComplianceStep";
 import { CostEstimateStep } from "@/features/agent-builder/deploy/CostEstimateStep";
@@ -38,17 +40,19 @@ import {
   ensureProvisioned,
   formatTime,
   hoursErrors,
+  monthlyCost as estimatedMonthlyCost,
   normalizeDeployConfig,
   resolvedNumber,
   type DeployConfig,
 } from "@/lib/deploy";
+import { formatUsd } from "@/lib/format";
 import {
   applyPersonaPatch,
   cleanBusinessName,
   compileGreeting,
   compileSystemPrompt,
+  inferPersonaDefaults,
   recompileForTools,
-  voiceOptions,
 } from "@/lib/persona";
 import { statusLabel, statusTone } from "@/lib/status";
 import { bookingTool } from "@/lib/tools";
@@ -180,13 +184,13 @@ function takenNumbers(records: AgentRecord[], exceptId: string): string[] {
   return out;
 }
 
-/** Only "Start from scratch" is available today, so every method starts blank. */
 const blankValues: CreateFormValues = { name: "", purpose: "", direction: "inbound" };
 
 function buildRecord(values: CreateFormValues): AgentRecord {
   const { name, purpose, direction } = values;
   const inbound = direction === "inbound";
   const other = inbound ? "Caller" : "Recipient";
+  const persona = inferPersonaDefaults(purpose, direction);
 
   const base: Agent = {
     id: newId("agt"),
@@ -196,13 +200,13 @@ function buildRecord(values: CreateFormValues): AgentRecord {
     purpose,
     direction,
     status: "draft",
-    voice: inbound ? voiceOptions[0] : voiceOptions[1],
+    voice: persona.voice,
     greeting: "",
-    tone: 50,
+    tone: persona.tone,
     systemPrompt: "",
-    llmProvider: "System default (GPT-class, balanced)",
-    sttProvider: "System default",
-    ttsProvider: "System default",
+    llmProvider: "System default — balanced (GPT-4.1)",
+    sttProvider: "System default (Deepgram Nova-3)",
+    ttsProvider: "System default (ElevenLabs Turbo)",
     temperature: 0.4,
     callsThisWeek: 0,
     // Not hand-edited yet, so both stay compiled from name / voice / tone / purpose.
@@ -290,10 +294,10 @@ function AgentRowMenu({ agent, onDuplicate, onDelete }: { agent: Agent; onDuplic
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-10 mt-1 w-48 overflow-hidden rounded-lg border border-ink-950/10 bg-paper-0 py-1 shadow-lg"
+          className="animate-popover-in absolute right-0 top-full z-10 mt-1 w-48 overflow-hidden rounded-lg border border-ink-950/10 bg-paper-0 py-1 shadow-lg"
         >
           {confirming ? (
-            <div className="px-3 py-2.5">
+            <div key="confirm" className="animate-fade-in px-3 py-2.5">
               <p className="text-[12.5px] text-ink-700">Delete {agent.name.trim() || "this agent"}? This can't be undone.</p>
               <div className="mt-2 flex justify-end gap-1.5">
                 <button
@@ -319,7 +323,7 @@ function AgentRowMenu({ agent, onDuplicate, onDelete }: { agent: Agent; onDuplic
               </div>
             </div>
           ) : (
-            <>
+            <div key="actions" className="animate-fade-in">
               <button
                 type="button"
                 role="menuitem"
@@ -341,7 +345,7 @@ function AgentRowMenu({ agent, onDuplicate, onDelete }: { agent: Agent; onDuplic
                 <Icon name="trash" className="size-3.5" />
                 Delete
               </button>
-            </>
+            </div>
           )}
         </div>
       )}
@@ -351,15 +355,21 @@ function AgentRowMenu({ agent, onDuplicate, onDelete }: { agent: Agent; onDuplic
 
 function AgentRow({
   agent,
+  deploy,
   onOpen,
   onDuplicate,
   onDelete,
 }: {
   agent: Agent;
+  deploy?: DeployConfig;
   onOpen: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
+  const budget = deploy?.monthlyBudget;
+  const cost = deploy ? estimatedMonthlyCost(deploy, agent) : undefined;
+  const overBudget = budget !== undefined && cost !== undefined && cost > budget;
+
   return (
     <div
       role="button"
@@ -396,16 +406,30 @@ function AgentRow({
           <p className="mt-0.5 text-[12.5px] tabular-nums text-ink-400">{agent.phoneNumber}</p>
         )}
       </div>
-      <div className="hidden shrink-0 gap-8 text-right sm:flex">
-        <div>
-          <p className="text-[12px] text-ink-400">Calls this week</p>
-          <p className="text-[13px] font-medium tabular-nums text-ink-900">{agent.callsThisWeek ?? 0}</p>
+      <div className="hidden shrink-0 gap-6 text-right sm:flex">
+        <div className="w-[86px] shrink-0">
+          <p className="whitespace-nowrap text-[12px] text-ink-400">Calls this week</p>
+          <p className="whitespace-nowrap text-[13px] font-medium tabular-nums text-ink-900">{agent.callsThisWeek ?? 0}</p>
         </div>
-        <div>
-          <p className="text-[12px] text-ink-400">Avg handle time</p>
-          <p className="text-[13px] font-medium tabular-nums text-ink-900">
+        <div className="w-[88px] shrink-0">
+          <p className="whitespace-nowrap text-[12px] text-ink-400">Avg handle time</p>
+          <p className="whitespace-nowrap text-[13px] font-medium tabular-nums text-ink-900">
             {agent.avgHandleTimeSec ? `${Math.round(agent.avgHandleTimeSec / 60)} min` : "No calls yet"}
           </p>
+        </div>
+        <div className="w-[96px] shrink-0">
+          {budget !== undefined ? (
+            <>
+              <p className="whitespace-nowrap text-[12px] text-ink-400">Budget</p>
+              <p
+                className={`whitespace-nowrap text-[13px] font-medium tabular-nums ${overBudget ? "text-warning-700" : "text-ink-900"}`}
+              >
+                {formatUsd(budget)}/mo{overBudget && " — over"}
+              </p>
+            </>
+          ) : (
+            <p className="whitespace-nowrap text-[13px] text-ink-300">—</p>
+          )}
         </div>
       </div>
       <AgentRowMenu agent={agent} onDuplicate={onDuplicate} onDelete={onDelete} />
@@ -484,6 +508,7 @@ function AgentsList({
                   <AgentRow
                     key={r.agent.id}
                     agent={r.agent}
+                    deploy={r.deploy}
                     onOpen={() => onOpen(r.agent.id)}
                     onDuplicate={() => onDuplicate(r.agent.id)}
                     onDelete={() => onDelete(r.agent.id)}
@@ -536,7 +561,7 @@ function CreateShell({
   return (
     <div className="flex h-full flex-col bg-paper-50">
       <header className="border-b border-ink-950/10 bg-paper-0">
-        <div className="flex items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
+        <div className="mx-auto flex w-full max-w-[640px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-0">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
@@ -546,21 +571,21 @@ function CreateShell({
               <Icon name="chevron-right" className="size-3.5 rotate-180" />
               Agents
             </button>
-            <div className="h-4 w-px bg-ink-950/10" />
+            <div className="h-4 w-px shrink-0 bg-ink-950/10" />
             <span className="truncate text-[14px] font-semibold text-ink-950">New agent</span>
           </div>
-          {onStepBack && (
-            <Button variant="ghost" size="sm" className="gap-1" onClick={onStepBack}>
-              <Icon name="chevron-right" className="size-3.5 rotate-180" />
-              Back
-            </Button>
-          )}
-        </div>
-        <div className="border-t border-ink-950/8 px-4 py-4 sm:px-6">
-          <Stepper steps={createSteps} activeId={activeId} completedIds={completedIds} />
+          <div className="flex shrink-0 items-center gap-3">
+            <Stepper steps={createSteps} activeId={activeId} completedIds={completedIds} compact />
+            {onStepBack && (
+              <Button variant="ghost" size="sm" className="gap-1" onClick={onStepBack}>
+                <Icon name="chevron-right" className="size-3.5 rotate-180" />
+                Back
+              </Button>
+            )}
+          </div>
         </div>
       </header>
-      <div className="flex-1 overflow-y-auto sm:px-6">{children}</div>
+      <div className="flex-1 overflow-y-auto">{children}</div>
     </div>
   );
 }
@@ -575,7 +600,8 @@ const deployOrder: DeployStepId[] = ["channel", "compliance", "cost", "golive"];
 type Screen =
   | { name: "list" }
   | { name: "create-method" }
-  | { name: "create-form"; method: Method }
+  | { name: "template-gallery" }
+  | { name: "create-form"; method: Method; templateId?: string }
   | { name: "create-success"; agentId: string; method: Method }
   | { name: "build"; agentId: string; tab?: BuildTab }
   | { name: "test"; agentId: string }
@@ -588,7 +614,16 @@ type Screen =
       edit?: boolean;
     };
 
-const screenNames = new Set(["list", "create-method", "create-form", "create-success", "build", "test", "deploy"]);
+const screenNames = new Set([
+  "list",
+  "create-method",
+  "template-gallery",
+  "create-form",
+  "create-success",
+  "build",
+  "test",
+  "deploy",
+]);
 
 /** Screens are stored in history.state so Back/Forward (and reload) stay inside the app. */
 function screenFromHistory(state: unknown): Screen | null {
@@ -724,22 +759,44 @@ export default function App() {
   if (screen.name === "create-method") {
     return (
       <CreateShell activeId="method" completedIds={[]} onExit={goList}>
-        <MethodChooser onContinue={(method) => navigate({ name: "create-form", method })} />
+        <MethodChooser
+          onContinue={(method) =>
+            navigate(method === "template" ? { name: "template-gallery" } : { name: "create-form", method })
+          }
+        />
+      </CreateShell>
+    );
+  }
+
+  if (screen.name === "template-gallery") {
+    return (
+      <CreateShell
+        activeId="method"
+        completedIds={[]}
+        onExit={goList}
+        onStepBack={() => navigate({ name: "create-method" })}
+      >
+        <TemplateGallery
+          onSelect={(template) => navigate({ name: "create-form", method: "template", templateId: template.id })}
+        />
       </CreateShell>
     );
   }
 
   if (screen.name === "create-form") {
+    const template = screen.templateId ? agentTemplates.find((t) => t.id === screen.templateId) : undefined;
     return (
       <CreateShell
         activeId="basics"
         completedIds={["method"]}
         onExit={goList}
-        onStepBack={() => navigate({ name: "create-method" })}
+        onStepBack={() =>
+          navigate(screen.method === "template" ? { name: "template-gallery" } : { name: "create-method" })
+        }
       >
         <MinimalCreateForm
-          key={screen.method}
-          initialValues={blankValues}
+          key={screen.templateId ?? screen.method}
+          initialValues={template?.values ?? blankValues}
           onCreate={(values) => {
             const rec = buildRecord(values);
             setRecords((rs) => [rec, ...rs]);
@@ -844,9 +901,11 @@ export default function App() {
         <DeployStatusPanel
           agent={agent}
           config={deployConfig}
+          monthlyCost={estimatedMonthlyCost(deployConfig, agent)}
           onPause={() => updateAgent(agent.id, { status: "paused" })}
           onResume={() => updateAgent(agent.id, { status: "live" })}
           onEditSettings={() => navigate({ ...screen, step: "channel", edit: true })}
+          onEditBudget={() => navigate({ ...screen, step: "cost", edit: true })}
         />
       </DeployWizardLayout>
     );
@@ -931,6 +990,7 @@ export default function App() {
           acknowledged={costAcknowledged}
           onAcknowledgedChange={handleAcknowledged}
           onEstimateChange={handleEstimate}
+          onApplyProviders={(patch) => updateAgent(agent.id, patch)}
         />
       )}
       {screen.step === "golive" && (

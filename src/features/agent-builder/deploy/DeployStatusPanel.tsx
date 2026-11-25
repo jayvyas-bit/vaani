@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { contactListSummary, dncLabel, formatTime, type DeployConfig } from "@/lib/deploy";
+import { formatUsd } from "@/lib/format";
 import { statusLabel, statusTone } from "@/lib/status";
 import type { Agent } from "@/lib/types";
 
@@ -13,18 +14,26 @@ import type { Agent } from "@/lib/types";
 export function DeployStatusPanel({
   agent,
   config,
+  monthlyCost,
   onPause,
   onResume,
   onEditSettings,
+  onEditBudget,
 }: {
   agent: Agent;
   config: DeployConfig;
+  /** Current projected spend at this agent's configured volume and providers. */
+  monthlyCost?: number;
   onPause?: () => void;
   onResume?: () => void;
   onEditSettings?: () => void;
+  /** Jumps straight to the Cost estimate step — no need to re-walk phone/hours first. */
+  onEditBudget?: () => void;
 }) {
   const live = agent.status === "live";
   const inbound = agent.direction === "inbound";
+  const budget = config.monthlyBudget;
+  const overBudget = budget !== undefined && monthlyCost !== undefined && monthlyCost > budget;
 
   const rows = [
     { label: "Phone number", value: agent.phoneNumber ?? "Not reserved yet" },
@@ -90,19 +99,52 @@ export function DeployStatusPanel({
 
       <dl className="divide-y divide-ink-950/8 rounded-lg border border-ink-950/10 bg-paper-0">
         {rows.map((r) => (
-          <div
-            key={r.label}
-            className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6 sm:px-5"
-          >
-            <dt className="shrink-0 text-[13px] text-ink-500">{r.label}</dt>
-            <dd className="text-[13px] font-medium text-ink-900 sm:text-right">{r.value}</dd>
+          <div key={r.label} className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-baseline sm:gap-6 sm:px-5">
+            <dt className="shrink-0 text-[13px] text-ink-500 sm:w-[170px]">{r.label}</dt>
+            <dd className="text-[13px] font-medium text-ink-900">{r.value}</dd>
           </div>
         ))}
       </dl>
 
+      <div className="flex flex-col gap-4 rounded-lg border border-ink-950/10 bg-paper-0 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="flex min-w-0 items-start gap-3">
+          <div
+            className={`flex size-9 shrink-0 items-center justify-center rounded-full ${
+              overBudget ? "bg-warning-100 text-warning-700" : "bg-paper-50 text-ink-500"
+            }`}
+          >
+            <Icon name={overBudget ? "alert" : "flag"} className="size-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[14px] font-semibold text-ink-950">Monthly budget</p>
+            {budget !== undefined ? (
+              <p className="mt-0.5 text-[13px] text-ink-600">
+                {monthlyCost !== undefined && (
+                  <>
+                    Projected {formatUsd(monthlyCost)} of {formatUsd(budget)}
+                    {overBudget && (
+                      <span className="font-medium text-warning-700"> — {formatUsd(monthlyCost - budget)} over</span>
+                    )}
+                  </>
+                )}
+              </p>
+            ) : (
+              <p className="mt-0.5 text-[13px] text-ink-600">
+                No budget set{monthlyCost !== undefined ? ` — projected ${formatUsd(monthlyCost)}/month` : ""}.
+              </p>
+            )}
+          </div>
+        </div>
+        {onEditBudget && (
+          <Button variant="secondary" className="shrink-0 self-start sm:self-auto" onClick={onEditBudget}>
+            {budget !== undefined ? "Edit budget" : "Set a budget"}
+          </Button>
+        )}
+      </div>
+
       {onEditSettings && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[13px] text-ink-500">Need a different number, hours or cost estimate?</p>
+          <p className="text-[13px] text-ink-500">Need a different number or hours?</p>
           <Button variant="ghost" className="gap-1 self-start sm:self-auto" onClick={onEditSettings}>
             Change deploy settings
             <Icon name="chevron-right" className="size-4" />

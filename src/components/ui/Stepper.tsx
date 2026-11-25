@@ -9,12 +9,43 @@ export function Stepper({
   steps,
   activeId,
   completedIds,
+  compact = false,
 }: {
   steps: StepItem[];
   activeId: string;
   completedIds: string[];
+  /** Condensed dots + "Step N of M — label" for tight single-row headers. */
+  compact?: boolean;
 }) {
   const activeIndex = steps.findIndex((s) => s.id === activeId);
+
+  if (compact) {
+    return (
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-1" aria-hidden="true">
+          {steps.map((step, i) => {
+            const done = completedIds.includes(step.id);
+            const active = step.id === activeId;
+            return (
+              <span
+                key={step.id}
+                className={`h-1.5 w-6 rounded-full transition-colors ${
+                  done || active ? "bg-brand-600" : i < activeIndex ? "bg-brand-200" : "bg-gray-200"
+                }`}
+              />
+            );
+          })}
+        </div>
+        <span className="min-w-0 truncate whitespace-nowrap text-[12.5px] text-ink-500">
+          <span className="font-medium text-ink-900">
+            Step {activeIndex + 1} of {steps.length}
+          </span>
+          <span className="mx-1.5 text-ink-300">·</span>
+          <span className="font-medium text-ink-700">{steps[activeIndex]?.label}</span>
+        </span>
+      </div>
+    );
+  }
 
   return (
     <ol className="flex items-center overflow-x-auto [scrollbar-width:none]">

@@ -20,10 +20,30 @@ import { ToolsSection } from "./ToolsSection";
 export type BuildTab = "persona" | "guardrails" | "knowledge" | "tools";
 
 const tabs: TabItem[] = [
-  { id: "persona", label: "Persona", icon: <Icon name="user" className="size-4" /> },
-  { id: "guardrails", label: "Guardrails", icon: <Icon name="shield" className="size-4" /> },
-  { id: "knowledge", label: "Knowledge", icon: <Icon name="book" className="size-4" /> },
-  { id: "tools", label: "Tools", icon: <Icon name="wrench" className="size-4" /> },
+  {
+    id: "persona",
+    label: "Persona",
+    icon: <Icon name="user" className="size-4" />,
+    description: "How it introduces itself and sounds on the call.",
+  },
+  {
+    id: "guardrails",
+    label: "Guardrails",
+    icon: <Icon name="shield" className="size-4" />,
+    description: "Things this agent must never do, or must hand to a person.",
+  },
+  {
+    id: "knowledge",
+    label: "Knowledge",
+    icon: <Icon name="book" className="size-4" />,
+    description: "Your business info this agent can answer from, like hours, prices or an FAQ page.",
+  },
+  {
+    id: "tools",
+    label: "Tools",
+    icon: <Icon name="wrench" className="size-4" />,
+    description: "Actions it can take during a call, like booking or transferring.",
+  },
 ];
 
 /**
@@ -82,7 +102,13 @@ export function BuildEditorPage({
 
   return (
     <div className="flex h-full flex-col bg-paper-50">
-      <BuilderNav agent={currentAgent} active="build" onNavigate={onNavigate} onBack={onBack} />
+      <BuilderNav
+        agent={currentAgent}
+        active="build"
+        onNavigate={onNavigate}
+        onBack={onBack}
+        contentClassName="mx-auto max-w-[720px]"
+      />
       {currentAgent.status === "live" && (
         <div role="status" className="flex items-center gap-2 border-b border-warning-200 bg-warning-50 px-4 py-2 sm:px-6">
           <Icon name="alert" className="size-3.5 shrink-0 text-warning-600" />
@@ -99,10 +125,17 @@ export function BuildEditorPage({
         </div>
       )}
       <div className="border-b border-ink-950/10 bg-paper-0 px-4 sm:px-6">
-        <Tabs items={tabs} active={tab} onChange={(id) => setTab(id as BuildTab)} />
+        <div className="mx-auto w-full max-w-[720px]">
+          <Tabs items={tabs} active={tab} onChange={(id) => setTab(id as BuildTab)} />
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-        <div className="mx-auto w-full max-w-[720px]" role="tabpanel" aria-label={tabs.find((t) => t.id === tab)?.label}>
+        <div
+          key={tab}
+          className="animate-step-in mx-auto w-full max-w-[720px]"
+          role="tabpanel"
+          aria-label={tabs.find((t) => t.id === tab)?.label}
+        >
           {tab === "persona" && (
             <PersonaSection
               agent={currentAgent}

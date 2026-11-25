@@ -1,4 +1,4 @@
-import { llmRateMultiplier, sttRateMultiplier, ttsRateMultiplier } from "./providers";
+import { llmOptions, llmRateMultiplier, sttOptions, sttRateMultiplier, ttsOptions, ttsRateMultiplier } from "./providers";
 import type { Agent, CallDirection } from "./types";
 
 export type NumberMethod = "keep" | "new" | "port" | "pool";
@@ -266,4 +266,77 @@ export function hoursErrors(config: DeployConfig, direction: CallDirection): Hou
 
 export function monthlyCost(config: Pick<DeployConfig, "callsPerMonth" | "avgMinutes">, providers?: ProviderSelection) {
   return config.callsPerMonth * config.avgMinutes * effectivePerMinRate(providers);
+}
+
+/* ---------------- Cost-saving suggestions ---------------- */
+
+export interface ProviderSwap {
+  field: keyof ProviderSelection;
+  label: string;
+  from: string;
+  to: string;
+  monthlySavings: number;
+}
+
+export interface CostSuggestion {
+  swaps: ProviderSwap[];
+  newMonthlyCost: number;
+  monthlySavings: number;
+  /** True if even the cheapest available combination can't bring cost back under budget. */
+  stillOverBudget: boolean;
+}
+
+const SWAP_COMPONENTS: { field: keyof ProviderSelection; label: string; options: string[]; multipliers: Record<string, number>; base: number }[] = [
+  { field: "llmProvider", label: "Language model", options: llmOptions, multipliers: llmRateMultiplier, base: LLM_BASE_RATE },
+  { field: "sttProvider", label: "Speech-to-text", options: sttOptions, multipliers: sttRateMultiplier, base: STT_BASE_RATE },
+  { field: "ttsProvider", label: "Text-to-speech", options: ttsOptions, multipliers: ttsRateMultiplier, base: TTS_BASE_RATE },
+];
+
+/**
+ * Proposes the fewest provider swaps (cheapest-first) needed to bring the
+ * projected monthly cost back under budget. Never auto-applies — the caller
+ * decides whether to accept the tradeoff.
+ */
+export function suggestCheaperProviders(
+  config: Pick<DeployConfig, "callsPerMonth" | "avgMinutes">,
+  providers: ProviderSelection,
+  budget: number,
+): CostSuggestion | undefined {
+  const minutes = config.callsPerMonth * config.avgMinutes;
+  const currentCost = minutes * effectivePerMinRate(providers);
+  if (currentCost <= budget) return undefined;
+
+  const candidates = SWAP_COMPONENTS.map((c) => {
+    const current = c.multipliers[providers[c.field]] ?? 1;
+    const cheapest = c.options.reduce((best, opt) => ((c.multipliers[opt] ?? 1) < (c.multipliers[best] ?? 1) ? opt : best), c.options[0]);
+    const cheapestMult = c.multipliers[cheapest] ?? 1;
+    if (cheapestMult >= current) return undefined;
+    return {
+      field: c.field,
+      label: c.label,
+      from: providers[c.field],
+      to: cheapest,
+      monthlySavings: c.base * (current - cheapestMult) * minutes,
+    } satisfies ProviderSwap;
+  }).filter((c): c is ProviderSwap => c !== undefined);
+
+  if (candidates.length === 0) return undefined;
+  candidates.sort((a, b) => b.monthlySavings - a.monthlySavings);
+
+  const applied: ProviderSwap[] = [];
+  let running = { ...providers };
+  let runningCost = currentCost;
+  for (const swap of candidates) {
+    if (runningCost <= budget) break;
+    applied.push(swap);
+    running = { ...running, [swap.field]: swap.to };
+    runningCost = minutes * effectivePerMinRate(running);
+  }
+
+  return {
+    swaps: applied,
+    newMonthlyCost: runningCost,
+    monthlySavings: currentCost - runningCost,
+    stillOverBudget: runningCost > budget,
+  };
 }
