@@ -1,0 +1,168 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+/*
+ * Design tokens for the voice-agent builder — Untitled-UI-style system.
+ *
+ * Canonical scales (use these in new code):
+ *   gray-*     cool neutral scale, the dominant surface/text palette
+ *   brand-*    the single accent: primary actions, focus rings, active state
+ *   success-* / warning-* / error-*   semantic feedback colors
+ *   blue-* / orange-*                 inbound / outbound identity colors
+ *
+ * Legacy names (still referenced throughout src/features and App.tsx) are
+ * kept as aliases onto the canonical scales so nothing dangles:
+ *   paper-*  -> white / gray-25..200 (surfaces)
+ *   ink-*    -> gray-300..900 (text, borders via /opacity)
+ *   accent-* -> brand-*
+ *   amber-*  -> warning-*
+ *   clay-*   -> error-*
+ *   inbound-*  -> blue-*
+ *   outbound-* -> orange-*
+ */
+@theme {
+  /* ---- Gray (cool neutral) ---- */
+  --color-gray-25: #fcfcfd;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f2f4f7;
+  --color-gray-200: #eaecf0;
+  --color-gray-300: #d0d5dd;
+  --color-gray-400: #98a2b3;
+  --color-gray-500: #667085;
+  --color-gray-600: #475467;
+  --color-gray-700: #344054;
+  --color-gray-800: #1d2939;
+  --color-gray-900: #101828;
+  --color-gray-950: #0c111d;
+
+  /* ---- Brand (single accent) ---- */
+  --color-brand-25: #fcfaff;
+  --color-brand-50: #f9f5ff;
+  --color-brand-100: #f4ebff;
+  --color-brand-200: #e9d7fe;
+  --color-brand-300: #d6bbfb;
+  --color-brand-400: #b692f6;
+  --color-brand-500: #9e77ed;
+  --color-brand-600: #7f56d9;
+  --color-brand-700: #6941c6;
+  --color-brand-800: #53389e;
+  --color-brand-900: #42307d;
+
+  /* ---- Semantic ---- */
+  --color-success-50: #ecfdf3;
+  --color-success-100: #dcfae6;
+  --color-success-200: #abefc6;
+  --color-success-500: #17b26a;
+  --color-success-600: #079455;
+  --color-success-700: #067647;
+
+  --color-warning-50: #fffaeb;
+  --color-warning-100: #fef0c7;
+  --color-warning-200: #fedf89;
+  --color-warning-500: #f79009;
+  --color-warning-600: #dc6803;
+  --color-warning-700: #b54708;
+
+  --color-error-50: #fef3f2;
+  --color-error-100: #fee4e2;
+  --color-error-200: #fecdca;
+  --color-error-300: #fda29b;
+  --color-error-500: #f04438;
+  --color-error-600: #d92d20;
+  --color-error-700: #b42318;
+
+  /* ---- Identity: inbound (blue) / outbound (orange) ---- */
+  --color-blue-50: #eff8ff;
+  --color-blue-100: #d1e9ff;
+  --color-blue-200: #b2ddff;
+  --color-blue-600: #1570ef;
+  --color-blue-700: #175cd3;
+
+  --color-orange-50: #fef6ee;
+  --color-orange-100: #fdead7;
+  --color-orange-200: #f9dbaf;
+  --color-orange-600: #e04f16;
+  --color-orange-700: #b93815;
+
+  /* ---- Legacy aliases (do not remove: referenced across src/) ---- */
+  --color-paper-0: #ffffff;
+  --color-paper-25: var(--color-gray-25);
+  --color-paper-50: var(--color-gray-50);
+  --color-paper-100: var(--color-gray-100);
+  --color-paper-200: var(--color-gray-200);
+
+  --color-ink-950: var(--color-gray-900);
+  --color-ink-900: var(--color-gray-800);
+  --color-ink-800: var(--color-gray-700);
+  --color-ink-700: var(--color-gray-700);
+  --color-ink-600: var(--color-gray-600);
+  --color-ink-500: var(--color-gray-500);
+  --color-ink-400: var(--color-gray-400);
+  --color-ink-300: var(--color-gray-300);
+
+  --color-accent-50: var(--color-brand-50);
+  --color-accent-100: var(--color-brand-100);
+  --color-accent-500: var(--color-brand-500);
+  --color-accent-600: var(--color-brand-600);
+  --color-accent-700: var(--color-brand-700);
+
+  --color-amber-50: var(--color-warning-50);
+  --color-amber-100: var(--color-warning-100);
+  --color-amber-600: var(--color-warning-600);
+  --color-amber-700: var(--color-warning-700);
+
+  --color-clay-50: var(--color-error-50);
+  --color-clay-100: var(--color-error-100);
+  --color-clay-600: var(--color-error-600);
+  --color-clay-700: var(--color-error-700);
+
+  --color-inbound-50: var(--color-blue-50);
+  --color-inbound-100: var(--color-blue-100);
+  --color-inbound-200: var(--color-blue-200);
+  --color-inbound-600: var(--color-blue-600);
+  --color-inbound-700: var(--color-blue-700);
+
+  --color-outbound-50: var(--color-orange-50);
+  --color-outbound-100: var(--color-orange-100);
+  --color-outbound-200: var(--color-orange-200);
+  --color-outbound-600: var(--color-orange-600);
+  --color-outbound-700: var(--color-orange-700);
+
+  /* ---- Type ---- */
+  --font-sans:
+    "Inter", ui-sans-serif, -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Roboto Mono", Menlo, monospace;
+  --text-md: 1rem;
+  --text-md--line-height: 1.5rem;
+
+  /* ---- Elevation (soft, neutral only) ---- */
+  --shadow-xs: 0 1px 2px 0 rgba(16, 24, 40, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(16, 24, 40, 0.1), 0 1px 2px -1px rgba(16, 24, 40, 0.1);
+  --shadow-md: 0 4px 8px -2px rgba(16, 24, 40, 0.1), 0 2px 4px -2px rgba(16, 24, 40, 0.06);
+  --shadow-float: 0 12px 16px -4px rgba(16, 24, 40, 0.08), 0 4px 6px -2px rgba(16, 24, 40, 0.03);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-gray-50);
+  color: var(--color-gray-900);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background-color: var(--color-brand-100);
+  color: var(--color-brand-900);
+}

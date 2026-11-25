@@ -1,0 +1,202 @@
+import { enabledTransferTool } from "./tools";
+import type { Agent, ToolDef, TranscriptTurn } from "./types";
+
+/**
+ * Persona "compiler": the greeting and system prompt are written from the
+ * agent's business name, voice, tone and purpose (and, for the prompt, which
+ * tools exist). Every persona edit goes through `applyPersonaPatch` so those
+ * derived strings never go stale.
+ */
+
+export const voiceOptions = [
+  "Ava — clear, friendly",
+  "Sam — clear, friendly",
+  "Maya — warm, even pace",
+  "Daniel — calm, neutral pace",
+  "Priya — bright, upbeat",
+  "Owen — low, steady",
+];
+
+export function voiceFirstName(voice: string) {
+  return voice.split(/\s+[—–-]\s+/)[0]?.trim() || "your assistant";
+}
+
+export type ToneBand = "formal" | "balanced" | "warm";
+
+export function toneBand(tone: number): ToneBand {
+  if (tone <= 33) return "formal";
+  if (tone >= 67) return "warm";
+  return "balanced";
+}
+
+/** The "Allow light humor" toggle is a tone choice, so it's edited in Persona, not Guardrails. */
+export const HUMOR_TOGGLE_ID = "safety_4";
+
+export const toneBandLabel: Record<ToneBand, string> = {
+  formal: "Formal & brief",
+  balanced: "Balanced",
+  warm: "Warm & chatty",
+};
+
+function lowerFirst(s: string) {
+  return s.charAt(0).toLowerCase() + s.slice(1);
+}
+
+function stripPeriod(s: string) {
+  return s.trim().replace(/[.\s]+$/, "");
+}
+
+/**
+ * Words that describe the agent's job rather than the business. Everything
+ * from the first of these on is dropped: "Northside Auto Missed-Appointment
+ * Callback" → "Northside Auto", "Riverside Dental Front Desk" → "Riverside Dental".
+ */
+const ROLE_WORDS = new Set(
+  "front desk reception receptionist missed appointment appointments callback callbacks outreach reminder reminders renewal renewals collections collection after-hours scheduling scheduler booking intake follow followup line agent bot assistant sales billing lead leads qualification survey surveys confirmation confirmations dispatch helpline hotline answering".split(
+    " ",
+  ),
+);
+
+/** A caller-facing business name guessed from the internal agent name. */
+export function cleanBusinessName(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const isRole = (w: string) => {
+    const lower = w.toLowerCase().replace(/[^a-z–-]/g, "");
+    return ROLE_WORDS.has(lower) || ROLE_WORDS.has(lower.split(/[-–]/)[0]);
+  };
+  const cut = words.findIndex((w, i) => i > 0 && isRole(w));
+  const kept = cut > 0 ? words.slice(0, cut) : words;
+  return kept.join(" ").replace(/[\s,:;–—-]+$/, "") || name.trim();
+}
+
+/** The name callers hear on the phone. */
+export function businessNameOf(agent: Pick<Agent, "name" | "businessName">): string {
+  return agent.businessName?.trim() || cleanBusinessName(agent.name) || "our team";
+}
+
+function displayName(agent: Pick<Agent, "name" | "businessName">) {
+  return businessNameOf(agent);
+}
+
+export function compileGreeting(agent: Agent): string {
+  const name = displayName(agent);
+  const who = voiceFirstName(agent.voice);
+  const band = toneBand(agent.tone);
+  if (agent.direction === "inbound") {
+    if (band === "formal") return `Thank you for calling ${name}. This is ${who}. How may I assist you?`;
+    if (band === "warm") return `Hi there, thanks so much for calling ${name}! This is ${who} — what can I help you with today?`;
+    return `Thanks for calling ${name}, this is ${who}. How can I help you today?`;
+  }
+  if (band === "formal")
+    return `Good day. This is ${who}, an automated assistant calling on behalf of ${name}. Is this a convenient time to speak?`;
+  if (band === "warm")
+    return `Hi! This is ${who}, an automated assistant with ${name} — hope your day's going well. Do you have a quick minute to chat?`;
+  return `Hi, this is ${who}, an automated assistant with ${name}. Do you have a quick minute?`;
+}
+
+const toneInstruction: Record<ToneBand, string> = {
+  formal: "Keep a formal, professional register: short, precise answers and no small talk.",
+  balanced: "Be concise and friendly.",
+  warm: "Be warm and conversational: acknowledge how the caller feels, use their name once you have it, and keep a relaxed pace.",
+};
+
+/**
+ * The handoff line only promises a transfer when a Transfer call tool is
+ * actually enabled — otherwise the agent would promise something on a real
+ * call that it can't do. Without one it offers a callback instead.
+ */
+export function compileSystemPrompt(agent: Agent, tools: ToolDef[] = []): string {
+  const name = displayName(agent);
+  const who = voiceFirstName(agent.voice);
+  const purpose = agent.purpose.trim() ? ` Your job: ${lowerFirst(stripPeriod(agent.purpose))}.` : "";
+  const other = agent.direction === "inbound" ? "the caller" : "the person you're calling";
+  const handoff = enabledTransferTool(tools)
+    ? `If you are unsure or ${other} asks for a person, offer to transfer them to a teammate.`
+    : `If you are unsure or ${other} asks for a person, take their name and number so a teammate can call them back.`;
+  return `You are ${who}, the ${agent.direction} voice assistant for ${name}.${purpose} ${toneInstruction[toneBand(agent.tone)]} ${handoff}`;
+}
+
+/** Re-write a still-generated system prompt after the agent's tools change. */
+export function recompileForTools(agent: Agent, tools: ToolDef[]): Agent {
+  if (agent.promptCustom) return agent;
+  const systemPrompt = compileSystemPrompt(agent, tools);
+  return systemPrompt === agent.systemPrompt ? agent : { ...agent, systemPrompt };
+}
+
+function swapAll(text: string, from: string, to: string) {
+  // Guard against tiny fragments (e.g. a 1-letter name mid-edit) rewriting
+  // unrelated characters all over a hand-written greeting.
+  if (from.length < 3 || from === to) return text;
+  return text.split(from).join(to);
+}
+
+function swapIdentity(text: string, prev: Agent, next: Agent) {
+  let out = swapAll(text, prev.name.trim(), next.name.trim());
+  out = swapAll(out, businessNameOf(prev), businessNameOf(next));
+  const prevWho = voiceFirstName(prev.voice);
+  const nextWho = voiceFirstName(next.voice);
+  if (prevWho !== nextWho && prevWho.length >= 2) {
+    out = out.replace(new RegExp(`\\b${prevWho.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g"), nextWho);
+  }
+  return out;
+}
+
+const identityKeys: (keyof Agent)[] = ["name", "businessName", "voice", "tone", "purpose", "direction"];
+
+/**
+ * Apply an edit to an agent and keep the compiled greeting / system prompt in
+ * sync. Typing into the greeting or prompt directly marks it custom; setting
+ * `greetingCustom: false` / `promptCustom: false` regenerates from fields.
+ * Pass the agent's tools so a regenerated prompt knows whether it can transfer.
+ */
+export function applyPersonaPatch(agent: Agent, patch: Partial<Agent>, tools: ToolDef[] = []): Agent {
+  const next: Agent = { ...agent, ...patch };
+  if ("greeting" in patch && patch.greetingCustom === undefined) next.greetingCustom = true;
+  if ("systemPrompt" in patch && patch.promptCustom === undefined) next.promptCustom = true;
+
+  const identityChanged = identityKeys.some((k) => k in patch);
+
+  if (patch.greetingCustom === false || (identityChanged && !next.greetingCustom)) {
+    next.greeting = compileGreeting(next);
+  } else if (identityChanged && !("greeting" in patch)) {
+    next.greeting = swapIdentity(agent.greeting, agent, next);
+  }
+
+  if (patch.promptCustom === false || (identityChanged && !next.promptCustom)) {
+    next.systemPrompt = compileSystemPrompt(next, tools);
+  } else if (identityChanged && !("systemPrompt" in patch)) {
+    next.systemPrompt = swapIdentity(agent.systemPrompt, agent, next);
+  }
+  return next;
+}
+
+/** Sample call shown (opt-in) in the Test panel for agents without a recorded one. */
+export function sampleCallTranscript(agent: Agent): TranscriptTurn[] {
+  const name = displayName(agent);
+  if (agent.direction === "inbound") {
+    return [
+      { id: "s1", speaker: "agent", text: agent.greeting },
+      { id: "s2", speaker: "caller", text: "Hi, I wasn't sure who to ask — what can you help me with?" },
+      {
+        id: "s3",
+        speaker: "agent",
+        text: `Happy to help — I'm the automated assistant for ${name}. What can I do for you today?`,
+      },
+    ];
+  }
+  return [
+    { id: "s1", speaker: "agent", text: agent.greeting },
+    { id: "s2", speaker: "caller", text: "Uh, sure. What's this about?" },
+    {
+      id: "s3",
+      speaker: "agent",
+      text: `Thanks — I'm calling from ${name}, and it should only take a minute. Before I go on, can I confirm I'm speaking with the right person?`,
+    },
+  ];
+}
+
+/** Recorded transcripts always open with whatever the greeting is right now. */
+export function withLiveGreeting(transcript: TranscriptTurn[], agent: Agent): TranscriptTurn[] {
+  if (transcript.length === 0) return sampleCallTranscript(agent);
+  return transcript.map((t, i) => (i === 0 && t.speaker === "agent" ? { ...t, text: agent.greeting } : t));
+}
