@@ -22,11 +22,13 @@ import {
   clinicAgent,
   clinicBusinessRules,
   clinicKnowledge,
+  clinicOutcomes,
   clinicTools,
   clinicTranscript,
   collectionsAgent,
   collectionsBusinessRules,
   collectionsKnowledge,
+  collectionsOutcomes,
   collectionsScenarios,
   collectionsTools,
   collectionsTranscript,
@@ -60,8 +62,10 @@ import { bookingTool } from "@/lib/tools";
 import type {
   Agent,
   BusinessRule,
+  CallDirection,
   KnowledgeSettings,
   KnowledgeSource,
+  OutcomeField,
   SafetyToggle,
   Scenario,
   ToolDef,
@@ -84,6 +88,8 @@ interface AgentRecord {
   safety: SafetyToggle[];
   scenarios: Scenario[];
   transcript: TranscriptTurn[];
+  /** What this agent must capture or report by the end of a call. */
+  outcomes: OutcomeField[];
   /** What the Deploy wizard collected; created on first visit to Deploy. */
   deploy?: DeployConfig;
 }
@@ -99,6 +105,7 @@ const seedRecords = (): AgentRecord[] => [
     safety: cloneSafety(),
     scenarios: scenarioPool,
     transcript: clinicTranscript,
+    outcomes: clinicOutcomes,
   },
   {
     agent: collectionsAgent,
@@ -108,6 +115,7 @@ const seedRecords = (): AgentRecord[] => [
     safety: cloneSafety(),
     scenarios: collectionsScenarios,
     transcript: collectionsTranscript,
+    outcomes: collectionsOutcomes,
   },
 ];
 
@@ -136,6 +144,7 @@ function normalizeRecord(raw: unknown): AgentRecord | null {
     safety: asArray(r.safety, cloneSafety()),
     scenarios: asArray(r.scenarios, []),
     transcript: asArray(r.transcript, []),
+    outcomes: asArray(r.outcomes, []),
     deploy: r.deploy ? normalizeDeployConfig(r.deploy, direction) : undefined,
   };
 }
@@ -205,6 +214,7 @@ function buildRecord(values: CreateFormValues): AgentRecord {
     greeting: "",
     tone: persona.tone,
     systemPrompt: "",
+    language: "en",
     llmProvider: "System default — balanced (GPT-4.1)",
     sttProvider: "System default (Deepgram Nova-3)",
     ttsProvider: "System default (ElevenLabs Turbo)",
@@ -253,6 +263,7 @@ function buildRecord(values: CreateFormValues): AgentRecord {
     safety: cloneSafety(),
     scenarios,
     transcript: [],
+    outcomes: [],
   };
 }
 
@@ -260,7 +271,17 @@ function buildRecord(values: CreateFormValues): AgentRecord {
 /* Agents list                                                          */
 /* ------------------------------------------------------------------ */
 
-function AgentRowMenu({ agent, onDuplicate, onDelete }: { agent: Agent; onDuplicate: () => void; onDelete: () => void }) {
+function AgentRowMenu({
+  agent,
+  onDuplicate,
+  onDelete,
+  onAddCounterpart,
+}: {
+  agent: Agent;
+  onDuplicate: () => void;
+  onDelete: () => void;
+  onAddCounterpart?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -337,6 +358,20 @@ function AgentRowMenu({ agent, onDuplicate, onDelete }: { agent: Agent; onDuplic
                 <Icon name="copy" className="size-3.5 text-ink-400" />
                 Duplicate
               </button>
+              {onAddCounterpart && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOpen(false);
+                    onAddCounterpart();
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-ink-800 hover:bg-paper-50"
+                >
+                  <Icon name={agent.direction === "inbound" ? "phone-outbound" : "phone-inbound"} className="size-3.5 text-ink-400" />
+                  Add {agent.direction === "inbound" ? "outbound" : "inbound"} counterpart
+                </button>
+              )}
               <button
                 type="button"
                 role="menuitem"
@@ -357,15 +392,20 @@ function AgentRowMenu({ agent, onDuplicate, onDelete }: { agent: Agent; onDuplic
 function AgentRow({
   agent,
   deploy,
+  linkedAgentName,
   onOpen,
   onDuplicate,
   onDelete,
+  onAddCounterpart,
 }: {
   agent: Agent;
   deploy?: DeployConfig;
+  /** Name of the linked inbound/outbound counterpart, if any — looked up by the parent. */
+  linkedAgentName?: string;
   onOpen: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  onAddCounterpart?: () => void;
 }) {
   const budget = deploy?.monthlyBudget;
   const cost = deploy ? estimatedMonthlyCost(deploy, agent) : undefined;
@@ -401,6 +441,12 @@ function AgentRow({
           <Badge tone={statusTone[agent.status]} dot>
             {statusLabel[agent.status]}
           </Badge>
+          {linkedAgentName && (
+            <span className="inline-flex items-center gap-1 text-[12px] text-ink-400">
+              <Icon name="link" className="size-3" />
+              Paired with {linkedAgentName}
+            </span>
+          )}
         </div>
         <p className="mt-0.5 truncate text-[13px] text-ink-500">{agent.purpose}</p>
         {agent.phoneNumber && (
@@ -433,7 +479,7 @@ function AgentRow({
           )}
         </div>
       </div>
-      <AgentRowMenu agent={agent} onDuplicate={onDuplicate} onDelete={onDelete} />
+      <AgentRowMenu agent={agent} onDuplicate={onDuplicate} onDelete={onDelete} onAddCounterpart={onAddCounterpart} />
       <Icon
         name="chevron-right"
         className="size-4 shrink-0 text-ink-300 transition-colors group-hover:text-ink-600 group-focus-visible:text-ink-600"
@@ -461,6 +507,7 @@ function AgentsList({
   onDismissBanner,
   onDuplicate,
   onDelete,
+  onAddCounterpart,
 }: {
   records: AgentRecord[];
   justWentLive: { agent: Agent; deploy?: DeployConfig } | null;
@@ -469,6 +516,7 @@ function AgentsList({
   onDismissBanner: () => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
+  onAddCounterpart?: (id: string) => void;
 }) {
   return (
     <div className="h-full overflow-y-auto bg-paper-50">
@@ -484,7 +532,7 @@ function AgentsList({
         }
       />
       <main className="px-4 py-6 sm:px-6 sm:py-8">
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-4xl lg:max-w-5xl xl:max-w-6xl">
           {justWentLive && (
             <div
               role="status"
@@ -510,9 +558,17 @@ function AgentsList({
                     key={r.agent.id}
                     agent={r.agent}
                     deploy={r.deploy}
+                    linkedAgentName={
+                      r.agent.linkedAgentId
+                        ? records.find((o) => o.agent.id === r.agent.linkedAgentId)?.agent.name
+                        : undefined
+                    }
                     onOpen={() => onOpen(r.agent.id)}
                     onDuplicate={() => onDuplicate(r.agent.id)}
                     onDelete={() => onDelete(r.agent.id)}
+                    onAddCounterpart={
+                      !r.agent.linkedAgentId && onAddCounterpart ? () => onAddCounterpart(r.agent.id) : undefined
+                    }
                   />
                 ))}
               </div>
@@ -688,6 +744,7 @@ export default function App() {
           phoneNumber: undefined,
           callsThisWeek: undefined,
           avgHandleTimeSec: undefined,
+          linkedAgentId: undefined,
         },
         scenarios: rec.scenarios.map((s) => ({ ...s, verdict: "not-run" })),
         transcript: [],
@@ -698,7 +755,48 @@ export default function App() {
     });
   };
 
-  const deleteRecord = (id: string) => setRecords((rs) => rs.filter((r) => r.agent.id !== id));
+  const deleteRecord = (id: string) =>
+    setRecords((rs) => {
+      const rec = rs.find((r) => r.agent.id === id);
+      const linkedId = rec?.agent.linkedAgentId;
+      return rs
+        .filter((r) => r.agent.id !== id)
+        .map((r) => (linkedId && r.agent.id === linkedId ? { ...r, agent: { ...r.agent, linkedAgentId: undefined } } : r));
+    });
+
+  /** The other direction's job description, derived mechanically — not a guess at the real business flow. */
+  const createCounterpart = (id: string) => {
+    setRecords((rs) => {
+      const rec = rs.find((r) => r.agent.id === id);
+      if (!rec || rec.agent.linkedAgentId) return rs;
+      const direction: CallDirection = rec.agent.direction === "inbound" ? "outbound" : "inbound";
+      const newId_ = newId("agt");
+      const counterpart: AgentRecord = {
+        ...rec,
+        agent: {
+          ...rec.agent,
+          id: newId_,
+          direction,
+          status: "draft",
+          phoneNumber: undefined,
+          callsThisWeek: undefined,
+          avgHandleTimeSec: undefined,
+          linkedAgentId: rec.agent.id,
+        },
+        scenarios: rec.scenarios.map((s) => ({ ...s, verdict: "not-run" as const })),
+        transcript: [],
+        deploy: undefined,
+      };
+      counterpart.agent.greeting = compileGreeting(counterpart.agent);
+      counterpart.agent.systemPrompt = compileSystemPrompt(counterpart.agent, counterpart.tools);
+      const idx = rs.findIndex((r) => r.agent.id === id);
+      return [
+        ...rs.slice(0, idx + 1).map((r) => (r.agent.id === id ? { ...r, agent: { ...r.agent, linkedAgentId: newId_ } } : r)),
+        counterpart,
+        ...rs.slice(idx + 1),
+      ];
+    });
+  };
 
   const goList = () => navigate({ name: "list" });
 
@@ -735,6 +833,7 @@ export default function App() {
         onDismissBanner={() => setJustWentLive(null)}
         onDuplicate={duplicateRecord}
         onDelete={deleteRecord}
+        onAddCounterpart={createCounterpart}
       />
     );
   }
@@ -796,6 +895,7 @@ export default function App() {
         onDismissBanner={() => undefined}
         onDuplicate={duplicateRecord}
         onDelete={deleteRecord}
+        onAddCounterpart={createCounterpart}
       />
     );
   }
@@ -826,6 +926,7 @@ export default function App() {
         knowledge={record.knowledge}
         knowledgeSettings={record.knowledgeSettings}
         tools={record.tools}
+        outcomes={record.outcomes}
         initialTab={screen.tab}
         onAgentChange={(patch) => updateAgent(agent.id, patch)}
         onSafetyChange={(safety) => patchRecord(agent.id, { safety })}
@@ -833,6 +934,7 @@ export default function App() {
         onKnowledgeChange={(knowledge) => patchRecord(agent.id, { knowledge })}
         onKnowledgeSettingsChange={(knowledgeSettings) => patchRecord(agent.id, { knowledgeSettings })}
         onToolsChange={(tools) => updateTools(agent.id, tools)}
+        onOutcomesChange={(outcomes) => patchRecord(agent.id, { outcomes })}
         onNavigate={navigateSection(agent.id)}
         onBack={goList}
       />
@@ -977,9 +1079,13 @@ export default function App() {
           monthlyCost={monthlyCost}
           scenarios={record.scenarios}
           knowledge={record.knowledge}
+          businessRules={record.businessRules}
+          tools={record.tools}
           onGoLive={goLive}
           onReviewTests={() => navigateSection(agent.id)("test")}
           onReviewKnowledge={() => navigate({ name: "build", agentId: agent.id, tab: "knowledge" })}
+          onReviewGuardrails={() => navigate({ name: "build", agentId: agent.id, tab: "guardrails" })}
+          onReviewTools={() => navigate({ name: "build", agentId: agent.id, tab: "tools" })}
         />
       )}
     </DeployWizardLayout>

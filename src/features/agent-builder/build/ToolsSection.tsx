@@ -1,17 +1,78 @@
 import { useId, useState, type FormEvent } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { FieldError, FieldLabel, Input, Textarea } from "@/components/ui/Field";
+import { FieldError, FieldLabel, Input, Select, Textarea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Switch } from "@/components/ui/Switch";
 import { parseCurl } from "@/lib/simulate";
-import { isTransferTool } from "@/lib/tools";
+import { isBookingTool, isTransferTool } from "@/lib/tools";
 import { newId } from "@/lib/useControllable";
-import type { ToolDef } from "@/lib/types";
+import type { CalendarProvider, ToolDef } from "@/lib/types";
 
 const TRANSFER_PLACEHOLDER = "(503) 555-0100";
 const TRANSFER_HELP = "Callers who ask for a person go here.";
+
+const calendarProviderLabel: Record<CalendarProvider, string> = {
+  google: "Google Calendar",
+  outlook: "Outlook Calendar",
+  other: "Other / custom calendar",
+};
+
+/** Inline calendar config editor for a booking tool — provider is real config; connection is simulated, never faked as a live OAuth link. */
+function CalendarConfigEditor({
+  toolName,
+  initialProvider,
+  initialConnected,
+  onCancel,
+  onSave,
+}: {
+  toolName: string;
+  initialProvider: CalendarProvider;
+  initialConnected: boolean;
+  onCancel?: () => void;
+  onSave: (patch: { calendarProvider: CalendarProvider; calendarConnected: boolean }) => void;
+}) {
+  const id = useId();
+  const [provider, setProvider] = useState<CalendarProvider>(initialProvider);
+  const [connected, setConnected] = useState(initialConnected);
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    onSave({ calendarProvider: provider, calendarConnected: connected });
+  };
+  return (
+    <form onSubmit={submit} aria-label={`Calendar configuration for ${toolName}`} className="mt-2.5 flex flex-col gap-3">
+      <div>
+        <FieldLabel htmlFor={`${id}-provider`}>Calendar</FieldLabel>
+        <Select id={`${id}-provider`} name="calendarProvider" value={provider} onChange={(e) => setProvider(e.target.value as CalendarProvider)}>
+          <option value="google">Google Calendar</option>
+          <option value="outlook">Outlook Calendar</option>
+          <option value="other">Other / custom calendar</option>
+        </Select>
+      </div>
+      <div className="flex items-start gap-3 rounded-lg border border-ink-950/10 bg-paper-50 p-3">
+        <Switch checked={connected} onChange={setConnected} label={`Simulate ${toolName} as connected`} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[12.5px] font-medium text-ink-800">Simulate as connected (test only)</p>
+          <p className="mt-0.5 text-[12px] text-ink-500">
+            This demo has no live calendar backend — there's no real OAuth or account to link. This switch only
+            marks the tool as connected for test scenarios; it doesn't read or write a real calendar.
+          </p>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2">
+        {onCancel && (
+          <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" size="sm">
+          Save
+        </Button>
+      </div>
+    </form>
+  );
+}
 
 /** Inline "Transfer to" editor for a transfer tool that's already on the list. */
 function DestinationEditor({
@@ -84,6 +145,7 @@ function ToolRow({
   onChange: (patch: Partial<ToolDef>) => void;
 }) {
   const transfer = isTransferTool(tool);
+  const booking = isBookingTool(tool);
   const destination = tool.destination?.trim();
   const [editing, setEditing] = useState(false);
   return (
@@ -96,6 +158,7 @@ function ToolRow({
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] font-medium text-ink-950">
             {tool.name}
             {tool.kind === "custom" && !transfer && <Badge tone="neutral">Custom webhook</Badge>}
+            {booking && <Badge tone="neutral">{calendarProviderLabel[tool.calendarProvider ?? "google"]}</Badge>}
           </p>
           {transfer ? (
             destination ? (
@@ -106,6 +169,18 @@ function ToolRow({
               <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-warning-700">
                 <Icon name="alert" className="size-3.5 shrink-0" />
                 No destination set — calls can't be transferred yet
+              </p>
+            )
+          ) : booking ? (
+            tool.calendarConnected ? (
+              <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-success-700">
+                <Icon name="check" className="size-3.5 shrink-0" />
+                Connected (simulated — no live calendar backend)
+              </p>
+            ) : (
+              <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-warning-700">
+                <Icon name="alert" className="size-3.5 shrink-0" />
+                Not connected — configure a calendar before relying on this
               </p>
             )
           ) : (
@@ -125,6 +200,11 @@ function ToolRow({
             {destination ? "Edit" : "Set destination"}
           </Button>
         )}
+        {booking && !editing && (
+          <Button size="sm" variant="ghost" onClick={() => setEditing(true)} aria-label={`Configure calendar for ${tool.name}`}>
+            Configure
+          </Button>
+        )}
         <Switch checked={tool.enabled} onChange={onToggle} label={`Tool on: ${tool.name}`} />
       </div>
       {transfer && editing && (
@@ -135,6 +215,20 @@ function ToolRow({
             onCancel={() => setEditing(false)}
             onSave={(next) => {
               onChange({ destination: next });
+              setEditing(false);
+            }}
+          />
+        </div>
+      )}
+      {booking && editing && (
+        <div className="pl-12">
+          <CalendarConfigEditor
+            toolName={tool.name}
+            initialProvider={tool.calendarProvider ?? "google"}
+            initialConnected={!!tool.calendarConnected}
+            onCancel={() => setEditing(false)}
+            onSave={(patch) => {
+              onChange(patch);
               setEditing(false);
             }}
           />
@@ -212,7 +306,13 @@ function AddToolForm({
                 onClick={() =>
                   isTransferTool(p)
                     ? (setName(p.name), setDescription(""), setSubmitted(false), setFocusDestination(true))
-                    : onSave({ id: newId("tool"), ...p, kind: "builtin", enabled: true })
+                    : onSave({
+                        id: newId("tool"),
+                        ...p,
+                        kind: "builtin",
+                        enabled: true,
+                        ...(isBookingTool(p) && { calendarProvider: "google", calendarConnected: false }),
+                      })
                 }
               >
                 <Icon name="plus" className="size-3.5" />
@@ -393,6 +493,10 @@ export function ToolsSection({
     enabled: t.enabled,
     description: t.description,
     ...(isTransferTool(t) && { transferTo: t.destination?.trim() || null }),
+    ...(isBookingTool(t) && {
+      calendarProvider: t.calendarProvider ?? "google",
+      calendarConnected: !!t.calendarConnected,
+    }),
     ...(t.method && t.url && { method: t.method, url: t.url }),
   })),
   null,

@@ -1,5 +1,5 @@
 import { enabledTransferTool } from "./tools";
-import type { Agent, CallDirection, ToolDef, TranscriptTurn } from "./types";
+import type { Agent, AgentLanguage, CallDirection, ToolDef, TranscriptTurn } from "./types";
 
 /**
  * Persona "compiler": the greeting and system prompt are written from the
@@ -17,7 +17,20 @@ export const voiceOptions = [
   "Owen — low, steady",
 ];
 
-const FORMAL_PURPOSE_WORDS = ["legal", "law", "attorney", "insurance", "collections", "collection", "compliance", "debt", "audit"];
+const FORMAL_PURPOSE_WORDS = [
+  "legal",
+  "law",
+  "attorney",
+  "insurance",
+  "debt collection",
+  "collections agency",
+  "collections department",
+  "past-due",
+  "past due",
+  "compliance",
+  "debt",
+  "audit",
+];
 const WARM_PURPOSE_WORDS = ["spa", "concierge", "wellness", "support", "salon", "hospitality", "yoga"];
 
 /**
@@ -36,6 +49,17 @@ export function inferPersonaDefaults(purpose: string, direction: CallDirection):
     return { voice: inbound ? voiceOptions[4] : voiceOptions[2], tone: 80 };
   }
   return { voice: inbound ? voiceOptions[0] : voiceOptions[1], tone: 50 };
+}
+
+export const agentLanguageLabel: Record<AgentLanguage, string> = {
+  en: "English",
+  hi: "Hindi",
+  "en-hi": "English + Hindi (bilingual)",
+};
+
+/** Defaults to "en" for agents created before this field existed. */
+export function languageOf(agent: Pick<Agent, "language">): AgentLanguage {
+  return agent.language ?? "en";
 }
 
 export function voiceFirstName(voice: string) {
@@ -99,6 +123,17 @@ function displayName(agent: Pick<Agent, "name" | "businessName">) {
   return businessNameOf(agent);
 }
 
+/**
+ * Outbound calls are unsolicited, so the recipient needs a reason before
+ * they're asked for a minute of their time — without it they're as likely to
+ * hang up as to hear the agent out. Inbound doesn't get this: the caller
+ * already knows why they dialed, and will say so.
+ */
+function outboundPurposeClause(purpose: string): string {
+  const body = lowerFirst(stripPeriod(purpose));
+  return body ? ` I'm calling to ${body}.` : "";
+}
+
 export function compileGreeting(agent: Agent): string {
   const name = displayName(agent);
   const who = voiceFirstName(agent.voice);
@@ -108,11 +143,12 @@ export function compileGreeting(agent: Agent): string {
     if (band === "warm") return `Hi there, thanks so much for calling ${name}! This is ${who} — what can I help you with today?`;
     return `Thanks for calling ${name}, this is ${who}. How can I help you today?`;
   }
+  const purpose = outboundPurposeClause(agent.purpose);
   if (band === "formal")
-    return `Good day. This is ${who}, an automated assistant calling on behalf of ${name}. Is this a convenient time to speak?`;
+    return `Good day. This is ${who}, an automated assistant calling on behalf of ${name}.${purpose} Is this a convenient time to speak?`;
   if (band === "warm")
-    return `Hi! This is ${who}, an automated assistant with ${name} — hope your day's going well. Do you have a quick minute to chat?`;
-  return `Hi, this is ${who}, an automated assistant with ${name}. Do you have a quick minute?`;
+    return `Hi! This is ${who}, an automated assistant with ${name} — hope your day's going well.${purpose} Do you have a quick minute to chat?`;
+  return `Hi, this is ${who}, an automated assistant with ${name}.${purpose} Do you have a quick minute?`;
 }
 
 const toneInstruction: Record<ToneBand, string> = {
@@ -134,7 +170,14 @@ export function compileSystemPrompt(agent: Agent, tools: ToolDef[] = []): string
   const handoff = enabledTransferTool(tools)
     ? `If you are unsure or ${other} asks for a person, offer to transfer them to a teammate.`
     : `If you are unsure or ${other} asks for a person, take their name and number so a teammate can call them back.`;
-  return `You are ${who}, the ${agent.direction} voice assistant for ${name}.${purpose} ${toneInstruction[toneBand(agent.tone)]} ${handoff}`;
+  const language = languageOf(agent);
+  const languageInstruction =
+    language === "hi"
+      ? " Speak only in Hindi."
+      : language === "en-hi"
+        ? " Speak English by default, and switch fluently to Hindi whenever the other party uses Hindi."
+        : "";
+  return `You are ${who}, the ${agent.direction} voice assistant for ${name}.${purpose} ${toneInstruction[toneBand(agent.tone)]}${languageInstruction} ${handoff}`;
 }
 
 /** Re-write a still-generated system prompt after the agent's tools change. */
@@ -162,7 +205,7 @@ function swapIdentity(text: string, prev: Agent, next: Agent) {
   return out;
 }
 
-const identityKeys: (keyof Agent)[] = ["name", "businessName", "voice", "tone", "purpose", "direction"];
+const identityKeys: (keyof Agent)[] = ["name", "businessName", "voice", "tone", "purpose", "direction", "language"];
 
 /**
  * Apply an edit to an agent and keep the compiled greeting / system prompt in

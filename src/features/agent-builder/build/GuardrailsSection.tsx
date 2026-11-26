@@ -45,10 +45,13 @@ function lowerFirst(text: string) {
  * A saved rule as one plain sentence — the condition, then what the agent does:
  * "If the caller mentions swelling → Offer a same-day slot."
  */
-export function ruleSentence(rule: Pick<BusinessRule, "limitType" | "label" | "threshold" | "action">) {
+export function ruleSentence(
+  rule: Pick<BusinessRule, "limitType" | "label" | "threshold" | "priceFloor" | "action">,
+) {
   const label = rule.label.trim().replace(/[.!]+$/, "");
   const action = sentenceEnd(capitalize(rule.action));
   const threshold = rule.threshold?.trim();
+  const floor = rule.priceFloor?.trim();
   switch (rule.limitType) {
     case "forbidden_promise":
       return { condition: `${sentenceEnd(capitalize(label))} If it comes up`, action };
@@ -56,15 +59,21 @@ export function ruleSentence(rule: Pick<BusinessRule, "limitType" | "label" | "t
       const body = /^(if|when|whenever)\b/i.test(label) ? capitalize(label) : `If ${lowerFirst(label)}`;
       return { condition: threshold ? `${body} (${threshold})` : body, action };
     }
-    default:
+    default: {
+      const limitBits = [threshold, floor ? `never below ${floor} per item` : null].filter(Boolean).join(", ");
       return {
-        condition: threshold ? `${capitalize(label)}: ${sentenceEnd(threshold)} Within this limit` : capitalize(label),
+        condition: limitBits ? `${capitalize(label)}: ${sentenceEnd(limitBits)} Within this limit` : capitalize(label),
         action,
       };
+    }
   }
 }
 
-function RuleSentence({ rule }: { rule: Pick<BusinessRule, "limitType" | "label" | "threshold" | "action"> }) {
+function RuleSentence({
+  rule,
+}: {
+  rule: Pick<BusinessRule, "limitType" | "label" | "threshold" | "priceFloor" | "action">;
+}) {
   const { condition, action } = ruleSentence(rule);
   return (
     <>
@@ -155,30 +164,50 @@ function RuleForm({
   const id = useId();
   const [limitType, setLimitType] = useState<LimitType>(initial?.limitType ?? "forbidden_promise");
   const [threshold, setThreshold] = useState(initial?.threshold ?? "");
+  const [priceFloor, setPriceFloor] = useState(initial?.priceFloor ?? "");
   const [label, setLabel] = useState(initial?.label ?? "");
   const [action, setAction] = useState(initial?.action ?? "");
   const [submitted, setSubmitted] = useState(false);
 
   const limitNeeded = hasLimit(limitType);
+  const isDiscount = limitType === "discount_limit";
   const labelErr = submitted && !label.trim() ? "Describe the rule in a sentence." : null;
   const actionErr = submitted && !action.trim() ? "Say what the agent should do." : null;
-  const thresholdErr = submitted && limitNeeded && !threshold.trim() ? "Say what the limit is, e.g. up to 15% off." : null;
+  const thresholdErr =
+    submitted && limitNeeded
+      ? !threshold.trim()
+        ? "Say what the limit is, e.g. up to 15% off."
+        : !/\d/.test(threshold)
+          ? "Include a number, e.g. 20% or $25/mo."
+          : null
+      : null;
+  const floorErr =
+    submitted && isDiscount && priceFloor.trim() && !/\d/.test(priceFloor)
+      ? "Include a dollar amount, e.g. $45."
+      : null;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
-    if (!label.trim() || !action.trim() || (limitNeeded && !threshold.trim())) return;
+    if (
+      !label.trim() ||
+      !action.trim() ||
+      (limitNeeded && (!threshold.trim() || !/\d/.test(threshold))) ||
+      (isDiscount && priceFloor.trim() && !/\d/.test(priceFloor))
+    )
+      return;
     onSave({
       id: initial?.id ?? newId("rule"),
       limitType,
       label: label.trim(),
       threshold: threshold.trim() || undefined,
+      priceFloor: isDiscount ? priceFloor.trim() || undefined : undefined,
       action: action.trim(),
       enabled: initial?.enabled ?? true,
     });
   };
 
-  const preview = label.trim() && action.trim() ? { limitType, label, threshold, action } : null;
+  const preview = label.trim() && action.trim() ? { limitType, label, threshold, priceFloor, action } : null;
 
   return (
     <form
@@ -228,6 +257,23 @@ function RuleForm({
           <FieldError id={`${id}-threshold-err`}>{thresholdErr}</FieldError>
         </div>
       </div>
+      {isDiscount && (
+        <div>
+          <FieldLabel htmlFor={`${id}-floor`} hint="Optional — never discount below this, per item">
+            Price floor (per item)
+          </FieldLabel>
+          <Input
+            id={`${id}-floor`}
+            name="priceFloor"
+            value={priceFloor}
+            onChange={(e) => setPriceFloor(e.target.value)}
+            aria-invalid={!!floorErr || undefined}
+            aria-describedby={floorErr ? `${id}-floor-err` : undefined}
+            placeholder="e.g. $45"
+          />
+          <FieldError id={`${id}-floor-err`}>{floorErr}</FieldError>
+        </div>
+      )}
       <div>
         <FieldLabel htmlFor={`${id}-label`} required>
           {limitType === "escalation_trigger" ? "When this happens" : "In plain language"}
@@ -377,11 +423,12 @@ export function GuardrailsSection({
               className="overflow-x-auto rounded-md bg-ink-950 p-3 text-[12px] leading-relaxed text-paper-100"
             >
 {JSON.stringify(
-  businessRules.map(({ id, limitType, label, threshold, action, enabled }) => ({
+  businessRules.map(({ id, limitType, label, threshold, priceFloor, action, enabled }) => ({
     id,
     limitType,
     label,
     threshold: threshold ?? null,
+    priceFloor: priceFloor ?? null,
     action,
     enabled,
   })),

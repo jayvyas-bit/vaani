@@ -5,10 +5,15 @@ import { Switch } from "@/components/ui/Switch";
 import {
   contactCountLabel,
   contactListErrors,
+  DAY_KEYS,
+  dayHoursFor,
+  dayLabel,
   defaultDeployConfig,
   hoursErrors,
+  hoursSummary,
   WORKSPACE_CONTACT_LISTS,
   type ContactList,
+  type DayKey,
   type DeployConfig,
   type DncList,
 } from "@/lib/deploy";
@@ -109,6 +114,55 @@ function TimeRange({
   );
 }
 
+function DayHoursRow({
+  day,
+  config,
+  error,
+  onChange,
+}: {
+  day: DayKey;
+  config: DeployConfig;
+  error?: string;
+  onChange: (patch: { closed?: boolean; open?: string; close?: string }) => void;
+}) {
+  const id = useId();
+  const hours = dayHoursFor(config, day);
+  return (
+    <div className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 min-[480px]:flex-row min-[480px]:items-start min-[480px]:gap-4">
+      <div className="flex w-[120px] shrink-0 items-center gap-2 min-[480px]:pt-2">
+        <span className="text-[13px] font-medium text-ink-800">{dayLabel[day]}</span>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <label className="flex items-center gap-2 text-[12.5px] text-ink-600">
+          <input
+            type="checkbox"
+            checked={hours.closed}
+            onChange={(e) => onChange({ closed: e.target.checked })}
+            className="size-3.5 rounded border-ink-300"
+          />
+          Closed
+        </label>
+        {!hours.closed && (
+          <div>
+            <TimeRange
+              startLabel="Open"
+              endLabel="Close"
+              startName={`hoursByDay.${day}.open`}
+              endName={`hoursByDay.${day}.close`}
+              start={hours.open}
+              end={hours.close}
+              errors={{ start: error, end: error }}
+              onChange={({ start, end }) =>
+                onChange({ ...(start !== undefined && { open: start }), ...(end !== undefined && { close: end }) })
+              }
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function InboundCompliance({
   config,
   update,
@@ -119,21 +173,48 @@ function InboundCompliance({
   canBook: boolean;
 }) {
   const errors = hoursErrors(config, "inbound");
+  const setDayHours = (day: DayKey, patch: { closed?: boolean; open?: string; close?: string }) => {
+    const current = dayHoursFor(config, day);
+    update({
+      hoursByDay: {
+        ...config.hoursByDay,
+        [day]: { ...current, ...patch },
+      },
+    });
+  };
   return (
     <div className="divide-y divide-ink-950/8 rounded-lg border border-ink-950/10 bg-paper-0">
-      <SettingRow title="Business hours" hint="Mon–Fri · America/Los_Angeles">
-        <TimeRange
-          startLabel="Open"
-          endLabel="Close"
-          startName="hoursOpen"
-          endName="hoursClose"
-          start={config.hoursOpen}
-          end={config.hoursClose}
-          errors={errors}
-          onChange={({ start, end }) =>
-            update({ ...(start !== undefined && { hoursOpen: start }), ...(end !== undefined && { hoursClose: end }) })
-          }
-        />
+      <SettingRow
+        title="Business hours"
+        hint={hoursSummary(config)}
+        control={
+          <Switch
+            checked={!!config.customHoursByDay}
+            onChange={(customHoursByDay) => update({ customHoursByDay })}
+            label="Set different hours for each day"
+          />
+        }
+      >
+        {config.customHoursByDay ? (
+          <div className="divide-y divide-ink-950/8">
+            {DAY_KEYS.map((day) => (
+              <DayHoursRow key={day} day={day} config={config} error={errors.byDay?.[day]} onChange={(p) => setDayHours(day, p)} />
+            ))}
+          </div>
+        ) : (
+          <TimeRange
+            startLabel="Open"
+            endLabel="Close"
+            startName="hoursOpen"
+            endName="hoursClose"
+            start={config.hoursOpen}
+            end={config.hoursClose}
+            errors={errors}
+            onChange={({ start, end }) =>
+              update({ ...(start !== undefined && { hoursOpen: start }), ...(end !== undefined && { hoursClose: end }) })
+            }
+          />
+        )}
       </SettingRow>
       <SettingRow
         title="Answer after hours"
@@ -240,7 +321,7 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
         hint={
           <span className="flex items-center gap-1.5">
             <Icon name="shield" className="size-3.5 shrink-0 text-ink-400" />
-            Applied in each recipient's time zone; TCPA allows 8:00 AM – 9:00 PM.
+            Applied in each recipient's local time. Many regions restrict unsolicited calls outside 8:00 AM – 9:00 PM — check the rules where you're calling.
           </span>
         }
       >

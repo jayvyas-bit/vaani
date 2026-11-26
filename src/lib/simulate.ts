@@ -1,6 +1,6 @@
 import type { DeployConfig } from "./deploy";
 import { businessNameOf, toneBand, voiceFirstName } from "./persona";
-import { bookingTool, enabledTransferTool, workingTransferTool } from "./tools";
+import { bookingTool, enabledTransferTool, workingBookingTool, workingTransferTool } from "./tools";
 import type {
   Agent,
   BusinessRule,
@@ -95,7 +95,7 @@ const typeLabel: Record<LimitType, string> = {
 };
 
 function ruleTokens(r: BusinessRule) {
-  return tokens(`${r.label} ${r.threshold ?? ""} ${r.action}`);
+  return tokens(`${r.label} ${r.threshold ?? ""} ${r.priceFloor ?? ""} ${r.action}`);
 }
 
 /**
@@ -193,6 +193,10 @@ interface LimitCheck {
 function checkLimits(rule: BusinessRule, request: string): LimitCheck | undefined {
   if (rule.limitType !== "payment_plan_limit" && rule.limitType !== "discount_limit") return undefined;
   const limits = parseLimits(rule.threshold);
+  if (rule.limitType === "discount_limit" && rule.priceFloor) {
+    const floor = amountsIn(rule.priceFloor).find((a) => a.unit === "usd");
+    if (floor) limits.push({ unit: "usd", bound: "min", value: floor.value });
+  }
   const requested = amountsIn(request);
   if (limits.length === 0 || requested.length === 0) return undefined;
   const breaches = limits.filter((l) => {
@@ -208,6 +212,27 @@ function handlesOutOfLimit(action: string) {
   return /(beyond|over the|above|exceed|outside|otherwise|longer|more than|review|escalat|transfer|teammate|person|declin|refus|deny|counter)/i.test(
     action,
   );
+}
+
+/**
+ * A breach isn't only handled by the rule that defines the limit — a separate
+ * "Never do" or "Hand to a person" rule can cover the same scenario. Search
+ * every other enabled rule (any type) for one whose action actually handles
+ * an out-of-limit request and that's clearly about the same thing.
+ */
+function coveringRule(rules: BusinessRule[], primary: BusinessRule, text: string): BusinessRule | undefined {
+  const textTokens = tokens(text);
+  let best: BusinessRule | undefined;
+  let bestScore = 0;
+  for (const r of rules) {
+    if (r.id === primary.id || !r.enabled || !handlesOutOfLimit(r.action)) continue;
+    const score = overlap(textTokens, ruleTokens(r));
+    if (score > bestScore) {
+      best = r;
+      bestScore = score;
+    }
+  }
+  return best;
 }
 
 const promisesTransfer = (text: string) =>
@@ -266,6 +291,23 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
       const asked = check.requested.map((a) => describeAmount(a, perMonth)).join(" at ");
       const breach = check.breaches.map((l) => describeBreach(l, perMonth)).join(" and ");
       if (!handlesOutOfLimit(rule.action)) {
+        const backup = coveringRule(ctx.rules, rule, text);
+        if (backup) {
+          const backupAction = lowerFirst(stripPeriod(backup.action));
+          if (promisesTransfer(backup.action) && !workingTransferTool(ctx.tools)) {
+            const half = enabledTransferTool(ctx.tools);
+            return {
+              verdict: "fail",
+              reason: half
+                ? `“${backup.label}” says to ${backupAction}, but “${half.name}” has no destination set. Add one in Build → Tools.`
+                : `“${backup.label}” says to ${backupAction}, but call transfer isn't set up. Add it in Build → Tools.`,
+            };
+          }
+          return {
+            verdict: "pass",
+            reason: `${who} asks for ${asked}, which is ${breach} in “${rule.label}”. That rule alone doesn't say what happens next, but “${backup.label}” covers it: ${backupAction}.`,
+          };
+        }
         return {
           verdict: "fail",
           reason: `${who} asks for ${asked}, which is ${breach} in “${rule.label}”. That rule only says what to do inside its limits (${action}) — nothing tells the agent to decline or send this for review. Add that in Build → Guardrails.`,
@@ -317,6 +359,23 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
   // 3. Booking / rescheduling.
   if (has(text, /(book|reschedul|appointment|schedul|slot)/)) {
     const tool = bookingTool(ctx.tools);
+    const failureFramed = has(
+      text,
+      /(api (fail|failure|down|error|outage)|calendar (fail|failure|down|error|unavailable|outage)|system (is )?down|service (is )?(down|unavailable)|can'?t reach|not responding|500 error|times? ?out|timeout|outage|offline)/,
+    );
+    if (failureFramed) {
+      if (!tool) {
+        return {
+          verdict: "fail",
+          reason: "No booking or calendar tool is enabled, so there's no integration here to fail over in the first place.",
+        };
+      }
+      const connected = workingBookingTool(ctx.tools);
+      return {
+        verdict: "inconclusive",
+        reason: `“${tool.name}” is enabled, but ${connected ? "its calendar connection is simulated for testing" : "it isn't connected to a real calendar"} — this prototype has no live backend to actually fail, so a real API-failure path can't be verified from config alone. Test this with a real calendar integration before relying on it.`,
+      };
+    }
     return tool
       ? { verdict: "pass", reason: `“${tool.name}” is enabled and the prompt covers the flow.` }
       : { verdict: "fail", reason: "No booking or calendar tool is enabled, so the agent can't find or move appointments." };

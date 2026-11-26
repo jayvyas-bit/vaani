@@ -5,9 +5,9 @@ import { Icon } from "@/components/ui/Icon";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Slider } from "@/components/ui/Slider";
 import { Switch } from "@/components/ui/Switch";
-import { businessNameOf, cleanBusinessName, toneBand, toneBandLabel, voiceOptions } from "@/lib/persona";
+import { agentLanguageLabel, businessNameOf, cleanBusinessName, languageOf, toneBand, toneBandLabel, voiceOptions } from "@/lib/persona";
 import { llmOptions, sttOptions, ttsOptions } from "@/lib/providers";
-import type { Agent, SafetyToggle } from "@/lib/types";
+import type { Agent, AgentLanguage, SafetyToggle } from "@/lib/types";
 
 function withCurrent(options: string[], current: string) {
   return options.includes(current) ? options : [current, ...options];
@@ -16,10 +16,13 @@ function withCurrent(options: string[], current: string) {
 function CompiledNote({
   custom,
   what,
+  fromPurpose = true,
   onRegenerate,
 }: {
   custom?: boolean;
   what: string;
+  /** False where the compiled text genuinely doesn't draw on the purpose field. */
+  fromPurpose?: boolean;
   onRegenerate: () => void;
 }) {
   return (
@@ -27,7 +30,7 @@ function CompiledNote({
       <span>
         {custom
           ? `Edited by hand — business name and voice changes are swapped in, tone won't rewrite it.`
-          : `Written from the business name, voice, tone and purpose. Edit to customize.`}
+          : `Written from the business name, voice, tone${fromPurpose ? " and purpose" : ""}. Edit to customize.`}
       </span>
       {custom && (
         <button
@@ -143,6 +146,27 @@ export function PersonaSection({
 
             <div>
               <FieldLabel
+                htmlFor={`${id}-language`}
+                hint="Changes this agent's instructions — doesn't verify that its voice, speech-to-text or text-to-speech provider actually supports Hindi"
+              >
+                Language
+              </FieldLabel>
+              <Select
+                id={`${id}-language`}
+                name="language"
+                value={languageOf(agent)}
+                onChange={(e) => onChange({ language: e.target.value as AgentLanguage })}
+              >
+                {(Object.entries(agentLanguageLabel) as [AgentLanguage, string][]).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div>
+              <FieldLabel
                 htmlFor={`${id}-business`}
                 hint="Only you see the agent name"
               >
@@ -175,6 +199,7 @@ export function PersonaSection({
               <CompiledNote
                 custom={agent.greetingCustom}
                 what={lineName}
+                fromPurpose={outbound}
                 onRegenerate={() => onChange({ greetingCustom: false })}
               />
             </div>

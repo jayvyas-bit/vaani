@@ -71,14 +71,14 @@ export function DeployWizardLayout({
       <BuilderNav agent={agent} active="deploy" onNavigate={onNavigate} onBack={onExit} />
       {!hideStepper && (
         <div className="border-b border-ink-950/10 bg-paper-50 px-4 py-2.5 sm:px-6">
-          <div className="mx-auto flex w-full max-w-[640px] justify-center">
+          <div className="mx-auto flex w-full max-w-[640px] lg:max-w-[760px] xl:max-w-[880px] justify-center">
             <Stepper steps={deployStepsFor(agent.direction)} activeId={activeId} completedIds={completedIds} compact />
           </div>
         </div>
       )}
       <div className="relative flex-1 overflow-hidden">
         <div ref={scrollRef} className="h-full overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
-          <div className="mx-auto w-full max-w-[640px]">
+          <div className="mx-auto w-full max-w-[640px] lg:max-w-[760px] xl:max-w-[880px]">
             <div key={activeId} className="animate-step-in">
               {children}
             </div>

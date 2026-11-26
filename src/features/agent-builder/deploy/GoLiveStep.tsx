@@ -8,13 +8,15 @@ import {
   dncLabel,
   effectivePerMinRate,
   formatTime,
+  hoursSummary,
   monthlyCost as costOf,
   numberSourceNote,
   resolvedNumber,
   type DeployConfig,
 } from "@/lib/deploy";
-import { formatUsd } from "@/lib/format";
-import type { Agent, KnowledgeSource, Scenario } from "@/lib/types";
+import { formatMoney, type DisplayCurrency } from "@/lib/format";
+import { bookingTool, enabledTransferTool, workingBookingTool, workingTransferTool } from "@/lib/tools";
+import type { Agent, BusinessRule, KnowledgeSource, Scenario, ToolDef } from "@/lib/types";
 
 export function GoLiveStep({
   agent,
@@ -23,9 +25,13 @@ export function GoLiveStep({
   monthlyCost,
   scenarios,
   knowledge,
+  businessRules,
+  tools,
   onGoLive,
   onReviewTests,
   onReviewKnowledge,
+  onReviewGuardrails,
+  onReviewTools,
 }: {
   agent: Agent;
   live?: boolean;
@@ -34,15 +40,20 @@ export function GoLiveStep({
   monthlyCost?: number;
   scenarios?: Scenario[];
   knowledge?: KnowledgeSource[];
+  businessRules?: BusinessRule[];
+  tools?: ToolDef[];
   onGoLive?: () => void;
   onReviewTests?: () => void;
   onReviewKnowledge?: () => void;
+  onReviewGuardrails?: () => void;
+  onReviewTools?: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   const config = configProp ?? defaultDeployConfig(agent.direction, agent.phoneNumber);
   const number = live ? agent.phoneNumber : resolvedNumber(config, agent.phoneNumber);
   const cost = configProp ? costOf(config, agent) : (monthlyCost ?? costOf(config, agent));
   const rate = effectivePerMinRate(agent);
+  const currency: DisplayCurrency = config.displayCurrency ?? "USD";
 
   const total = scenarios?.length ?? 0;
   const passing = scenarios?.filter((s) => s.verdict === "pass").length ?? 0;
@@ -59,9 +70,7 @@ export function GoLiveStep({
 
   const hoursValue =
     agent.direction === "inbound"
-      ? `Mon–Fri ${formatTime(config.hoursOpen)} – ${formatTime(config.hoursClose)} · ${
-          config.afterHours ? "after-hours calls answered" : "after hours to voicemail"
-        }`
+      ? `${hoursSummary(config)} · ${config.afterHours ? "after-hours calls answered" : "after hours to voicemail"}`
       : `${formatTime(config.windowStart)} – ${formatTime(config.windowEnd)} recipient time · ${dncLabel[config.dncList]} · voicemail detection ${
           config.voicemailDetect ? "on" : "off"
         }`;
@@ -75,10 +84,10 @@ export function GoLiveStep({
     { label: agent.direction === "inbound" ? "Hours" : "Calling rules", value: hoursValue },
     {
       label: "Est. monthly cost",
-      value: `≈ ${formatUsd(cost)} / month (${config.callsPerMonth.toLocaleString()} calls × ${config.avgMinutes.toFixed(1)} min at ${formatUsd(rate, { cents: true })}/min)`,
+      value: `${currency === "USD" ? "≈ " : ""}${formatMoney(cost, currency)} / month (${config.callsPerMonth.toLocaleString()} calls × ${config.avgMinutes.toFixed(1)} min at ${formatMoney(rate, currency, { cents: true })}/min)`,
     },
     ...(config.monthlyBudget !== undefined
-      ? [{ label: "Monthly budget", value: formatUsd(config.monthlyBudget) }]
+      ? [{ label: "Monthly budget", value: formatMoney(config.monthlyBudget, currency) }]
       : []),
     ...(scenarios
       ? [
@@ -93,6 +102,17 @@ export function GoLiveStep({
           {
             label: "Knowledge",
             value: attachedKnowledge === 0 ? "No sources attached" : `${attachedKnowledge} source${attachedKnowledge === 1 ? "" : "s"} attached`,
+          },
+        ]
+      : []),
+    ...(businessRules !== undefined
+      ? [
+          {
+            label: "Business rules",
+            value:
+              businessRules.length === 0
+                ? "None set"
+                : `${businessRules.length} rule${businessRules.length === 1 ? "" : "s"} set`,
           },
         ]
       : []),
@@ -154,12 +174,40 @@ export function GoLiveStep({
       action: onReviewKnowledge ? { label: "Add knowledge", onClick: onReviewKnowledge } : undefined,
     });
   }
+  if (businessRules !== undefined && businessRules.length === 0) {
+    issues.push({
+      key: "rules",
+      title: "No business rules are set.",
+      detail: "This agent only follows its persona, with nothing stopping it from promising a discount, refund, or anything else on a call.",
+      action: onReviewGuardrails ? { label: "Add a rule", onClick: onReviewGuardrails } : undefined,
+    });
+  }
   if (config.monthlyBudget !== undefined && cost > config.monthlyBudget) {
     issues.push({
       key: "budget",
-      title: `Projected cost exceeds your ${formatUsd(config.monthlyBudget)} monthly budget.`,
-      detail: `At this volume, ${agent.name} is projected to cost ${formatUsd(cost)}/month — ${formatUsd(cost - config.monthlyBudget)} over.`,
+      title: `Projected cost exceeds your ${formatMoney(config.monthlyBudget, currency)} monthly budget.`,
+      detail: `At this volume, ${agent.name} is projected to cost ${formatMoney(cost, currency)}/month — ${formatMoney(cost - config.monthlyBudget, currency)} over.`,
     });
+  }
+  if (tools !== undefined) {
+    const transfer = enabledTransferTool(tools);
+    if (transfer && !workingTransferTool(tools)) {
+      issues.push({
+        key: "transfer",
+        title: `"${transfer.name}" is enabled but has no destination set.`,
+        detail: "This agent will offer to transfer the call, then have nowhere to send it.",
+        action: onReviewTools ? { label: "Set destination", onClick: onReviewTools } : undefined,
+      });
+    }
+    const booking = bookingTool(tools);
+    if (booking && !workingBookingTool(tools)) {
+      issues.push({
+        key: "booking",
+        title: `"${booking.name}" is enabled but no calendar is connected.`,
+        detail: "A provider is configured, but without a connected calendar this agent can't actually book or move appointments.",
+        action: onReviewTools ? { label: "Connect calendar", onClick: onReviewTools } : undefined,
+      });
+    }
   }
   const needsConfirm = issues.length > 0;
 

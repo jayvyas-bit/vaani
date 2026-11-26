@@ -1,6 +1,6 @@
-import { useId, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useId, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/Button";
-import { FieldError, Input } from "@/components/ui/Field";
+import { FieldError, FieldLabel, Input, Textarea } from "@/components/ui/Field";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { RadioCard } from "@/components/ui/RadioCard";
 import { SectionCard } from "@/components/ui/SectionCard";
@@ -88,6 +88,10 @@ export function KnowledgeSection({
   const fileRef = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [addingText, setAddingText] = useState(false);
+  const [textTitle, setTextTitle] = useState("");
+  const [textBody, setTextBody] = useState("");
+  const [textSubmitted, setTextSubmitted] = useState(false);
 
   const addUrl = () => {
     const normalized = normalizeUrl(url);
@@ -112,6 +116,29 @@ export function KnowledgeSection({
       e.preventDefault();
       addUrl();
     }
+  };
+
+  const textTitleErr = textSubmitted && !textTitle.trim() ? "Give it a short title." : null;
+  const textBodyErr = textSubmitted && !textBody.trim() ? "Paste the text this agent should know." : null;
+
+  const submitText = (e: FormEvent) => {
+    e.preventDefault();
+    setTextSubmitted(true);
+    if (!textTitle.trim() || !textBody.trim()) return;
+    onSourcesChange([
+      ...sources,
+      {
+        id: newId("kb"),
+        name: textTitle.trim(),
+        kind: "text",
+        sizeLabel: formatBytes(new Blob([textBody]).size),
+        attached: true,
+      },
+    ]);
+    setTextTitle("");
+    setTextBody("");
+    setTextSubmitted(false);
+    setAddingText(false);
   };
 
   const onFiles = (e: ChangeEvent<HTMLInputElement>) => {
@@ -191,7 +218,75 @@ export function KnowledgeSection({
                 <Icon name="file" className="size-4" />
                 Upload PDF
               </Button>
+              <Button
+                variant="secondary"
+                className="gap-1.5"
+                onClick={() => setAddingText((v) => !v)}
+                aria-expanded={addingText}
+              >
+                <Icon name="plus" className="size-4" />
+                Add text
+              </Button>
             </div>
+            {addingText && (
+              <form
+                onSubmit={submitText}
+                noValidate
+                aria-label="Add a text knowledge source"
+                className="mt-3 flex flex-col gap-3 rounded-lg border border-ink-950/10 bg-paper-50 p-4"
+              >
+                <div>
+                  <FieldLabel htmlFor={`${id}-text-title`} required>
+                    Title
+                  </FieldLabel>
+                  <Input
+                    id={`${id}-text-title`}
+                    name="knowledgeTextTitle"
+                    autoFocus
+                    value={textTitle}
+                    onChange={(e) => setTextTitle(e.target.value)}
+                    aria-invalid={!!textTitleErr || undefined}
+                    aria-describedby={textTitleErr ? `${id}-text-title-err` : undefined}
+                    placeholder="e.g. Office hours & holiday schedule"
+                  />
+                  <FieldError id={`${id}-text-title-err`}>{textTitleErr}</FieldError>
+                </div>
+                <div>
+                  <FieldLabel htmlFor={`${id}-text-body`} required>
+                    Text
+                  </FieldLabel>
+                  <Textarea
+                    id={`${id}-text-body`}
+                    name="knowledgeTextBody"
+                    rows={5}
+                    value={textBody}
+                    onChange={(e) => setTextBody(e.target.value)}
+                    aria-invalid={!!textBodyErr || undefined}
+                    aria-describedby={textBodyErr ? `${id}-text-body-err` : undefined}
+                    placeholder="Paste hours, prices, policies, or anything else this agent should know…"
+                  />
+                  <FieldError id={`${id}-text-body-err`}>{textBodyErr}</FieldError>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setAddingText(false);
+                      setTextTitle("");
+                      setTextBody("");
+                      setTextSubmitted(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="sm">
+                    Save text
+                  </Button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       }

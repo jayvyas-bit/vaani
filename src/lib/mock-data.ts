@@ -2,6 +2,7 @@ import type {
   Agent,
   BusinessRule,
   KnowledgeSource,
+  OutcomeField,
   SafetyToggle,
   Scenario,
   ToolDef,
@@ -143,7 +144,15 @@ export const clinicKnowledge: KnowledgeSource[] = [
 ];
 
 export const clinicTools: ToolDef[] = [
-  { id: "tool_1", name: "Book / reschedule appointment", description: "Reads and writes the practice's scheduling calendar.", kind: "builtin", enabled: true },
+  {
+    id: "tool_1",
+    name: "Book / reschedule appointment",
+    description: "Reads and writes the practice's scheduling calendar.",
+    kind: "builtin",
+    enabled: true,
+    calendarProvider: "google",
+    calendarConnected: false,
+  },
   {
     id: "tool_2",
     name: "Transfer call",
@@ -154,6 +163,19 @@ export const clinicTools: ToolDef[] = [
   },
   { id: "tool_3", name: "Send text confirmation", description: "Texts the caller their appointment details after booking.", kind: "builtin", enabled: true },
   { id: "tool_4", name: "Verify insurance eligibility", description: "Custom webhook into the practice's insurance clearinghouse.", kind: "custom", enabled: true },
+];
+
+export const clinicOutcomes: OutcomeField[] = [
+  {
+    id: "outcome_1",
+    label: "Appointment status",
+    type: "enum",
+    options: ["Booked", "Rescheduled", "Not booked"],
+    required: true,
+  },
+  { id: "outcome_2", label: "Service requested", type: "text", required: true },
+  { id: "outcome_3", label: "Callback needed", type: "boolean", required: false },
+  { id: "outcome_4", label: "Escalated to a teammate", type: "boolean", required: false },
 ];
 
 export const scenarioPool: Scenario[] = [
@@ -224,6 +246,17 @@ export const collectionsTools: ToolDef[] = [
     destination: "(503) 555-0177 — collections team",
   },
   { id: "tool_c4", name: "Add to do-not-call list", description: "Immediately suppresses the number for all future outbound campaigns.", kind: "builtin", enabled: true },
+];
+
+export const collectionsOutcomes: OutcomeField[] = [
+  {
+    id: "outcome_c1",
+    label: "Call outcome",
+    type: "enum",
+    options: ["Plan agreed", "Refused", "Disputed", "No answer"],
+    required: true,
+  },
+  { id: "outcome_c2", label: "Callback requested", type: "boolean", required: false },
 ];
 
 export const collectionsScenarios: Scenario[] = [

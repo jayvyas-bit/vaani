@@ -15,7 +15,21 @@ export function workingTransferTool(tools: ToolDef[]) {
   return tools.find((t) => t.enabled && isTransferTool(t) && !!t.destination?.trim());
 }
 
+/**
+ * Is this a booking/scheduling tool? Matches on the NAME only — other tools
+ * (e.g. "Send text confirmation") often mention "appointment" or "booking"
+ * in their description without being a calendar tool themselves.
+ */
+export function isBookingTool(tool: Pick<ToolDef, "name">) {
+  return /(book|schedul|appointment|calendar)/i.test(tool.name);
+}
+
 /** An enabled tool that can book or move appointments. */
 export function bookingTool(tools: ToolDef[]) {
-  return tools.find((t) => t.enabled && /(book|schedul|appointment|calendar)/i.test(`${t.name} ${t.description}`));
+  return tools.find((t) => t.enabled && isBookingTool(t));
+}
+
+/** An enabled booking tool with an actual calendar connected, not just a provider picked. */
+export function workingBookingTool(tools: ToolDef[]) {
+  return tools.find((t) => t.enabled && isBookingTool(t) && t.calendarConnected);
 }

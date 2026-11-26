@@ -1,8 +1,27 @@
+import type { DisplayCurrency } from "./format";
 import { llmOptions, llmRateMultiplier, sttOptions, sttRateMultiplier, ttsOptions, ttsRateMultiplier } from "./providers";
 import type { Agent, CallDirection } from "./types";
 
 export type NumberMethod = "keep" | "new" | "port" | "pool";
 export type DncList = "internal" | "federal" | "both";
+
+export type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+export const DAY_KEYS: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+export const dayLabel: Record<DayKey, string> = {
+  mon: "Mon",
+  tue: "Tue",
+  wed: "Wed",
+  thu: "Thu",
+  fri: "Fri",
+  sat: "Sat",
+  sun: "Sun",
+};
+
+export interface DayHours {
+  closed: boolean;
+  open: string; // "HH:MM" 24h
+  close: string;
+}
 
 /** Everything the Deploy wizard collects, held per agent in App state. */
 export interface DeployConfig {
@@ -16,6 +35,10 @@ export interface DeployConfig {
   hoursOpen: string; // "HH:MM" 24h
   hoursClose: string;
   afterHours: boolean;
+  /** Inbound only: set different hours (or closed) per day instead of one window every day. */
+  customHoursByDay?: boolean;
+  /** Inbound only: per-day overrides used when `customHoursByDay` is on. A day missing here falls back to hoursOpen/hoursClose. */
+  hoursByDay?: Partial<Record<DayKey, DayHours>>;
   // Outbound
   windowStart: string;
   windowEnd: string;
@@ -29,6 +52,14 @@ export interface DeployConfig {
   avgMinutes: number;
   /** Optional monthly spend ceiling — Cost estimate and Go live warn when the projection exceeds it. */
   monthlyBudget?: number;
+  /** Display-only currency for cost figures. Billing math always runs in USD — this never changes it. */
+  displayCurrency?: DisplayCurrency;
+}
+
+/** The hours that actually apply on a given day, honoring `customHoursByDay` when set. */
+export function dayHoursFor(config: DeployConfig, day: DayKey): DayHours {
+  if (config.customHoursByDay && config.hoursByDay?.[day]) return config.hoursByDay[day]!;
+  return { closed: false, open: config.hoursOpen, close: config.hoursClose };
 }
 
 /**
@@ -114,6 +145,7 @@ export function defaultDeployConfig(direction: CallDirection, currentNumber?: st
     contactCount: 0,
     callsPerMonth: direction === "inbound" ? 900 : 1800,
     avgMinutes: direction === "inbound" ? 2.4 : 3.1,
+    displayCurrency: "USD",
   };
 }
 
@@ -241,12 +273,48 @@ export function formatTime(value: string): string {
   return `${h12}:${String(m).padStart(2, "0")} ${h24 < 12 ? "AM" : "PM"}`;
 }
 
+/** "Mon–Fri 9:00 AM–6:00 PM, Sat 9:00 AM–2:00 PM, closed Sun" — groups consecutive days sharing the same hours. */
+export function hoursSummary(config: DeployConfig): string {
+  if (!config.customHoursByDay) {
+    return `${formatTime(config.hoursOpen)} – ${formatTime(config.hoursClose)}, every day`;
+  }
+  const groups: { label: string; days: DayKey[] }[] = [];
+  for (const day of DAY_KEYS) {
+    const h = dayHoursFor(config, day);
+    const label = h.closed ? "Closed" : `${formatTime(h.open)}–${formatTime(h.close)}`;
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.days.push(day);
+    else groups.push({ label, days: [day] });
+  }
+  return groups
+    .map((g) => {
+      const dayRange =
+        g.days.length > 1 ? `${dayLabel[g.days[0]]}–${dayLabel[g.days[g.days.length - 1]]}` : dayLabel[g.days[0]];
+      return g.label === "Closed" ? `closed ${dayRange}` : `${dayRange} ${g.label}`;
+    })
+    .join(", ");
+}
+
 export interface HoursErrors {
   start?: string;
   end?: string;
+  /** Inbound custom-by-day mode only: one message per day that fails validation. */
+  byDay?: Partial<Record<DayKey, string>>;
 }
 
 export function hoursErrors(config: DeployConfig, direction: CallDirection): HoursErrors {
+  if (direction === "inbound" && config.customHoursByDay) {
+    const byDay: Partial<Record<DayKey, string>> = {};
+    for (const day of DAY_KEYS) {
+      const h = config.hoursByDay?.[day];
+      if (!h || h.closed) continue;
+      const start = parseTime(h.open);
+      const end = parseTime(h.close);
+      if (start === null || end === null) byDay[day] = "Enter a valid time.";
+      else if (end <= start) byDay[day] = "Closing time must be after opening time.";
+    }
+    return Object.keys(byDay).length > 0 ? { byDay } : {};
+  }
   const [startRaw, endRaw] =
     direction === "inbound" ? [config.hoursOpen, config.hoursClose] : [config.windowStart, config.windowEnd];
   const start = parseTime(startRaw);
@@ -256,11 +324,6 @@ export function hoursErrors(config: DeployConfig, direction: CallDirection): Hou
   if (end === null) errors.end = "Enter a valid time.";
   if (start !== null && end !== null && end <= start)
     errors.end = direction === "inbound" ? "Closing time must be after opening time." : "Latest must be after earliest.";
-  if (direction === "outbound") {
-    // TCPA: no calls before 8am or after 9pm in the recipient's local time.
-    if (start !== null && start < 8 * 60) errors.start = "TCPA doesn't allow calls before 8:00 AM.";
-    if (end !== null && end > 21 * 60) errors.end = "TCPA doesn't allow calls after 9:00 PM.";
-  }
   return errors;
 }
 
@@ -339,4 +402,36 @@ export function suggestCheaperProviders(
     monthlySavings: currentCost - runningCost,
     stillOverBudget: runningCost > budget,
   };
+}
+
+const MIN_CALLS_PER_MONTH = 100;
+const CALLS_STEP = 50;
+
+export interface VolumeSuggestion {
+  newCallsPerMonth: number;
+  newMonthlyCost: number;
+  /** True if even the minimum call volume this app allows still exceeds budget. */
+  stillOverBudget: boolean;
+}
+
+/**
+ * The alternative lever to swapping providers: how far call volume would have
+ * to drop, at the current providers, to fit the budget. Never auto-applies.
+ */
+export function suggestLowerVolume(
+  config: Pick<DeployConfig, "callsPerMonth" | "avgMinutes">,
+  providers: ProviderSelection | undefined,
+  budget: number,
+): VolumeSuggestion | undefined {
+  const costPerCall = config.avgMinutes * effectivePerMinRate(providers);
+  if (costPerCall <= 0) return undefined;
+  const currentCost = config.callsPerMonth * costPerCall;
+  if (currentCost <= budget) return undefined;
+
+  const maxAffordable = Math.floor(budget / costPerCall / CALLS_STEP) * CALLS_STEP;
+  const newCallsPerMonth = Math.max(MIN_CALLS_PER_MONTH, maxAffordable);
+  if (newCallsPerMonth >= config.callsPerMonth) return undefined;
+
+  const newMonthlyCost = newCallsPerMonth * costPerCall;
+  return { newCallsPerMonth, newMonthlyCost, stillOverBudget: newMonthlyCost > budget };
 }

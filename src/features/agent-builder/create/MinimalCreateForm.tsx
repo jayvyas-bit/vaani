@@ -117,7 +117,7 @@ export function MinimalCreateForm({
         </div>
 
         <fieldset>
-          <legend className="mb-1.5 text-sm font-medium text-gray-700">
+          <legend className="mb-1.5 text-sm font-medium text-ink-700">
             Call direction<span className="ml-0.5 text-brand-600">*</span>
           </legend>
           <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2">

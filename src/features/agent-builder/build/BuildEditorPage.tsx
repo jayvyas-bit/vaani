@@ -8,16 +8,18 @@ import type {
   BusinessRule,
   KnowledgeSettings,
   KnowledgeSource,
+  OutcomeField,
   SafetyToggle,
   ToolDef,
 } from "@/lib/types";
 import { useControllable } from "@/lib/useControllable";
 import { GuardrailsSection } from "./GuardrailsSection";
 import { defaultKnowledgeSettings, KnowledgeSection } from "./KnowledgeSection";
+import { OutcomesSection } from "./OutcomesSection";
 import { PersonaSection } from "./PersonaSection";
 import { ToolsSection } from "./ToolsSection";
 
-export type BuildTab = "persona" | "guardrails" | "knowledge" | "tools";
+export type BuildTab = "persona" | "guardrails" | "knowledge" | "tools" | "outcomes";
 
 const tabs: TabItem[] = [
   {
@@ -44,6 +46,12 @@ const tabs: TabItem[] = [
     icon: <Icon name="wrench" className="size-4" />,
     description: "Actions it can take during a call, like booking or transferring.",
   },
+  {
+    id: "outcomes",
+    label: "Outcomes",
+    icon: <Icon name="check" className="size-4" />,
+    description: "What it must capture or report by the end of a call.",
+  },
 ];
 
 /**
@@ -57,6 +65,7 @@ export function BuildEditorPage({
   businessRules,
   knowledge,
   tools,
+  outcomes = [],
   knowledgeSettings = defaultKnowledgeSettings,
   initialTab = "persona",
   defaultAdvanced = false,
@@ -66,6 +75,7 @@ export function BuildEditorPage({
   onKnowledgeChange,
   onKnowledgeSettingsChange,
   onToolsChange,
+  onOutcomesChange,
   onNavigate,
   onBack,
 }: {
@@ -74,6 +84,7 @@ export function BuildEditorPage({
   businessRules: BusinessRule[];
   knowledge: KnowledgeSource[];
   tools: ToolDef[];
+  outcomes?: OutcomeField[];
   knowledgeSettings?: KnowledgeSettings;
   initialTab?: BuildTab;
   defaultAdvanced?: boolean;
@@ -83,6 +94,7 @@ export function BuildEditorPage({
   onKnowledgeChange?: (next: KnowledgeSource[]) => void;
   onKnowledgeSettingsChange?: (next: KnowledgeSettings) => void;
   onToolsChange?: (next: ToolDef[]) => void;
+  onOutcomesChange?: (next: OutcomeField[]) => void;
   onNavigate?: (section: PrimarySection) => void;
   onBack?: () => void;
 }) {
@@ -98,6 +110,7 @@ export function BuildEditorPage({
   const [sources, setSources] = useControllable(knowledge, onKnowledgeChange);
   const [kbSettings, setKbSettings] = useControllable(knowledgeSettings, onKnowledgeSettingsChange);
   const [toolList, setTools] = useControllable(tools, onToolsChange);
+  const [outcomeList, setOutcomes] = useControllable(outcomes, onOutcomesChange);
   const humor = safetyState.find((s) => s.id === HUMOR_TOGGLE_ID);
 
   return (
@@ -124,14 +137,14 @@ export function BuildEditorPage({
         </div>
       )}
       <div className="border-b border-ink-950/10 bg-paper-0 px-4 sm:px-6">
-        <div className="mx-auto w-full max-w-[720px]">
+        <div className="mx-auto w-full max-w-[720px] lg:max-w-[880px] xl:max-w-[1040px]">
           <Tabs items={tabs} active={tab} onChange={(id) => setTab(id as BuildTab)} />
         </div>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
         <div
           key={tab}
-          className="animate-step-in mx-auto w-full max-w-[720px]"
+          className="animate-step-in mx-auto w-full max-w-[720px] lg:max-w-[880px] xl:max-w-[1040px]"
           role="tabpanel"
           aria-label={tabs.find((t) => t.id === tab)?.label}
         >
@@ -166,6 +179,9 @@ export function BuildEditorPage({
           )}
           {tab === "tools" && (
             <ToolsSection tools={toolList} onToolsChange={setTools} defaultAdvanced={defaultAdvanced} />
+          )}
+          {tab === "outcomes" && (
+            <OutcomesSection outcomes={outcomeList} onOutcomesChange={setOutcomes} defaultAdvanced={defaultAdvanced} />
           )}
         </div>
       </div>

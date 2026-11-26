@@ -1,10 +1,17 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { FieldLabel, Input } from "@/components/ui/Field";
+import { FieldLabel, Input, Select } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { Slider } from "@/components/ui/Slider";
-import { costBreakdown, defaultDeployConfig, effectivePerMinRate, suggestCheaperProviders, type DeployConfig } from "@/lib/deploy";
-import { formatUsd } from "@/lib/format";
+import {
+  costBreakdown,
+  defaultDeployConfig,
+  effectivePerMinRate,
+  suggestCheaperProviders,
+  suggestLowerVolume,
+  type DeployConfig,
+} from "@/lib/deploy";
+import { displayCurrencyLabel, formatMoney, type DisplayCurrency } from "@/lib/format";
 import { llmTradeoff, sttTradeoff, ttsTradeoff } from "@/lib/providers";
 import type { Agent, CallDirection } from "@/lib/types";
 import { useControllable } from "@/lib/useControllable";
@@ -42,6 +49,8 @@ export function CostEstimateStep({
   const { callsPerMonth, avgMinutes } = config;
   const setCallsPerMonth = (v: number) => setConfig({ ...config, callsPerMonth: v });
   const setAvgMinutes = (v: number) => setConfig({ ...config, avgMinutes: v });
+  const currency: DisplayCurrency = config.displayCurrency ?? "USD";
+  const setCurrency = (v: DisplayCurrency) => setConfig({ ...config, displayCurrency: v });
   const [acknowledged, setAcknowledged] = useState(acknowledgedProp ?? false);
 
   const rate = effectivePerMinRate(providers);
@@ -63,31 +72,64 @@ export function CostEstimateStep({
     () => (overBudget && providers ? suggestCheaperProviders(config, providers, budget ?? 0) : undefined),
     [overBudget, providers, config, budget],
   );
+  const volumeSuggestion = useMemo(
+    () => (overBudget ? suggestLowerVolume(config, providers, budget ?? 0) : undefined),
+    [overBudget, config, providers, budget],
+  );
 
   const applySuggestion = () => {
     if (!suggestion || !onApplyProviders) return;
     onApplyProviders(Object.fromEntries(suggestion.swaps.map((s) => [s.field, s.to])));
   };
 
+  const applyVolumeSuggestion = () => {
+    if (!volumeSuggestion) return;
+    setCallsPerMonth(volumeSuggestion.newCallsPerMonth);
+  };
+
   return (
     <div className="flex flex-col gap-7">
-      <div>
-        <h1 className="text-[20px] font-semibold text-ink-950">Cost estimate</h1>
-        <p className="mt-1 text-[14px] text-ink-600">
-          Set your expected volume to see what this agent will cost to run.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[20px] font-semibold text-ink-950">Cost estimate</h1>
+          <p className="mt-1 text-[14px] text-ink-600">
+            Set your expected volume to see what this agent will cost to run.
+          </p>
+        </div>
+        <div className="shrink-0">
+          <FieldLabel htmlFor={`${id}-currency`}>Display currency</FieldLabel>
+          <Select
+            id={`${id}-currency`}
+            name="displayCurrency"
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value as DisplayCurrency)}
+            className="min-w-[180px]"
+          >
+            {Object.entries(displayCurrencyLabel).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </div>
       </div>
 
       <div className="rounded-lg border border-ink-950/10 bg-paper-0 p-5">
         <p className="text-[12.5px] font-medium text-ink-500">Projected monthly cost</p>
         <p className="mt-1 text-[32px] leading-none font-semibold tabular-nums text-ink-950">
-          {formatUsd(monthlyCost)}
+          {formatMoney(monthlyCost, currency)}
           <span className="ml-1 text-[14px] font-normal text-ink-500">/ month</span>
         </p>
         <p className="mt-2 text-[13px] tabular-nums text-ink-500">
-          {Math.round(monthlyMinutes).toLocaleString()} call minutes × {formatUsd(rate, { cents: true })} per minute
+          {Math.round(monthlyMinutes).toLocaleString()} call minutes × {formatMoney(rate, currency, { cents: true })} per minute
           at your chosen AI providers
         </p>
+        {currency !== "USD" && (
+          <p className="mt-1 text-[11.5px] text-ink-400">
+            Illustrative conversion at a fixed rate for display only — you're billed in USD, and this is not a live or
+            verified exchange rate.
+          </p>
+        )}
 
         <div className="mt-5 flex flex-col gap-4 border-t border-ink-950/10 pt-4">
           <div>
@@ -137,13 +179,20 @@ export function CostEstimateStep({
           {breakdown.map((b) => (
             <div key={b.label} className="flex items-center justify-between gap-3">
               <dt className="text-ink-500">{b.label}</dt>
-              <dd className="tabular-nums text-ink-700">{formatUsd(b.amount)}</dd>
+              <dd className="tabular-nums text-ink-700">{formatMoney(b.amount, currency)}</dd>
             </div>
           ))}
         </dl>
 
         <div className="mt-5 border-t border-ink-950/10 pt-4">
-          <FieldLabel htmlFor={`${id}-budget`} hint="Optional — we'll warn you before going live if you're projected to exceed it">
+          <FieldLabel
+            htmlFor={`${id}-budget`}
+            hint={
+              currency === "USD"
+                ? "Optional — we'll warn you before going live if you're projected to exceed it"
+                : "Optional, entered in USD — we'll warn you before going live if you're projected to exceed it"
+            }
+          >
             Monthly budget
           </FieldLabel>
           <div className="flex items-center gap-2">
@@ -166,13 +215,13 @@ export function CostEstimateStep({
             <>
               <p className="mt-2 flex items-start gap-1.5 text-[12.5px] font-medium text-error-600">
                 <Icon name="alert" className="mt-0.5 size-3.5 shrink-0" />
-                Projected to run {formatUsd(monthlyCost - (budget ?? 0))} over this budget at the volume set above.
+                Projected to run {formatMoney(monthlyCost - (budget ?? 0), currency)} over this budget at the volume set above.
               </p>
 
               {suggestion && (
                 <div className="mt-3 rounded-lg border border-ink-950/10 bg-paper-50 p-4">
                   <p className="text-[12.5px] font-medium text-ink-800">
-                    Switch to lower-cost providers to save {formatUsd(suggestion.monthlySavings)}/mo
+                    Switch to lower-cost providers to save {formatMoney(suggestion.monthlySavings, currency)}/mo
                   </p>
                   <ul className="mt-2.5 flex flex-col gap-2">
                     {suggestion.swaps.map((swap) => (
@@ -188,7 +237,7 @@ export function CostEstimateStep({
                     ))}
                   </ul>
                   <p className="mt-2.5 text-[12.5px] tabular-nums text-ink-600">
-                    New projected cost: <span className="font-medium text-ink-900">{formatUsd(suggestion.newMonthlyCost)}/mo</span>
+                    New projected cost: <span className="font-medium text-ink-900">{formatMoney(suggestion.newMonthlyCost, currency)}/mo</span>
                   </p>
                   {suggestion.stillOverBudget && (
                     <p className="mt-1.5 text-[12.5px] text-ink-500">
@@ -196,6 +245,26 @@ export function CostEstimateStep({
                     </p>
                   )}
                   <Button type="button" variant="secondary" size="sm" className="mt-3" onClick={applySuggestion} disabled={!onApplyProviders}>
+                    Apply suggestion
+                  </Button>
+                </div>
+              )}
+
+              {volumeSuggestion && (
+                <div className="mt-3 rounded-lg border border-ink-950/10 bg-paper-50 p-4">
+                  <p className="text-[12.5px] font-medium text-ink-800">
+                    Or lower expected volume to {volumeSuggestion.newCallsPerMonth.toLocaleString()} calls/month to fit your budget
+                  </p>
+                  <p className="mt-2.5 text-[12.5px] tabular-nums text-ink-600">
+                    New projected cost:{" "}
+                    <span className="font-medium text-ink-900">{formatMoney(volumeSuggestion.newMonthlyCost, currency)}/mo</span>
+                  </p>
+                  {volumeSuggestion.stillOverBudget && (
+                    <p className="mt-1.5 text-[12.5px] text-ink-500">
+                      Still over budget even at the lowest volume this estimate supports.
+                    </p>
+                  )}
+                  <Button type="button" variant="secondary" size="sm" className="mt-3" onClick={applyVolumeSuggestion}>
                     Apply suggestion
                   </Button>
                 </div>
