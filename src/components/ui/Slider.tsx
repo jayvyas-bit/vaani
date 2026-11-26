@@ -1,6 +1,6 @@
 const thumb =
-  "[&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-brand-600 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-shadow " +
-  "[&::-moz-range-thumb]:size-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-brand-600 [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow-md " +
+  "[&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-brand-600 [&::-webkit-slider-thumb]:bg-paper-0 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-shadow " +
+  "[&::-moz-range-thumb]:size-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-brand-600 [&::-moz-range-thumb]:bg-paper-0 [&::-moz-range-thumb]:shadow-md " +
   "focus-visible:[&::-webkit-slider-thumb]:ring-4 focus-visible:[&::-webkit-slider-thumb]:ring-brand-500/25 focus-visible:[&::-moz-range-thumb]:ring-4 focus-visible:[&::-moz-range-thumb]:ring-brand-500/25";
 
 export function Slider({
@@ -50,11 +50,11 @@ export function Slider({
         onChange={(e) => onChange?.(Number(e.target.value))}
         className={`block h-2 w-full cursor-pointer appearance-none rounded-full outline-none ${thumb}`}
         style={{
-          background: `linear-gradient(to right, var(--color-brand-600) 0%, var(--color-brand-600) ${pct}%, var(--color-gray-200) ${pct}%, var(--color-gray-200) 100%)`,
+          background: `linear-gradient(to right, var(--color-brand-600) 0%, var(--color-brand-600) ${pct}%, var(--color-paper-200) ${pct}%, var(--color-paper-200) 100%)`,
         }}
       />
       {(leftLabel || rightLabel) && (
-        <div className="mt-2.5 flex justify-between text-xs font-medium text-gray-500">
+        <div className="mt-2.5 flex justify-between text-xs font-medium text-ink-500">
           <span>{leftLabel}</span>
           <span>{rightLabel}</span>
         </div>

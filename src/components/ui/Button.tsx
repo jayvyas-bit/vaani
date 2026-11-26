@@ -5,13 +5,13 @@ type Size = "sm" | "md" | "lg";
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    "border border-brand-600 bg-brand-600 text-white shadow-xs hover:border-brand-700 hover:bg-brand-700 focus-visible:ring-brand-500/25 disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none",
+    "border border-brand-600 bg-brand-600 text-white shadow-xs hover:border-brand-700 hover:bg-brand-700 active:border-brand-800 active:bg-brand-800 focus-visible:ring-brand-500/25 disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none",
   secondary:
-    "border border-gray-300 bg-white text-gray-700 shadow-xs hover:bg-gray-50 hover:text-gray-800 focus-visible:ring-gray-400/20 disabled:border-gray-200 disabled:bg-white disabled:text-gray-400",
+    "border border-gray-300 bg-white text-gray-700 shadow-xs hover:bg-gray-50 hover:text-gray-800 active:bg-gray-100 active:text-gray-900 focus-visible:ring-gray-400/20 disabled:border-gray-200 disabled:bg-white disabled:text-gray-400",
   ghost:
-    "border border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-700 focus-visible:ring-gray-400/20 disabled:bg-transparent disabled:text-gray-400",
+    "border border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-700 active:bg-gray-100 active:text-gray-800 focus-visible:ring-gray-400/20 disabled:bg-transparent disabled:text-gray-400",
   destructive:
-    "border border-error-600 bg-error-600 text-white shadow-xs hover:border-error-700 hover:bg-error-700 focus-visible:ring-error-500/25 disabled:border-error-200 disabled:bg-error-50 disabled:text-error-300 disabled:shadow-none",
+    "border border-error-600 bg-error-600 text-white shadow-xs hover:border-error-700 hover:bg-error-700 active:border-error-700 active:bg-error-700 active:brightness-90 focus-visible:ring-error-500/25 disabled:border-error-200 disabled:bg-error-50 disabled:text-error-300 disabled:shadow-none",
 };
 
 const sizeClasses: Record<Size, string> = {

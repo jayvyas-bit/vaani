@@ -107,7 +107,6 @@ export function BuildEditorPage({
         active="build"
         onNavigate={onNavigate}
         onBack={onBack}
-        contentClassName="mx-auto max-w-[720px]"
       />
       {currentAgent.status === "live" && (
         <div role="status" className="flex items-center gap-2 border-b border-warning-200 bg-warning-50 px-4 py-2 sm:px-6">

@@ -10,29 +10,47 @@ export function Stepper({
   activeId,
   completedIds,
   compact = false,
+  onStepClick,
 }: {
   steps: StepItem[];
   activeId: string;
   completedIds: string[];
   /** Condensed dots + "Step N of M — label" for tight single-row headers. */
   compact?: boolean;
+  /** When given, each step becomes a button so the stepper doubles as free-roam navigation. */
+  onStepClick?: (id: string) => void;
 }) {
   const activeIndex = steps.findIndex((s) => s.id === activeId);
 
   if (compact) {
     return (
       <div className="flex min-w-0 items-center gap-3">
-        <div className="flex shrink-0 items-center gap-1" aria-hidden="true">
+        <div className="flex shrink-0 items-center gap-1">
           {steps.map((step, i) => {
             const done = completedIds.includes(step.id);
             const active = step.id === activeId;
-            return (
+            const dot = (
               <span
-                key={step.id}
                 className={`h-1.5 w-6 rounded-full transition-colors ${
                   done || active ? "bg-brand-600" : i < activeIndex ? "bg-brand-200" : "bg-gray-200"
-                }`}
+                } ${onStepClick ? "hover:bg-brand-400" : ""}`}
               />
+            );
+            return onStepClick ? (
+              <button
+                key={step.id}
+                type="button"
+                aria-current={active ? "step" : undefined}
+                aria-label={step.label}
+                onClick={() => onStepClick(step.id)}
+                className="rounded-full p-0.5 outline-none focus-visible:ring-4 focus-visible:ring-brand-500/25"
+              >
+                {dot}
+              </button>
+            ) : (
+              <span key={step.id} aria-hidden="true">
+                {dot}
+              </span>
             );
           })}
         </div>

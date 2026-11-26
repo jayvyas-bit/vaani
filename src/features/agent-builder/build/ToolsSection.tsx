@@ -192,7 +192,7 @@ function AddToolForm({
   };
 
   return (
-    <div className="m-6 flex flex-col gap-4 rounded-xl border border-ink-950/10 bg-paper-0 p-5 shadow-float">
+    <div className="m-6 flex flex-col gap-4 rounded-lg border border-ink-950/10 bg-paper-0 p-5">
       <div className="flex items-center gap-2">
         <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600">
           <Icon name="plus" className="size-3.5" />

@@ -21,11 +21,11 @@ export function FieldLabel({
 }) {
   return (
     <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-      <label htmlFor={htmlFor} id={id} className="text-sm font-medium text-gray-700">
+      <label htmlFor={htmlFor} id={id} className="text-sm font-medium text-ink-700">
         {children}
         {required && <span className="ml-0.5 text-brand-600">*</span>}
       </label>
-      {hint && <span className="text-xs text-gray-500">{hint}</span>}
+      {hint && <span className="text-xs text-ink-500">{hint}</span>}
     </div>
   );
 }
@@ -41,7 +41,7 @@ export function FieldError({ id, children }: { id: string; children?: ReactNode 
 }
 
 const fieldClasses =
-  "w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-xs placeholder:text-gray-500 outline-none transition-[border-color,box-shadow] hover:border-gray-400 focus:border-brand-300 focus:ring-4 focus:ring-brand-500/25 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-500 aria-invalid:border-error-300 aria-invalid:focus:ring-error-500/25";
+  "w-full rounded-lg border border-ink-300 bg-paper-0 px-3.5 py-2.5 text-sm text-ink-950 shadow-xs placeholder:text-ink-500 outline-none transition-[border-color,box-shadow] hover:border-ink-400 focus:border-brand-300 focus:ring-4 focus:ring-brand-500/25 disabled:cursor-not-allowed disabled:border-paper-200 disabled:bg-paper-50 disabled:text-ink-500 aria-invalid:border-error-300 aria-invalid:focus:ring-error-500/25";
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${fieldClasses} ${props.className ?? ""}`} />;

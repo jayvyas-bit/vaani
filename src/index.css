@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@500;600;700&display=swap");
 @import "tailwindcss";
 
 /*
@@ -131,6 +131,7 @@
   /* ---- Type ---- */
   --font-sans:
     "Inter", ui-sans-serif, -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
+  --font-display: "Lexend", var(--font-sans);
   --font-mono: ui-monospace, "SF Mono", "Roboto Mono", Menlo, monospace;
   --text-md: 1rem;
   --text-md--line-height: 1.5rem;
@@ -172,6 +173,10 @@ body {
   font-feature-settings: "cv11", "ss01";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1 {
+  font-family: var(--font-display);
 }
 
 * {

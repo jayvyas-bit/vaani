@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/Button";
 import { FieldLabel, Input, Textarea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { RadioCard } from "@/components/ui/RadioCard";
+import { WizardFooter } from "@/components/ui/WizardFooter";
 import { cleanBusinessName } from "@/lib/persona";
 import type { CallDirection } from "@/lib/types";
 
@@ -21,11 +22,14 @@ export function MinimalCreateForm({
     direction: "inbound",
   },
   onCreate,
+  onBack,
 }: {
   initialValues?: CreateFormValues;
   onCreate?: (values: CreateFormValues) => void;
+  onBack?: () => void;
 }) {
   const id = useId();
+  const formId = `${id}-form`;
   const [name, setName] = useState(initialValues.name);
   const [purpose, setPurpose] = useState(initialValues.purpose);
   const [direction, setDirection] = useState<CallDirection>(initialValues.direction);
@@ -46,17 +50,20 @@ export function MinimalCreateForm({
   };
 
   return (
-    <form
-      onSubmit={submit}
-      aria-labelledby={`${id}-title`}
-      className="mx-auto w-full max-w-[640px] px-4 py-10 sm:px-0 sm:py-14"
-    >
-      <h1 id={`${id}-title`} className="text-[22px] font-semibold text-ink-950">
-        Name it and tell us the job
-      </h1>
-      <p className="mt-1.5 text-[14px] text-ink-600">
-        Your purpose line is used to write what the agent says.
-      </p>
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-y-auto">
+        <form
+          id={formId}
+          onSubmit={submit}
+          aria-labelledby={`${id}-title`}
+          className="mx-auto w-full max-w-[640px] px-4 py-10 sm:px-0 sm:py-14"
+        >
+          <h1 id={`${id}-title`} className="text-[22px] font-semibold text-ink-950">
+            Name it and tell us the job
+          </h1>
+          <p className="mt-1.5 text-[14px] text-ink-600">
+            Your purpose line is used to write what the agent says.
+          </p>
 
       <div className="mt-8 flex flex-col gap-6">
         <div>
@@ -130,16 +137,18 @@ export function MinimalCreateForm({
             />
           </div>
         </fieldset>
-      </div>
+          </div>
 
-      <div className="mt-6 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <p className="max-w-[420px] text-[13px] text-ink-400">
-          Voice, rules and AI settings start on sensible defaults. Change any of them in Build.
-        </p>
-        <Button type="submit" size="lg" disabled={!canCreate}>
+          <p className="mt-6 max-w-[420px] text-[13px] text-ink-400">
+            Voice, rules and AI settings start on sensible defaults. Change any of them in Build.
+          </p>
+        </form>
+      </div>
+      <WizardFooter onBack={onBack} showBack={!!onBack}>
+        <Button type="submit" form={formId} size="lg" disabled={!canCreate}>
           Create agent
         </Button>
-      </div>
-    </form>
+      </WizardFooter>
+    </div>
   );
 }

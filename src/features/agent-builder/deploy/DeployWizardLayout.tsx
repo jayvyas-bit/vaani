@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Stepper, type StepItem } from "@/components/ui/Stepper";
+import { WizardFooter } from "@/components/ui/WizardFooter";
 import { BuilderNav, type PrimarySection } from "@/features/agent-builder/BuilderNav";
 import type { Agent, CallDirection } from "@/lib/types";
 
@@ -67,17 +68,14 @@ export function DeployWizardLayout({
 
   return (
     <div className="flex h-full flex-col bg-paper-50">
-      <BuilderNav
-        agent={agent}
-        active="deploy"
-        onNavigate={onNavigate}
-        onBack={onExit}
-        center={
-          !hideStepper && (
+      <BuilderNav agent={agent} active="deploy" onNavigate={onNavigate} onBack={onExit} />
+      {!hideStepper && (
+        <div className="border-b border-ink-950/10 bg-paper-50 px-4 py-2.5 sm:px-6">
+          <div className="mx-auto flex w-full max-w-[640px] justify-center">
             <Stepper steps={deployStepsFor(agent.direction)} activeId={activeId} completedIds={completedIds} compact />
-          )
-        }
-      />
+          </div>
+        </div>
+      )}
       <div className="relative flex-1 overflow-hidden">
         <div ref={scrollRef} className="h-full overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
           <div className="mx-auto w-full max-w-[640px]">
@@ -92,24 +90,14 @@ export function DeployWizardLayout({
         )}
       </div>
       {!hideFooter && (
-      <div className="border-t border-ink-950/10 bg-paper-0 px-4 py-3.5 sm:px-6">
-        <div className="mx-auto flex w-full max-w-[640px] items-center justify-between gap-3">
-          {showBack ? (
-            <Button variant="ghost" className="gap-1.5" onClick={onStepBack}>
-              <Icon name="chevron-right" className="size-4 rotate-180" />
-              Back
-            </Button>
-          ) : (
-            <span />
-          )}
+        <WizardFooter onBack={onStepBack} showBack={showBack}>
           {showContinue && (
             <Button disabled={continueDisabled} className="gap-1.5" onClick={onContinue}>
               {continueLabel}
               <Icon name="chevron-right" className="size-4" />
             </Button>
           )}
-        </div>
-      </div>
+        </WizardFooter>
       )}
     </div>
   );

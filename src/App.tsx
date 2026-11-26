@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
+import { PageHeader, PageHeaderBackLink, PageHeaderDivider } from "@/components/ui/PageHeader";
 import { Stepper, type StepItem } from "@/components/ui/Stepper";
 import type { PrimarySection } from "@/features/agent-builder/BuilderNav";
 import { BuildEditorPage, type BuildTab } from "@/features/agent-builder/build/BuildEditorPage";
@@ -471,17 +472,17 @@ function AgentsList({
 }) {
   return (
     <div className="h-full overflow-y-auto bg-paper-50">
-      <header className="border-b border-ink-950/10 bg-paper-0 px-4 py-4 sm:px-6">
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-4">
-          <h1 className="text-[16px] font-semibold text-ink-950">Agents</h1>
-          {records.length > 0 && (
+      <PageHeader
+        left={<h1 className="text-[16px] font-semibold text-ink-950">Agents</h1>}
+        right={
+          records.length > 0 && (
             <Button className="gap-1.5" onClick={onNew}>
               <Icon name="plus" className="size-4" />
               New agent
             </Button>
-          )}
-        </div>
-      </header>
+          )
+        }
+      />
       <main className="px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-4xl">
           {justWentLive && (
@@ -549,43 +550,26 @@ function CreateShell({
   activeId,
   completedIds,
   onExit,
-  onStepBack,
   children,
 }: {
   activeId: string;
   completedIds: string[];
   onExit: () => void;
-  onStepBack?: () => void;
   children: ReactNode;
 }) {
   return (
     <div className="flex h-full flex-col bg-paper-50">
-      <header className="border-b border-ink-950/10 bg-paper-0">
-        <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              onClick={onExit}
-              className="flex shrink-0 items-center gap-1 text-[13px] text-ink-400 hover:text-ink-700"
-            >
-              <Icon name="chevron-right" className="size-3.5 rotate-180" />
-              Agents
-            </button>
-            <div className="h-4 w-px shrink-0 bg-ink-950/10" />
+      <PageHeader
+        left={
+          <>
+            <PageHeaderBackLink label="Agents" onClick={onExit} />
+            <PageHeaderDivider />
             <span className="truncate text-[14px] font-semibold text-ink-950">New agent</span>
-          </div>
-          <div className="flex shrink-0 items-center gap-3">
-            <Stepper steps={createSteps} activeId={activeId} completedIds={completedIds} compact />
-            {onStepBack && (
-              <Button variant="ghost" size="sm" className="gap-1" onClick={onStepBack}>
-                <Icon name="chevron-right" className="size-3.5 rotate-180" />
-                Back
-              </Button>
-            )}
-          </div>
-        </div>
-      </header>
-      <div className="flex-1 overflow-y-auto">{children}</div>
+          </>
+        }
+        center={<Stepper steps={createSteps} activeId={activeId} completedIds={completedIds} compact />}
+      />
+      <div className="flex-1 overflow-hidden">{children}</div>
     </div>
   );
 }
@@ -770,13 +754,9 @@ export default function App() {
 
   if (screen.name === "template-gallery") {
     return (
-      <CreateShell
-        activeId="method"
-        completedIds={[]}
-        onExit={goList}
-        onStepBack={() => navigate({ name: "create-method" })}
-      >
+      <CreateShell activeId="method" completedIds={[]} onExit={goList}>
         <TemplateGallery
+          onBack={() => navigate({ name: "create-method" })}
           onSelect={(template) => navigate({ name: "create-form", method: "template", templateId: template.id })}
         />
       </CreateShell>
@@ -786,16 +766,12 @@ export default function App() {
   if (screen.name === "create-form") {
     const template = screen.templateId ? agentTemplates.find((t) => t.id === screen.templateId) : undefined;
     return (
-      <CreateShell
-        activeId="basics"
-        completedIds={["method"]}
-        onExit={goList}
-        onStepBack={() =>
-          navigate(screen.method === "template" ? { name: "template-gallery" } : { name: "create-method" })
-        }
-      >
+      <CreateShell activeId="basics" completedIds={["method"]} onExit={goList}>
         <MinimalCreateForm
           key={screen.templateId ?? screen.method}
+          onBack={() =>
+            navigate(screen.method === "template" ? { name: "template-gallery" } : { name: "create-method" })
+          }
           initialValues={template?.values ?? blankValues}
           onCreate={(values) => {
             const rec = buildRecord(values);
