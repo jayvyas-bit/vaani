@@ -11,7 +11,14 @@ import {
   suggestLowerVolume,
   type DeployConfig,
 } from "@/lib/deploy";
-import { displayCurrencyLabel, formatMoney, type DisplayCurrency } from "@/lib/format";
+import {
+  currencySymbol,
+  displayCurrencyLabel,
+  formatMoney,
+  fromDisplayAmount,
+  toDisplayAmount,
+  type DisplayCurrency,
+} from "@/lib/format";
 import { llmTradeoff, sttTradeoff, ttsTradeoff } from "@/lib/providers";
 import type { Agent, CallDirection } from "@/lib/types";
 import { useControllable } from "@/lib/useControllable";
@@ -187,16 +194,12 @@ export function CostEstimateStep({
         <div className="mt-5 border-t border-ink-950/10 pt-4">
           <FieldLabel
             htmlFor={`${id}-budget`}
-            hint={
-              currency === "USD"
-                ? "Optional — we'll warn you before going live if you're projected to exceed it"
-                : "Optional, entered in USD — we'll warn you before going live if you're projected to exceed it"
-            }
+            hint="Optional — we'll warn you before going live if you're projected to exceed it"
           >
             Monthly budget
           </FieldLabel>
           <div className="flex items-center gap-2">
-            <span className="text-[13px] text-ink-500">$</span>
+            <span className="text-[13px] text-ink-500">{currencySymbol[currency]}</span>
             <Input
               id={`${id}-budget`}
               name="monthlyBudget"
@@ -205,12 +208,20 @@ export function CostEstimateStep({
               min={0}
               placeholder="No limit set"
               className="max-w-[160px]"
-              value={budget ?? ""}
+              value={budget === undefined ? "" : toDisplayAmount(budget, currency)}
               onChange={(e) =>
-                setConfig({ ...config, monthlyBudget: e.target.value ? Math.max(0, Number(e.target.value)) : undefined })
+                setConfig({
+                  ...config,
+                  monthlyBudget: e.target.value ? Math.max(0, fromDisplayAmount(Number(e.target.value), currency)) : undefined,
+                })
               }
             />
           </div>
+          {currency !== "USD" && (
+            <p className="mt-1.5 text-[11.5px] text-ink-400">
+              Illustrative conversion — billing and the warning threshold are still tracked in USD.
+            </p>
+          )}
           {overBudget && (
             <>
               <p className="mt-2 flex items-start gap-1.5 text-[12.5px] font-medium text-error-600">
@@ -280,19 +291,20 @@ export function CostEstimateStep({
         aria-checked={acknowledged}
         onClick={() => setAcknowledged((v) => !v)}
         className={`flex items-start gap-3 rounded-lg border p-4 text-left transition-colors ${
-          acknowledged ? "border-brand-300 bg-brand-25" : "border-ink-950/10 bg-paper-0 hover:border-ink-950/20"
+          acknowledged ? "border-brand-300 bg-brand-25" : "border-warning-200 bg-warning-50 hover:border-warning-500"
         }`}
       >
         <div
           className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border ${
-            acknowledged ? "border-accent-600 bg-accent-600" : "border-ink-300 bg-paper-0"
+            acknowledged ? "border-accent-600 bg-accent-600" : "border-warning-500 bg-paper-0"
           }`}
         >
           {acknowledged && <Icon name="check" className="size-3.5 text-paper-0" strokeWidth={2.6} />}
         </div>
         <span className="text-[13px] text-ink-800">
           <span className="font-medium">I understand this is a usage-based estimate.</span> You're billed
-          for real call minutes, so the total moves with actual volume and call length. Required to go live.
+          for real call minutes, so the total moves with actual volume and call length.{" "}
+          <span className={acknowledged ? "text-ink-500" : "font-medium text-warning-700"}>Required to go live.</span>
         </span>
       </button>
     </div>

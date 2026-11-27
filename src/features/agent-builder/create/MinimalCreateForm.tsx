@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
-import { FieldLabel, Input, Textarea } from "@/components/ui/Field";
+import { FieldError, FieldLabel, Input, Textarea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { RadioCard } from "@/components/ui/RadioCard";
 import { WizardFooter } from "@/components/ui/WizardFooter";
@@ -34,13 +34,19 @@ export function MinimalCreateForm({
   const [purpose, setPurpose] = useState(initialValues.purpose);
   const [direction, setDirection] = useState<CallDirection>(initialValues.direction);
   const [businessName, setBusinessName] = useState(initialValues.businessName ?? "");
+  const [submitted, setSubmitted] = useState(false);
   const suggestedBusinessName = name.trim() ? cleanBusinessName(name) : "";
 
   const canCreate = name.trim().length > 0 && purpose.trim().length > 0;
+  const nameErr = submitted && !name.trim() ? "Give the agent a name." : null;
+  const purposeErr = submitted && !purpose.trim() ? "Say what the agent should do." : null;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!canCreate) return;
+    if (!canCreate) {
+      setSubmitted(true);
+      return;
+    }
     onCreate?.({
       name: name.trim(),
       purpose: purpose.trim(),
@@ -73,12 +79,14 @@ export function MinimalCreateForm({
           <Input
             id={`${id}-name`}
             name="agentName"
-            required
             autoComplete="off"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Riverside Dental Front Desk"
+            aria-invalid={!!nameErr || undefined}
+            aria-describedby={nameErr ? `${id}-name-err` : undefined}
           />
+          <FieldError id={`${id}-name-err`}>{nameErr}</FieldError>
         </div>
 
         <div>
@@ -107,13 +115,15 @@ export function MinimalCreateForm({
           <Textarea
             id={`${id}-purpose`}
             name="purpose"
-            required
             rows={2}
             maxLength={160}
             value={purpose}
             onChange={(e) => setPurpose(e.target.value)}
             placeholder="One line, in plain language — what should this agent do on a call?"
+            aria-invalid={!!purposeErr || undefined}
+            aria-describedby={purposeErr ? `${id}-purpose-err` : undefined}
           />
+          <FieldError id={`${id}-purpose-err`}>{purposeErr}</FieldError>
         </div>
 
         <fieldset>
@@ -145,7 +155,7 @@ export function MinimalCreateForm({
         </form>
       </div>
       <WizardFooter onBack={onBack} showBack={!!onBack}>
-        <Button type="submit" form={formId} size="lg" disabled={!canCreate}>
+        <Button type="submit" form={formId} size="lg">
           Create agent
         </Button>
       </WizardFooter>

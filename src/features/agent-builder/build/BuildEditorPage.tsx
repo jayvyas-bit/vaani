@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { Tabs, type TabItem } from "@/components/ui/Tabs";
 import { BuilderNav, type PrimarySection } from "@/features/agent-builder/BuilderNav";
@@ -99,6 +99,11 @@ export function BuildEditorPage({
   onBack?: () => void;
 }) {
   const [tab, setTab] = useState<BuildTab>(initialTab);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [tab]);
 
   const [localAgent, setLocalAgent] = useState(agent);
   const currentAgent = onAgentChange ? agent : localAgent;
@@ -141,10 +146,10 @@ export function BuildEditorPage({
           <Tabs items={tabs} active={tab} onChange={(id) => setTab(id as BuildTab)} />
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
         <div
           key={tab}
-          className="animate-step-in mx-auto w-full max-w-[720px] lg:max-w-[880px] xl:max-w-[1040px]"
+          className="animate-step-in mx-auto flex min-h-full w-full max-w-[720px] flex-col justify-center lg:max-w-[880px] xl:max-w-[1040px]"
           role="tabpanel"
           aria-label={tabs.find((t) => t.id === tab)?.label}
         >

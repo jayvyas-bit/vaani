@@ -84,6 +84,10 @@ const typeKeywords: { type: LimitType; re: RegExp }[] = [
   { type: "escalation_trigger", re: /\b(pain|swollen|swelling|emergency|urgent|dispute|isn'?t my debt|not my debt|escalat|crisis|angry|threat)/ },
   { type: "payment_plan_limit", re: /\b(payment plan|month plan|installment|per month|\/month|\d+-month)/ },
   { type: "discount_limit", re: /\b(discount|promo|promotion|coupon|% off|percent off)/ },
+  {
+    type: "follow_up_limit",
+    re: /\b(no answer|didn'?t (answer|pick up)|doesn'?t (answer|pick up)|unreachable|repeated(ly)? (call|dial|try)|call attempt|max(?:imum)? attempts|attempt limit|retr(?:y|ies)|give up (calling|trying)|stop (calling|trying|dialing) after)/,
+  },
   { type: "forbidden_promise", re: /\b(price|cost|quote|charge|legal action|lawsuit|guarantee|promise|refund)/ },
 ];
 
@@ -92,6 +96,7 @@ const typeLabel: Record<LimitType, string> = {
   forbidden_promise: "forbidden-promise",
   escalation_trigger: "escalation trigger",
   payment_plan_limit: "payment plan limit",
+  follow_up_limit: "follow-up limit",
 };
 
 function ruleTokens(r: BusinessRule) {
@@ -123,6 +128,34 @@ function matchRule(text: string, rules: BusinessRule[], type?: LimitType): Busin
 
 function detectType(text: string): LimitType | undefined {
   return typeKeywords.find((k) => k.re.test(text))?.type;
+}
+
+/* ------------------------------------------------------------------ */
+/* Party-size / headcount thresholds ("party of 9 or more")             */
+/* ------------------------------------------------------------------ */
+
+const PARTY_WORDS = /\b(part(?:y|ies)|groups?|guests?|people|persons|headcount|table size)\b/i;
+
+/** A headcount mentioned in free text: "party of 15", "a table for 12", "20 people". */
+function partySizeIn(text: string): number | undefined {
+  const m =
+    text.match(/\b(?:part(?:y|ies)|groups?|table|booking|reservation)s?\s+(?:of|for)\s+(\d+)\b/i) ??
+    text.match(/\b(\d+)\s+(?:people|guests|persons|diners)\b/i);
+  return m ? Number(m[1]) : undefined;
+}
+
+/**
+ * An escalation_trigger rule whose label/threshold encodes a minimum
+ * headcount (e.g. "party of 9 or more"). Its condition only ever lives in
+ * free text, so this is the one number in that text worth trusting — word
+ * overlap against the rest of the label is too unreliable to match on.
+ */
+function partySizeThreshold(rule: BusinessRule): number | undefined {
+  if (rule.limitType !== "escalation_trigger") return undefined;
+  const source = `${rule.threshold ?? ""} ${rule.label}`;
+  if (!PARTY_WORDS.test(source)) return undefined;
+  const m = source.match(/\b(\d+)\s*(?:\+|or more|or above|or higher|and up)\b/i);
+  return m ? Number(m[1]) : undefined;
 }
 
 function findTool(tools: ToolDef[], re: RegExp) {
@@ -235,8 +268,54 @@ function coveringRule(rules: BusinessRule[], primary: BusinessRule, text: string
   return best;
 }
 
+/**
+ * Someone asking to be handed to a teammate — distinct from the word "human"
+ * or "transfer" appearing incidentally (e.g. a rule that "flags the lead for
+ * a human follow-up decision" is an internal process note, not a caller
+ * requesting a handoff).
+ */
+const requestsHandoff = (text: string) =>
+  /(real person|speak (?:to|with) (?:a |an )?(?:person|human|representative|someone)|ask(?:s|ed|ing)? (?:for|to speak (?:to|with)) (?:a )?(?:person|human|representative|manager|teammate)|transfer (?:to|me|the call|them|him|her|us)|put (?:me|us|them) through|\brepresentative\b|\bteammate\b|\bmanager\b)/.test(
+    text,
+  );
+
 const promisesTransfer = (text: string) =>
   /(transfer|connect (you|them|the caller|the person) (to|with)|hand (it|the call|them) (off|over)|put (you|them) through)/i.test(text);
+
+/** A tool/API/system that's down, erroring, or not responding — distinct from a request simply being denied. */
+const toolFailureFramed = (text: string) =>
+  /(api (fail|failure|down|error|outage)|system (is )?down|service (is )?(down|unavailable)|can'?t reach|not responding|500 error|times? ?out|timeout|outage|offline|unreachable)/i.test(
+    text,
+  );
+
+/** The record being asked about doesn't exist, rather than a tool being broken. */
+const notFoundFramed = (text: string) =>
+  /(doesn'?t exist|does not exist|no such (order|account|record|customer)|no record|not found|can'?t find|couldn'?t find|missing order|no matching)/i.test(
+    text,
+  );
+
+/** Does the tool's own description say what to do when it fails or comes up empty? */
+function handlesToolFailure(description: string) {
+  return /(apologi|do not guess|don'?t guess|transfer|escalat|log a case|case id|honest|instead of inventing|can'?t be logged automatically|without guessing)/i.test(
+    description,
+  );
+}
+
+/** Best enabled tool for a piece of text, by name+description word overlap. */
+function bestTool(text: string, tools: ToolDef[]): ToolDef | undefined {
+  const t = tokens(text);
+  let best: ToolDef | undefined;
+  let bestScore = 0;
+  for (const tool of tools) {
+    if (!tool.enabled) continue;
+    const score = overlap(t, tokens(`${tool.name} ${tool.description}`));
+    if (score > bestScore) {
+      best = tool;
+      bestScore = score;
+    }
+  }
+  return best;
+}
 
 function findKnowledge(text: string, knowledge: KnowledgeSource[]) {
   const t = tokens(text);
@@ -275,9 +354,94 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
     };
   }
 
-  // 1. Business rules — typed keywords first, then plain-word overlap.
+  // 1. Tool failure / missing-record scenarios. These need the specific tool's
+  // own fallback language, not a generic guardrail keyword match — without this,
+  // "refund" alone would route a failed-lookup or not-found scenario into the
+  // forbidden-promise rule below and give it the same reasoning as an unrelated case.
+  if (toolFailureFramed(text) || notFoundFramed(text)) {
+    const tool = bestTool(text, ctx.tools);
+    if (!tool) {
+      return {
+        verdict: "fail",
+        reason: "No enabled tool matches this request, so there's nothing configured here to fail over or fall back on.",
+      };
+    }
+    const sentences = tool.description.split(/(?<=[.!?])\s+/);
+    const fallbackSentence = sentences.find((s) => handlesToolFailure(s));
+    if (fallbackSentence) {
+      return {
+        verdict: "pass",
+        reason: `“${tool.name}” is enabled and its description spells out the fallback: ${lowerFirst(stripPeriod(fallbackSentence))}.`,
+      };
+    }
+    return {
+      verdict: "fail",
+      reason: `“${tool.name}” is enabled, but its description doesn't say what the agent should do if it fails or comes up empty. Add that fallback in Build → Tools.`,
+    };
+  }
+
+  // 2. Return/cancellation window and similar eligibility windows — a numeric
+  // business-rule type doesn't exist for these, so check rules and knowledge
+  // directly instead of falling through to an unrelated keyword match.
+  if (has(text, /(return window|return period|exchange window|outside .*(day|window)|expired return|return eligib|cancellation window)/)) {
+    const ruleHit = ctx.rules.find((r) => r.enabled && /(return|exchange|eligib)/i.test(`${r.label} ${r.action}`));
+    if (ruleHit) {
+      return {
+        verdict: "pass",
+        reason: `“${ruleHit.label}” covers this — agent will ${lowerFirst(stripPeriod(ruleHit.action))}.`,
+      };
+    }
+    const source = findKnowledge(text, ctx.knowledge);
+    if (source) {
+      return { verdict: "pass", reason: `Answerable from attached knowledge: “${source.name}”.` };
+    }
+    return {
+      verdict: "fail",
+      reason:
+        "No guardrail rule or attached knowledge source defines the return/eligibility window, so the agent has nothing to check this against. Add one in Build → Guardrails or Knowledge.",
+    };
+  }
+
+  // 3a. Party-size / headcount escalation thresholds, matched by the actual
+  // number in the text — a rule label like "party of 9 or more" rarely
+  // shares words with scenario text ("a table for 15 people"), and a
+  // party-of-4 or an unrelated scenario can coincidentally share words
+  // ("party", "reservation") with that label without breaching its threshold.
+  const requestedSize = partySizeIn(text);
+  if (requestedSize !== undefined) {
+    const sizeRule = ctx.rules.find((r) => {
+      const threshold = partySizeThreshold(r);
+      return threshold !== undefined && requestedSize >= threshold;
+    });
+    if (sizeRule) {
+      if (!sizeRule.enabled) {
+        return { verdict: "fail", reason: `Rule “${sizeRule.label}” exists but is turned off, so nothing enforces it on the call.` };
+      }
+      const action = lowerFirst(stripPeriod(sizeRule.action));
+      if (promisesTransfer(sizeRule.action) && !workingTransferTool(ctx.tools)) {
+        const half = enabledTransferTool(ctx.tools);
+        return {
+          verdict: "fail",
+          reason: half
+            ? `“${sizeRule.label}” says to ${action}, but “${half.name}” has no destination set. Add one in Build → Tools.`
+            : `“${sizeRule.label}” says to ${action}, but call transfer isn't set up. Add it in Build → Tools.`,
+        };
+      }
+      return {
+        verdict: "pass",
+        reason: `${who} asks for a party of ${requestedSize}, which meets “${sizeRule.label}” — agent will ${action}.`,
+      };
+    }
+  }
+
+  // 3b. Business rules — typed keywords first, then plain-word overlap. Rules
+  // with a parseable party-size threshold are matched only by 3a above, never
+  // by word overlap, since their label's vocabulary ("party", "reservation")
+  // is too generic in this domain to trust as a coincidental match.
+  const sizeRuleIds = new Set(ctx.rules.filter((r) => partySizeThreshold(r) !== undefined).map((r) => r.id));
+  const matchableRules = ctx.rules.filter((r) => !sizeRuleIds.has(r.id));
   const type = detectType(text);
-  const rule = type ? matchRule(text, ctx.rules, type) : matchRule(text, ctx.rules);
+  const rule = type ? matchRule(text, matchableRules, type) : matchRule(text, matchableRules);
   if (rule) {
     if (!rule.enabled) {
       return { verdict: "fail", reason: `Rule “${rule.label}” exists but is turned off, so nothing enforces it on the call.` };
@@ -348,7 +512,7 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
     };
   }
 
-  // 2. Do-not-call requests.
+  // 4. Do-not-call requests.
   if (has(text, /(never be called|stop calling|do-not-call|do not call|dnc)/)) {
     const tool = findTool(ctx.tools, /(do-not-call|do not call|dnc|suppress)/);
     return tool
@@ -356,7 +520,7 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
       : { verdict: "fail", reason: "No do-not-call tool is enabled, so the agent can't actually suppress the number." };
   }
 
-  // 3. Booking / rescheduling.
+  // 5. Booking / rescheduling.
   if (has(text, /(book|reschedul|appointment|schedul|slot)/)) {
     const tool = bookingTool(ctx.tools);
     const failureFramed = has(
@@ -376,13 +540,45 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
         reason: `“${tool.name}” is enabled, but ${connected ? "its calendar connection is simulated for testing" : "it isn't connected to a real calendar"} — this prototype has no live backend to actually fail, so a real API-failure path can't be verified from config alone. Test this with a real calendar integration before relying on it.`,
       };
     }
-    return tool
-      ? { verdict: "pass", reason: `“${tool.name}” is enabled and the prompt covers the flow.` }
-      : { verdict: "fail", reason: "No booking or calendar tool is enabled, so the agent can't find or move appointments." };
+    if (!tool) {
+      return { verdict: "fail", reason: "No booking or calendar tool is enabled, so the agent can't find or move appointments." };
+    }
+
+    // Prefer a specific guardrail rule or knowledge source over a generic
+    // "the tool is on" claim — otherwise unrelated booking scenarios (model
+    // availability, rescheduling, overbooking) all get the same boilerplate.
+    const ruleHit = matchRule(text, ctx.rules);
+    if (ruleHit) {
+      if (!ruleHit.enabled) {
+        return { verdict: "fail", reason: `Rule “${ruleHit.label}” exists but is turned off, so nothing enforces it on the call.` };
+      }
+      return {
+        verdict: "pass",
+        reason: `“${tool.name}” is enabled, and “${ruleHit.label}” covers this — agent will ${lowerFirst(stripPeriod(ruleHit.action))}.`,
+      };
+    }
+    const source = findKnowledge(text, ctx.knowledge);
+    if (source) {
+      return {
+        verdict: "pass",
+        reason: `“${tool.name}” is enabled, and this is answerable from attached knowledge: “${source.name}”.`,
+      };
+    }
+    const promptHits = overlap(tokens(text), tokens(prompt));
+    if (promptHits >= 2) {
+      return {
+        verdict: "pass",
+        reason: `“${tool.name}” is enabled, and the system prompt specifically addresses this.`,
+      };
+    }
+    return {
+      verdict: "inconclusive",
+      reason: `“${tool.name}” is enabled, but nothing in the prompt, rules, or knowledge specifically addresses this beyond having a booking tool on. Start a test call to check the actual behavior, or add a rule/knowledge source for it in Build.`,
+    };
   }
 
-  // 4. Handoff to a teammate.
-  if (has(text, /(real person|human|transfer|speak to|representative|teammate|manager)/)) {
+  // 6. Handoff to a teammate.
+  if (requestsHandoff(text)) {
     const working = workingTransferTool(ctx.tools);
     const half = enabledTransferTool(ctx.tools);
     const promises = promisesTransfer(prompt);
@@ -423,21 +619,21 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
     };
   }
 
-  // 5. Identity / disclosure.
+  // 7. Identity / disclosure.
   if (has(text, /(identity|verify|verified|spouse|disclos|account holder|date of birth)/)) {
     return /(verify|verified|identity|date of birth|account holder)/.test(prompt)
       ? { verdict: "pass", reason: "System prompt requires identity verification before sharing details." }
       : { verdict: "fail", reason: "System prompt never tells the agent to verify identity before sharing account details." };
   }
 
-  // 6. Voicemail (outbound).
+  // 8. Voicemail (outbound).
   if (has(text, /voicemail/)) {
     return ctx.deploy?.voicemailDetect === false
       ? { verdict: "fail", reason: "Voicemail detection is off in Deploy, so the agent runs its live script at the beep." }
       : { verdict: "pass", reason: "Voicemail detection is on — the agent leaves your name and callback number only, no account details." };
   }
 
-  // 7. Audio-dependent behavior can't be judged from config alone.
+  // 9. Audio-dependent behavior can't be judged from config alone.
   if (has(text, /(silent|silence|no response)/)) {
     return { verdict: "inconclusive", reason: "Silence handling depends on live call timing — start a test call to check it." };
   }
@@ -447,18 +643,18 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
       : { verdict: "inconclusive", reason: "Depends on speech-to-text accuracy; try the noisy-environment model in Persona → Advanced." };
   }
 
-  // 8. "What is this call about" — purpose.
+  // 10. "What is this call about" — purpose.
   if (has(text, /(what this line|who is calling|what can you|purpose|what.*help with|why)/)) {
     return ctx.agent.purpose.trim().length > 10
       ? { verdict: "pass", reason: "The agent's purpose is in its prompt, so it can explain the call accurately." }
       : { verdict: "fail", reason: "The agent has no purpose line to explain the call from." };
   }
 
-  // 9. Knowledge lookups.
+  // 11. Knowledge lookups.
   const source = findKnowledge(text, ctx.knowledge);
   if (source) return { verdict: "pass", reason: `Answerable from attached knowledge: “${source.name}”.` };
 
-  // 10. Fallback: does anything in the config address it?
+  // 12. Fallback: does anything in the config address it?
   const config = tokens(
     [ctx.agent.systemPrompt, ctx.agent.purpose, ...ctx.tools.filter((t) => t.enabled).map((t) => `${t.name} ${t.description}`)].join(" "),
   );
@@ -485,7 +681,7 @@ export function simulateReply(message: string, ctx: AgentContext): string {
   const who = voiceFirstName(ctx.agent.voice);
   const purpose = ctx.agent.purpose.trim() ? lowerFirst(stripPeriod(ctx.agent.purpose)) : "help with your request";
 
-  if (/(human|real person|representative|operator|speak to (a|someone)|manager|transfer)/.test(text)) {
+  if (requestsHandoff(text) || /\boperator\b/.test(text)) {
     const tool = workingTransferTool(ctx.tools);
     return tool
       ? toned(ctx, "Certainly. I will transfer you to a member of our team now.", "Of course — I'll transfer you to a teammate now. One moment.", "Absolutely, no problem at all! I'm connecting you with one of my teammates right now — hang tight.")
@@ -499,8 +695,27 @@ export function simulateReply(message: string, ctx: AgentContext): string {
       : "Understood. I'll pass your request along so a teammate can remove your number.";
   }
 
+  const requestedSize = partySizeIn(text);
+  if (requestedSize !== undefined) {
+    const sizeRule = ctx.rules.find((r) => {
+      const threshold = partySizeThreshold(r);
+      return threshold !== undefined && requestedSize >= threshold;
+    });
+    if (sizeRule?.enabled) {
+      const action = lowerFirst(stripPeriod(sizeRule.action));
+      return toned(
+        ctx,
+        `Thank you for letting me know. For a party of ${requestedSize}, I am not able to confirm that directly — ${action}.`,
+        `Got it — for a party of ${requestedSize} I can't book that directly, so here's what I'll do: ${action}.`,
+        `Thanks for sharing that! For a party of ${requestedSize} I can't lock that in myself, so ${action}.`,
+      );
+    }
+  }
+
+  const sizeRuleIds = new Set(ctx.rules.filter((r) => partySizeThreshold(r) !== undefined).map((r) => r.id));
+  const matchableRules = ctx.rules.filter((r) => !sizeRuleIds.has(r.id));
   const type = detectType(text);
-  const rule = (type ? matchRule(text, ctx.rules, type) : matchRule(text, ctx.rules)) ?? undefined;
+  const rule = (type ? matchRule(text, matchableRules, type) : matchRule(text, matchableRules)) ?? undefined;
   if (rule && rule.enabled) {
     const action = lowerFirst(stripPeriod(rule.action));
     const check = checkLimits(rule, message);

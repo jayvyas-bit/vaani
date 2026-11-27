@@ -1035,6 +1035,7 @@ export default function App() {
       completedIds={completedIds}
       continueLabel={continueLabel}
       continueDisabled={stepBlocked}
+      continueHint={screen.step === "cost" && !costAcknowledged ? "Check the box above to continue" : undefined}
       showBack={stepIndex > 0 && !screen.live}
       showContinue={!(screen.step === "golive" && !screen.live)}
       onContinue={onContinue}

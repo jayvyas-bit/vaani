@@ -25,6 +25,7 @@ export function DeployWizardLayout({
   children,
   continueLabel = "Continue",
   continueDisabled = false,
+  continueHint,
   showBack = true,
   showContinue = true,
   onContinue,
@@ -43,6 +44,8 @@ export function DeployWizardLayout({
   hideFooter?: boolean;
   continueLabel?: string;
   continueDisabled?: boolean;
+  /** Shown beside Continue while it's disabled — explain why, since the field that caused it may be scrolled out of view. */
+  continueHint?: ReactNode;
   showBack?: boolean;
   showContinue?: boolean;
   onContinue?: () => void;
@@ -66,6 +69,10 @@ export function DeployWizardLayout({
     return () => observer.disconnect();
   }, [children]);
 
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [activeId]);
+
   return (
     <div className="flex h-full flex-col bg-paper-50">
       <BuilderNav agent={agent} active="deploy" onNavigate={onNavigate} onBack={onExit} />
@@ -78,7 +85,7 @@ export function DeployWizardLayout({
       )}
       <div className="relative flex-1 overflow-hidden">
         <div ref={scrollRef} className="h-full overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
-          <div className="mx-auto w-full max-w-[640px] lg:max-w-[760px] xl:max-w-[880px]">
+          <div className="mx-auto flex min-h-full w-full max-w-[640px] flex-col justify-center lg:max-w-[760px] xl:max-w-[880px]">
             <div key={activeId} className="animate-step-in">
               {children}
             </div>
@@ -90,7 +97,7 @@ export function DeployWizardLayout({
         )}
       </div>
       {!hideFooter && (
-        <WizardFooter onBack={onStepBack} showBack={showBack}>
+        <WizardFooter onBack={onStepBack} showBack={showBack} hint={continueDisabled ? continueHint : undefined}>
           {showContinue && (
             <Button disabled={continueDisabled} className="gap-1.5" onClick={onContinue}>
               {continueLabel}

@@ -54,7 +54,8 @@ export type LimitType =
   | "discount_limit"
   | "forbidden_promise"
   | "escalation_trigger"
-  | "payment_plan_limit";
+  | "payment_plan_limit"
+  | "follow_up_limit";
 
 export interface BusinessRule {
   id: string;

@@ -13,6 +13,7 @@ export function WizardFooter({
   showBack = true,
   backLabel = "Back",
   maxWidthClassName = "max-w-[640px]",
+  hint,
   children,
 }: {
   onBack?: () => void;
@@ -20,6 +21,8 @@ export function WizardFooter({
   backLabel?: string;
   /** Matches the footer's inner width to the step content above it. */
   maxWidthClassName?: string;
+  /** Shown beside the primary action — use to explain why it's disabled. */
+  hint?: ReactNode;
   children?: ReactNode;
 }) {
   return (
@@ -33,7 +36,10 @@ export function WizardFooter({
         ) : (
           <span />
         )}
-        {children ?? <span />}
+        <div className="flex items-center gap-3">
+          {hint && <span className="text-[12.5px] font-medium text-warning-700">{hint}</span>}
+          {children ?? <span />}
+        </div>
       </div>
     </div>
   );

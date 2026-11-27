@@ -14,6 +14,7 @@ const limitTypeLabel: Record<LimitType, string> = {
   forbidden_promise: "Never do",
   escalation_trigger: "Hand to a person",
   payment_plan_limit: "Payment plan limit",
+  follow_up_limit: "Follow-up limit",
 };
 
 const limitTypeTone: Record<LimitType, "accent" | "clay" | "amber" | "neutral"> = {
@@ -21,6 +22,7 @@ const limitTypeTone: Record<LimitType, "accent" | "clay" | "amber" | "neutral"> 
   forbidden_promise: "clay",
   escalation_trigger: "amber",
   payment_plan_limit: "neutral",
+  follow_up_limit: "accent",
 };
 
 const hasLimit = (t: LimitType) => t === "discount_limit" || t === "payment_plan_limit";
@@ -57,6 +59,10 @@ export function ruleSentence(
       return { condition: `${sentenceEnd(capitalize(label))} If it comes up`, action };
     case "escalation_trigger": {
       const body = /^(if|when|whenever)\b/i.test(label) ? capitalize(label) : `If ${lowerFirst(label)}`;
+      return { condition: threshold ? `${body} (${threshold})` : body, action };
+    }
+    case "follow_up_limit": {
+      const body = /^(if|when|whenever|after)\b/i.test(label) ? capitalize(label) : `If ${lowerFirst(label)}`;
       return { condition: threshold ? `${body} (${threshold})` : body, action };
     }
     default: {
@@ -149,6 +155,7 @@ const labelPlaceholder: Record<LimitType, string> = {
   escalation_trigger: "e.g. The caller asks for a manager",
   discount_limit: "e.g. Loyalty discount",
   payment_plan_limit: "e.g. Payment plans the agent can offer alone",
+  follow_up_limit: "e.g. Lead doesn't answer after 3 attempts",
 };
 
 /** Inline, flat form region in the rules list — used both to add and to edit a rule. */
@@ -229,6 +236,7 @@ function RuleForm({
             <option value="escalation_trigger">Hand to a person</option>
             <option value="discount_limit">Discount limit</option>
             <option value="payment_plan_limit">Payment plan limit</option>
+            <option value="follow_up_limit">Follow-up limit</option>
           </Select>
         </div>
         <div>
@@ -251,7 +259,9 @@ function RuleForm({
                 ? "e.g. Up to 6 months, min $25/mo"
                 : limitType === "discount_limit"
                   ? "e.g. Up to 15% off"
-                  : "e.g. Pain ≥ 7 / 10"
+                  : limitType === "follow_up_limit"
+                    ? "e.g. After 3 attempts, 24h apart"
+                    : "e.g. Pain ≥ 7 / 10"
             }
           />
           <FieldError id={`${id}-threshold-err`}>{thresholdErr}</FieldError>

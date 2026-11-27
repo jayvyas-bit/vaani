@@ -188,11 +188,14 @@ function InboundCompliance({
         title="Business hours"
         hint={hoursSummary(config)}
         control={
-          <Switch
-            checked={!!config.customHoursByDay}
-            onChange={(customHoursByDay) => update({ customHoursByDay })}
-            label="Set different hours for each day"
-          />
+          <div className="flex items-center gap-2">
+            <span className="text-[12.5px] text-ink-600">Different hours per day</span>
+            <Switch
+              checked={!!config.customHoursByDay}
+              onChange={(customHoursByDay) => update({ customHoursByDay })}
+              label="Set different hours for each day"
+            />
+          </div>
         }
       >
         {config.customHoursByDay ? (

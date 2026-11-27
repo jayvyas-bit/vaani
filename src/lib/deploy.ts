@@ -5,6 +5,33 @@ import type { Agent, CallDirection } from "./types";
 export type NumberMethod = "keep" | "new" | "port" | "pool";
 export type DncList = "internal" | "federal" | "both";
 
+export type PhoneCountry = "US" | "IN" | "GB" | "AU";
+
+export interface PhoneCountryInfo {
+  value: PhoneCountry;
+  label: string;
+  dialCode: string;
+  areaCodeLabel: string;
+  areaCodeHint: string;
+  areaCodeMaxLength: number;
+}
+
+/**
+ * Illustrative provisioning only — no carrier is actually reserved for any of
+ * these. Each country's area-code shape is simplified (a single numeric code),
+ * not a precise model of its real numbering plan.
+ */
+export const PHONE_COUNTRIES: PhoneCountryInfo[] = [
+  { value: "US", label: "United States / Canada", dialCode: "+1", areaCodeLabel: "Preferred area code", areaCodeHint: "Based on your workspace billing address", areaCodeMaxLength: 3 },
+  { value: "IN", label: "India", dialCode: "+91", areaCodeLabel: "Preferred STD code", areaCodeHint: "e.g. 22 for Mumbai, 11 for Delhi", areaCodeMaxLength: 4 },
+  { value: "GB", label: "United Kingdom", dialCode: "+44", areaCodeLabel: "Preferred area code", areaCodeHint: "e.g. 20 for London", areaCodeMaxLength: 4 },
+  { value: "AU", label: "Australia", dialCode: "+61", areaCodeLabel: "Preferred area code", areaCodeHint: "e.g. 2 for Sydney/NSW", areaCodeMaxLength: 2 },
+];
+
+export const phoneCountryInfo: Record<PhoneCountry, PhoneCountryInfo> = Object.fromEntries(
+  PHONE_COUNTRIES.map((c) => [c.value, c]),
+) as Record<PhoneCountry, PhoneCountryInfo>;
+
 export type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 export const DAY_KEYS: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 export const dayLabel: Record<DayKey, string> = {
@@ -26,6 +53,8 @@ export interface DayHours {
 /** Everything the Deploy wizard collects, held per agent in App state. */
 export interface DeployConfig {
   numberMethod: NumberMethod;
+  /** Which country's numbering plan the area code and provisioned/ported number follow. */
+  country: PhoneCountry;
   areaCode: string;
   /** The number reserved for "new" — generated, unique across the workspace. */
   provisionedNumber?: string;
@@ -132,6 +161,7 @@ export const dncLabel: Record<DncList, string> = {
 export function defaultDeployConfig(direction: CallDirection, currentNumber?: string): DeployConfig {
   return {
     numberMethod: currentNumber ? "keep" : "new",
+    country: "US",
     areaCode: "503",
     portNumber: "",
     hoursOpen: "08:00",
@@ -179,42 +209,60 @@ export function contactListSummary(config: DeployConfig): string | null {
   return `${config.contactListName.trim()} — ${contactCountLabel(config.contactCount)}`;
 }
 
-export function isValidAreaCode(code: string) {
-  return /^[2-9]\d{2}$/.test(code.trim());
+export function isValidAreaCode(country: PhoneCountry, code: string) {
+  const trimmed = code.trim();
+  if (country === "US") return /^[2-9]\d{2}$/.test(trimmed);
+  const max = phoneCountryInfo[country].areaCodeMaxLength;
+  return new RegExp(`^[1-9]\\d{0,${max - 1}}$`).test(trimmed);
 }
 
 function digits(s: string) {
   return s.replace(/\D/g, "");
 }
 
-export function formatPhone(raw: string): string | null {
-  let d = digits(raw);
-  if (d.length === 11 && d.startsWith("1")) d = d.slice(1);
-  if (d.length !== 10 || !/^[2-9]/.test(d)) return null;
-  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+export function formatPhone(country: PhoneCountry, raw: string): string | null {
+  const d = digits(raw);
+  if (country === "US") {
+    let nanp = d;
+    if (nanp.length === 11 && nanp.startsWith("1")) nanp = nanp.slice(1);
+    if (nanp.length !== 10 || !/^[2-9]/.test(nanp)) return null;
+    return `(${nanp.slice(0, 3)}) ${nanp.slice(3, 6)}-${nanp.slice(6)}`;
+  }
+  // Generic international fallback — accepts a plausible national-number length
+  // and displays it with the country's dial code, without modelling the exact
+  // numbering plan the way the NANP branch above does.
+  if (d.length < 7 || d.length > 12) return null;
+  return `${phoneCountryInfo[country].dialCode} ${d}`;
+}
+
+function provisionedFormat(country: PhoneCountry, areaCode: string, i: number): string {
+  if (country === "US") return `(${areaCode}) 555-0${i}`;
+  return `${phoneCountryInfo[country].dialCode} ${areaCode} 555${i}`;
 }
 
 /**
- * Reserve a fictional 555-01XX number in the area code that no other agent in
- * the workspace already holds.
+ * Reserve a fictional 555-01XX placeholder number in the area code that no
+ * other agent in the workspace already holds. Illustrative only — no real
+ * carrier or number range is checked for any country.
  */
-export function provisionNumber(areaCode: string, taken: Iterable<string>): string {
+export function provisionNumber(country: PhoneCountry, areaCode: string, taken: Iterable<string>): string {
   const used = new Set(Array.from(taken, (n) => digits(n)));
   const candidates: string[] = [];
   for (let i = 100; i <= 199; i++) {
-    const n = `(${areaCode}) 555-0${i}`;
+    const n = provisionedFormat(country, areaCode, i);
     if (!used.has(digits(n))) candidates.push(n);
   }
-  if (candidates.length === 0) return `(${areaCode}) 555-0100`;
+  if (candidates.length === 0) return provisionedFormat(country, areaCode, 100);
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
-/** Make sure a "new" number exists and matches the chosen area code. */
+/** Make sure a "new" number exists and matches the chosen country + area code. */
 export function ensureProvisioned(config: DeployConfig, taken: Iterable<string>): DeployConfig {
-  if (config.numberMethod !== "new" || !isValidAreaCode(config.areaCode)) return config;
+  if (config.numberMethod !== "new" || !isValidAreaCode(config.country, config.areaCode)) return config;
   const code = config.areaCode.trim();
-  if (config.provisionedNumber?.startsWith(`(${code})`)) return config;
-  return { ...config, provisionedNumber: provisionNumber(code, taken) };
+  const expectedPrefix = config.country === "US" ? `(${code})` : `${phoneCountryInfo[config.country].dialCode} ${code}`;
+  if (config.provisionedNumber?.startsWith(expectedPrefix)) return config;
+  return { ...config, provisionedNumber: provisionNumber(config.country, code, taken) };
 }
 
 export function availablePool(taken: Iterable<string>) {
@@ -227,9 +275,9 @@ export function resolvedNumber(config: DeployConfig, currentNumber?: string): st
     case "keep":
       return currentNumber ?? null;
     case "new":
-      return isValidAreaCode(config.areaCode) ? (config.provisionedNumber ?? null) : null;
+      return isValidAreaCode(config.country, config.areaCode) ? (config.provisionedNumber ?? null) : null;
     case "port":
-      return formatPhone(config.portNumber);
+      return formatPhone(config.country, config.portNumber);
     case "pool":
       return config.poolNumber ?? null;
   }
@@ -243,10 +291,13 @@ export const numberSourceNote: Record<NumberMethod, string> = {
 };
 
 export function channelError(config: DeployConfig, currentNumber?: string): string | null {
-  if (config.numberMethod === "new" && !isValidAreaCode(config.areaCode))
-    return "Enter a 3-digit US area code (it can't start with 0 or 1).";
-  if (config.numberMethod === "port" && !formatPhone(config.portNumber))
-    return "Enter the full 10-digit number you want to port, e.g. (503) 555-0123.";
+  const country = phoneCountryInfo[config.country];
+  if (config.numberMethod === "new" && !isValidAreaCode(config.country, config.areaCode))
+    return `Enter a valid ${country.label} code (numeric, up to ${country.areaCodeMaxLength} digits, can't start with 0).`;
+  if (config.numberMethod === "port" && !formatPhone(config.country, config.portNumber))
+    return config.country === "US"
+      ? "Enter the full 10-digit number you want to port, e.g. (503) 555-0123."
+      : `Enter the full number you want to port, e.g. ${country.dialCode} ${"5".repeat(Math.max(7, country.areaCodeMaxLength + 5))}.`;
   if (config.numberMethod === "pool" && !config.poolNumber) return "Pick a number from your pool.";
   if (!resolvedNumber(config, currentNumber)) return "Choose a phone number to continue.";
   return null;

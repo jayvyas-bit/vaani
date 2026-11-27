@@ -8,8 +8,11 @@ import {
   ensureProvisioned,
   formatPhone,
   isValidAreaCode,
+  PHONE_COUNTRIES,
+  phoneCountryInfo,
   type DeployConfig,
   type NumberMethod,
+  type PhoneCountry,
 } from "@/lib/deploy";
 import type { CallDirection } from "@/lib/types";
 import { useControllable } from "@/lib/useControllable";
@@ -44,14 +47,18 @@ export function ChannelNumberStep({
       numberMethod,
       poolNumber: numberMethod === "pool" ? (config.poolNumber && pool.includes(config.poolNumber) ? config.poolNumber : pool[0]) : config.poolNumber,
     });
+  const chooseCountry = (country: PhoneCountry) => update({ country, areaCode: "", provisionedNumber: undefined });
 
+  const countryInfo = phoneCountryInfo[config.country];
   const areaErr =
-    config.numberMethod === "new" && !isValidAreaCode(config.areaCode)
-      ? "Enter a 3-digit US area code (it can't start with 0 or 1)."
+    config.numberMethod === "new" && !isValidAreaCode(config.country, config.areaCode)
+      ? `Enter a valid ${countryInfo.label} code (numeric, up to ${countryInfo.areaCodeMaxLength} digits, can't start with 0).`
       : null;
   const portErr =
-    config.numberMethod === "port" && (showErrors || config.portNumber.trim()) && !formatPhone(config.portNumber)
-      ? "Enter the full 10-digit number, e.g. (503) 555-0123."
+    config.numberMethod === "port" && (showErrors || config.portNumber.trim()) && !formatPhone(config.country, config.portNumber)
+      ? config.country === "US"
+        ? "Enter the full 10-digit number, e.g. (503) 555-0123."
+        : `Enter the full number including the country code, e.g. ${countryInfo.dialCode} 5551234567.`
       : null;
 
   return (
@@ -115,54 +122,90 @@ export function ChannelNumberStep({
       </fieldset>
 
       {config.numberMethod === "new" && (
-        <div>
-          <FieldLabel htmlFor={`${id}-area`} hint="Based on your workspace billing address">
-            Preferred area code
-          </FieldLabel>
-          <Input
-            id={`${id}-area`}
-            name="areaCode"
-            inputMode="numeric"
-            maxLength={3}
-            autoComplete="off"
-            value={config.areaCode}
-            onChange={(e) => update({ areaCode: e.target.value.replace(/\D/g, "").slice(0, 3) })}
-            aria-invalid={!!areaErr || undefined}
-            aria-describedby={areaErr ? `${id}-area-err` : `${id}-area-note`}
-            className="w-32"
-          />
-          <FieldError id={`${id}-area-err`}>{areaErr}</FieldError>
-          {!areaErr && config.provisionedNumber && (
-            <p id={`${id}-area-note`} className="mt-2 flex items-center gap-1.5 text-[13px] text-ink-700">
-              <Icon name="check" className="size-3.5 text-success-600" />
-              <span className="font-medium tabular-nums">{config.provisionedNumber}</span> — reserved for this agent,
-              active once you go live
-            </p>
-          )}
+        <div className="flex flex-col gap-4">
+          <div>
+            <FieldLabel htmlFor={`${id}-country`}>Country</FieldLabel>
+            <Select
+              id={`${id}-country`}
+              name="country"
+              value={config.country}
+              onChange={(e) => chooseCountry(e.target.value as PhoneCountry)}
+              className="max-w-[280px]"
+            >
+              {PHONE_COUNTRIES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label} ({c.dialCode})
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <FieldLabel htmlFor={`${id}-area`} hint={countryInfo.areaCodeHint}>
+              {countryInfo.areaCodeLabel}
+            </FieldLabel>
+            <Input
+              id={`${id}-area`}
+              name="areaCode"
+              inputMode="numeric"
+              maxLength={countryInfo.areaCodeMaxLength}
+              autoComplete="off"
+              value={config.areaCode}
+              onChange={(e) => update({ areaCode: e.target.value.replace(/\D/g, "").slice(0, countryInfo.areaCodeMaxLength) })}
+              aria-invalid={!!areaErr || undefined}
+              aria-describedby={areaErr ? `${id}-area-err` : `${id}-area-note`}
+              className="w-32"
+            />
+            <FieldError id={`${id}-area-err`}>{areaErr}</FieldError>
+            {!areaErr && config.provisionedNumber && (
+              <p id={`${id}-area-note`} className="mt-2 flex items-center gap-1.5 text-[13px] text-ink-700">
+                <Icon name="check" className="size-3.5 text-success-600" />
+                <span className="font-medium tabular-nums">{config.provisionedNumber}</span> — reserved for this agent,
+                active once you go live
+              </p>
+            )}
+          </div>
         </div>
       )}
       {config.numberMethod === "port" && (
-        <div>
-          <FieldLabel htmlFor={`${id}-port`} hint="We'll start the carrier porting process after you continue">
-            Existing number
-          </FieldLabel>
-          <Input
-            id={`${id}-port`}
-            name="portNumber"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel-national"
-            value={config.portNumber}
-            onChange={(e) => update({ portNumber: e.target.value })}
-            onBlur={() => {
-              const formatted = formatPhone(config.portNumber);
-              if (formatted && formatted !== config.portNumber) update({ portNumber: formatted });
-            }}
-            aria-invalid={!!portErr || undefined}
-            aria-describedby={portErr ? `${id}-port-err` : undefined}
-            placeholder="(xxx) xxx-xxxx"
-          />
-          <FieldError id={`${id}-port-err`}>{portErr}</FieldError>
+        <div className="flex flex-col gap-4">
+          <div>
+            <FieldLabel htmlFor={`${id}-port-country`}>Country</FieldLabel>
+            <Select
+              id={`${id}-port-country`}
+              name="country"
+              value={config.country}
+              onChange={(e) => update({ country: e.target.value as PhoneCountry })}
+              className="max-w-[280px]"
+            >
+              {PHONE_COUNTRIES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label} ({c.dialCode})
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <FieldLabel htmlFor={`${id}-port`} hint="We'll start the carrier porting process after you continue">
+              Existing number
+            </FieldLabel>
+            <Input
+              id={`${id}-port`}
+              name="portNumber"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel-national"
+              value={config.portNumber}
+              onChange={(e) => update({ portNumber: e.target.value })}
+              onBlur={() => {
+                const formatted = formatPhone(config.country, config.portNumber);
+                if (formatted && formatted !== config.portNumber) update({ portNumber: formatted });
+              }}
+              aria-invalid={!!portErr || undefined}
+              aria-describedby={portErr ? `${id}-port-err` : undefined}
+              placeholder={config.country === "US" ? "(xxx) xxx-xxxx" : `${countryInfo.dialCode} xxxxxxxxxx`}
+            />
+            <FieldError id={`${id}-port-err`}>{portErr}</FieldError>
+          </div>
         </div>
       )}
       {config.numberMethod === "pool" && pool.length > 0 && (
