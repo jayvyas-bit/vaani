@@ -27,7 +27,7 @@ export function CreateSuccess({
   onOpenBuild?: () => void;
   /** Opens the Build editor on the tab that holds the given details. */
   onEdit?: (tab: "persona" | "knowledge") => void;
-  /** Copies this agent into the opposite direction as a draft, with its rules, outcomes and knowledge. */
+  /** Adds a draft in the opposite direction that keeps this agent’s knowledge and tools but starts with general guardrails only. */
   onAddCounterpart?: () => void;
 }) {
   const [counterpartAdded, setCounterpartAdded] = useState(false);
@@ -143,7 +143,7 @@ export function CreateSuccess({
           {onAddCounterpart && (
             <p className="mt-3 text-sm text-tertiary">
               {counterpartAdded ? (
-                `An ${outbound ? "inbound" : "outbound"} draft was added to your agents. It starts with copies of this agent’s rules and knowledge; review its opening line, hours and tests before use.`
+                `An ${outbound ? "inbound" : "outbound"} draft was added to your agents. It keeps this agent’s knowledge and tools. Its guardrails start as the general set, and its result fields and tests start empty, because the originals were written for the other direction. Add them before use.`
               ) : (
                 <>
                   Need {outbound ? "incoming calls" : "outgoing updates"} too?{" "}

@@ -635,6 +635,67 @@ export function eventStarter(): StarterContent {
 }
 
 /**
+ * Inbound B2B ordering: verify the business account first, quote only approved prices, and never confirm stock, credit or an order without the system result.
+ * Editable config only: no catalog, price list, credit or order system is assumed.
+ */
+export function wholesaleStarter(): StarterContent {
+  const rule = (label: string, action: string, limitType: BusinessRule["limitType"], threshold?: string): BusinessRule => ({
+    id: newId("rule"),
+    limitType,
+    label,
+    threshold,
+    action,
+    enabled: true,
+  });
+  const field = (label: string, type: OutcomeField["type"], options?: string[], requiredWhen?: string): OutcomeField => ({
+    id: newId("outcome"),
+    label,
+    type,
+    options,
+    required: true,
+    requiredWhen,
+  });
+  return {
+    rules: [
+      rule("Never discuss prices, credit or orders before the business account is verified", "Ask for the verification items your company lists, and hand to a person if they cannot be confirmed", "forbidden_promise"),
+      rule("Never quote a price that is not on this account's approved price list", "Say the price will be confirmed by the sales team, and record the requested price as stated", "forbidden_promise"),
+      rule("Never accept an order below the minimum order quantity", "State the minimum once from your product information, offer to note the request, and place nothing below it", "forbidden_promise"),
+      rule("Never say an item is in stock unless the stock system returned it, and recheck before confirming", "If availability changes during the call, say so, restate only the latest result, and ask again before confirming", "forbidden_promise"),
+      rule("Order would exceed the account's credit limit or credit cannot be checked", "Do not place it. Say it needs approval, record it as pending credit approval and hand to the account manager", "escalation_trigger", "Credit check fails, or cannot be run"),
+      rule("Never agree a discount, special terms or credit increase without recorded approval", "Say it needs approval, record the request, and hand to the sales team", "escalation_trigger", "Any request outside the approved price list or terms"),
+      rule("Never say an order is placed unless the order system returned a reference", "Say the request is noted but not confirmed, and give the next step with no promise of timing", "forbidden_promise"),
+    ],
+    outcomes: [
+      field("Account verification", "enum", ["Verified", "Failed", "Not attempted"]),
+      field("Account reference", "text", undefined, "account verification is verified"),
+      field("SKUs and quantities (as stated)", "text", undefined, "account verification is verified"),
+      field("Approved unit price", "text", undefined, "the price list returned a price"),
+      field("Availability", "enum", ["In stock (system confirmed)", "Not confirmed", "Out of stock"]),
+      field("Credit check result", "enum", ["Within limit (system confirmed)", "Exceeds limit", "Not checked"]),
+      field("Order status", "enum", ["Confirmed by order system", "Requested, not confirmed", "Pending approval", "Not placed"]),
+      field("Order reference", "text", undefined, "order status is confirmed by order system"),
+    ],
+    scenarios: [
+      scenario("Customer orders below the minimum quantity", "States the minimum from the product information, places nothing below it, and records the request as not placed."),
+      scenario("Customer asks for a price that is not on their list", "Does not agree the price, says the sales team will confirm, and records the requested price as stated."),
+      scenario("The order would exceed the credit limit", "Does not place the order, says it needs approval, records it as pending credit approval and hands to the account manager."),
+      scenario("Stock availability changes during the call", "Says the availability changed, restates only the latest result, and asks the customer again before confirming."),
+      scenario("The approving manager is unavailable", "Does not place or promise the order, records it as pending approval, takes a callback and gives no promise of timing."),
+    ],
+    knowledge: [
+      {
+        id: newId("src"),
+        name: "Trade terms (edit me)",
+        kind: "text",
+        sizeLabel: "TEXT",
+        attached: true,
+        body: "Write here: how you verify a business account, your product lines with minimum order quantities, who approves special prices or credit, and how an order is confirmed. The agent states only what is written here. A price, stock level, credit result or order counts only when your systems return it.",
+      },
+    ],
+  };
+}
+
+/**
  * One entry per job type. Add a job type by adding an entry here; nothing else needs wiring.
  * `keywords` are matched against the job text, and the entry with the most distinct matches wins, so a job that
  * mentions two worlds is not decided by whichever detector happened to run first.
@@ -648,17 +709,20 @@ export const STARTERS: { id: string; direction: "inbound" | "outbound"; keywords
   { id: "outage", direction: "inbound", keywords: /\b(outages?|power cuts?|electricity|utility|utilities|water supply|grid)\b/gi, build: outageStarter },
   { id: "retention", direction: "inbound", keywords: /\b(subscriptions?|cancellations?|retention|churn|renewals?|streaming)\b/gi, build: retentionStarter },
   { id: "events", direction: "inbound", keywords: /\b(events?|conferences?|attendees?|registrations?|waitlist\w*|sessions?|summit|webinars?)\b/gi, build: eventStarter },
+  { id: "wholesale", direction: "inbound", keywords: /\b(wholesale|b2b|distributors?|bulk|purchase orders?|moq|skus?|resellers?|trade accounts?)\b/gi, build: wholesaleStarter },
   { id: "travel", direction: "inbound", keywords: /\b(travel|flights?|itinerar\w*|airlines?|bookings?|rebooking|disruptions?|travell?ers?)\b/gi, build: travelStarter },
   { id: "maintenance", direction: "inbound", keywords: /\b(maintenance|repairs?|work orders?|tenants?|landlord|property management|apartments?)\b/gi, build: maintenanceStarter },
 ];
 
 /** The best-matching starter for a job, or undefined when nothing matches (callers then fall back to baseRules). */
 export function pickStarter(purpose: string, direction: string): { id: string; content: StarterContent } | undefined {
-  let best: { id: string; score: number; build: () => StarterContent } | undefined;
+  let best: { id: string; score: number; hits: number; build: () => StarterContent } | undefined;
   for (const st of STARTERS) {
     if (st.direction !== direction) continue;
-    const score = new Set((purpose.match(st.keywords) ?? []).map((m) => m.toLowerCase())).size;
-    if (score > 0 && (!best || score > best.score)) best = { id: st.id, score, build: st.build };
+    const matches = (purpose.match(st.keywords) ?? []).map((m) => m.toLowerCase());
+    const score = new Set(matches).size;
+    // Distinct keywords decide; on a tie, the job that names its terms more often wins, then list order.
+    if (score > 0 && (!best || score > best.score || (score === best.score && matches.length > best.hits))) best = { id: st.id, score, hits: matches.length, build: st.build };
   }
   return best ? { id: best.id, content: best.build() } : undefined;
 }

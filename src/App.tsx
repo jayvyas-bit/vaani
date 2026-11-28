@@ -878,7 +878,10 @@ export default function App() {
           avgHandleTimeSec: undefined,
           linkedAgentId: rec.agent.id,
         },
-        scenarios: rec.scenarios.map((s) => ({ ...s, verdict: "not-run" as const })),
+        // Rules, result fields and tests were written for the other direction, so start from the general guardrails and keep only the knowledge and tools.
+        businessRules: baseRules(),
+        outcomes: [],
+        scenarios: [],
         transcript: [],
         deploy: undefined,
         lastDeployStep: undefined,
