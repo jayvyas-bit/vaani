@@ -22,9 +22,22 @@ export interface Offering {
  * The facts a caller will ask about. Everything here is optional — the agent
  * quotes only what is listed and hands off the rest.
  */
+export interface Faq {
+  id: string;
+  question: string;
+  /** The answer exactly as the agent should say it. */
+  answer: string;
+}
+
 export interface BusinessDetails {
   offerings: Offering[];
+  /** Questions callers ask and the answer to give, e.g. address, parking, policies. */
+  faqs?: Faq[];
   hours?: string;
+  /** IANA zone the hours are in, e.g. "Asia/Kolkata". */
+  timezone?: string;
+  /** What to collect when taking a message. */
+  messageFields?: string[];
   /** Who follows up when the agent can’t answer, e.g. "Front desk, 555-0100". */
   handoff?: string;
 }

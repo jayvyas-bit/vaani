@@ -36,34 +36,34 @@ export function SectionCard({
 
   return (
     <section
-      className="border-b border-ink-950/10 last:border-b-0"
+      className="border-t border-secondary py-8 first:border-t-0 first:pt-0"
     >
-      <header className={`flex items-start justify-between gap-4 px-6 ${quiet ? "py-4" : "pt-6 pb-2"}`}>
+      <header className={`flex items-start justify-between gap-4 ${quiet ? "pb-2" : "pb-5"}`}>
         <div className="min-w-0">
-          <h3 className={`font-semibold tracking-[-0.01em] text-ink-950 ${quiet ? "text-[13px]" : "text-[15px]"}`}>
+          <h2 className={`font-semibold text-primary ${quiet ? "text-sm" : "text-lg"}`}>
             {title}
-          </h3>
-          {description && <p className="mt-0.5 text-[13px] text-ink-500">{description}</p>}
+          </h2>
+          {description && <p className="mt-0.5 text-sm text-tertiary">{description}</p>}
         </div>
         {advanced && (
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
-            className={`-mr-2 flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ink-400/30 ${
-              open ? "bg-paper-100 text-ink-900" : "text-ink-600 hover:bg-paper-50 hover:text-ink-900"
+            className={`-mr-2 flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-2 text-sm font-semibold outline-focus-ring transition-colors focus-visible:outline-2 ${
+              open ? "bg-active text-secondary" : "text-tertiary hover:bg-primary_hover hover:text-secondary"
             }`}
           >
             Advanced
             <Icon
               name="chevron-down"
-              className={`size-4 text-ink-500 transition-transform ${open ? "rotate-180" : ""}`}
+              className={`size-4 text-fg-quaternary transition-transform ${open ? "rotate-180" : ""}`}
             />
           </button>
         )}
       </header>
 
-      {guided != null && <div className={`px-6 ${quiet ? "pb-4" : "pb-2"}`}>{guided}</div>}
+      {guided != null && <div>{guided}</div>}
 
       {advanced && (
         <div
@@ -72,8 +72,8 @@ export function SectionCard({
           }`}
         >
           <div className="min-h-0 overflow-hidden">
-            <div className="mx-6 mb-4 rounded-md border border-ink-950/10 bg-paper-50 px-4 py-4">
-              <div className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-ink-500">
+            <div className="mt-5 rounded-xl border border-secondary bg-secondary px-4 py-4">
+              <div className="mb-3 flex items-center gap-1.5 text-sm font-medium text-tertiary">
                 <Icon name="wrench" className="size-3.5" />
                 Advanced settings
               </div>

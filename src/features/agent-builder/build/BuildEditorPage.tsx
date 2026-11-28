@@ -143,7 +143,7 @@ export function BuildEditorPage({
       {!embedded && currentAgent.status === "live" && (
         <div role="status" className="flex items-center gap-2 border-b border-warning-200 bg-warning-50 px-4 py-2 sm:px-6">
           <Icon name="alert" className="size-3.5 shrink-0 text-warning-600" />
-          <p className="text-[12px] text-ink-800">
+          <p className="text-[13px] text-ink-800">
             <span className="font-semibold">This agent is live.</span> Changes here take effect immediately for real{" "}
             {currentAgent.direction === "inbound" ? "callers" : "calls"}.
           </p>
@@ -152,7 +152,7 @@ export function BuildEditorPage({
       {currentAgent.status === "paused" && (
         <div role="status" className="flex items-center gap-2 border-b border-ink-950/10 bg-paper-50 px-4 py-2 sm:px-6">
           <Icon name="clock" className="size-3.5 shrink-0 text-ink-400" />
-          <p className="text-[12px] text-ink-600">This agent is paused. Changes take effect once you resume it from Deploy.</p>
+          <p className="text-[13px] text-ink-600">This agent is paused. Changes take effect once you resume it from Deploy.</p>
         </div>
       )}
       {!embedded && (
@@ -162,13 +162,19 @@ export function BuildEditorPage({
           </div>
         </div>
       )}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-10 sm:px-8 sm:py-14">
         <div
           key={tab}
-          className={`animate-step-in mx-auto flex w-full flex-col ${"max-w-[1200px]"}`}
+          className="animate-step-in mx-auto flex w-full max-w-[1040px] flex-col"
           role="tabpanel"
           aria-label={tabs.find((t) => t.id === tab)?.label}
         >
+          <header className="mb-10">
+            <h1 className="text-display-xs font-semibold tracking-[-0.02em] text-primary sm:text-display-sm">
+              {tabs.find((t) => t.id === tab)?.label}
+            </h1>
+            <p className="mt-2 text-md text-tertiary">{tabs.find((t) => t.id === tab)?.description}</p>
+          </header>
           {tab === "persona" && (
             <PersonaSection
               agent={currentAgent}

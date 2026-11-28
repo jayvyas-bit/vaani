@@ -30,7 +30,7 @@ export function PreviewDialog({ agent, source, onClose }: { agent: Agent; source
         className="flex h-[min(640px,100%)] w-full max-w-[560px] flex-col overflow-hidden rounded-xl bg-paper-50 shadow-float"
       >
         <div className="flex items-center justify-between border-b border-ink-950/10 bg-paper-0 px-4 py-3">
-          <h2 id={titleId} className="text-[15px] font-semibold text-ink-950">
+          <h2 id={titleId} className="text-md font-semibold text-primary">
             Preview {agent.name.trim() || "this agent"}
           </h2>
           <button
@@ -38,7 +38,7 @@ export function PreviewDialog({ agent, source, onClose }: { agent: Agent; source
             type="button"
             onClick={onClose}
             aria-label="Close preview"
-            className="flex size-8 items-center justify-center rounded-md text-ink-500 outline-none hover:bg-paper-100 hover:text-ink-900 focus-visible:ring-2 focus-visible:ring-brand-200"
+            className="flex size-8 items-center justify-center rounded-md text-tertiary outline-none hover:bg-paper-100 hover:text-ink-900 focus-visible:ring-2 focus-visible:ring-brand-200"
           >
             <Icon name="x" className="size-4" />
           </button>
@@ -70,7 +70,7 @@ export function AgentPreviewPanel({
   const voiceName = agent.voice.split(" — ")[0];
 
   return (
-    <section className="relative rounded-lg border border-ink-950/10 bg-paper-0 px-4 pb-4 pt-5">
+    <section className="relative rounded-xl bg-secondary px-6 pb-6 pt-7">
       {onClose && (
         <button
           type="button"
@@ -83,14 +83,14 @@ export function AgentPreviewPanel({
       )}
       <div className="flex flex-col items-center text-center">
         <span
-          className={`flex size-14 items-center justify-center rounded-full ring-1 ring-inset bg-paper-100 text-ink-900 ring-ink-950/10`}
+          className={`flex size-14 items-center justify-center rounded-full ring-1 ring-inset bg-primary text-primary ring-primary`}
         >
           <VoiceWaveform className="h-6" />
         </span>
-        <h2 className="mt-3 text-[15px] font-semibold text-ink-950">Talk to your agent</h2>
-        <p className="mt-0.5 text-[12px] text-ink-500">{voiceName}'s voice · text test</p>
+        <h2 className="mt-4 text-md font-semibold text-primary">Talk to your agent</h2>
+        <p className="mt-1 text-sm text-tertiary">{voiceName}'s voice · text test</p>
       </div>
-      <Button variant="secondary" className="mt-4 w-full" onClick={() => setOpen(true)}>
+      <Button variant="secondary" className="mt-6 w-full" onClick={() => setOpen(true)}>
         <Icon name="play" className="size-3.5" />
         Start test call
       </Button>

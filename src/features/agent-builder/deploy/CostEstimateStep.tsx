@@ -98,8 +98,8 @@ export function CostEstimateStep({
     <div className="flex flex-col gap-7">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-[20px] font-semibold text-ink-950">Cost estimate</h1>
-          <p className="mt-1 text-[15px] text-ink-600">
+          <h1 className="text-display-xs font-semibold tracking-[-0.02em] text-primary">Cost estimate</h1>
+          <p className="mt-2 text-md text-tertiary">
             Set your expected volume to see what this agent will cost to run.
           </p>
         </div>
@@ -133,7 +133,7 @@ export function CostEstimateStep({
         </p>
         {currency !== "USD" && (
           <p className="mt-1 text-[12px] text-ink-500">
-            Illustrative conversion at a fixed rate for display only — you’re billed in USD, and this is not a live or
+            Illustrative conversion at a fixed rate for display only. You’re billed in USD, and this is not a live or
             verified exchange rate.
           </p>
         )}
@@ -162,8 +162,8 @@ export function CostEstimateStep({
             {direction === "outbound" && config.contactListName && config.contactCount > 0 && (
               <p className="mt-2 text-[12px] text-ink-500">
                 {callsPerMonth > config.contactCount
-                  ? `“${config.contactListName}” has ${config.contactCount.toLocaleString()} contacts — at this volume, each one gets called about ${(callsPerMonth / config.contactCount).toFixed(1)}× a month.`
-                  : `“${config.contactListName}” has ${config.contactCount.toLocaleString()} contacts — at this volume, you’d reach about ${Math.round((callsPerMonth / config.contactCount) * 100)}% of the list each month.`}
+                  ? `“${config.contactListName}” has ${config.contactCount.toLocaleString()} contacts. At this volume, each one gets called about ${(callsPerMonth / config.contactCount).toFixed(1)}× a month.`
+                  : `“${config.contactListName}” has ${config.contactCount.toLocaleString()} contacts. At this volume, you’d reach about ${Math.round((callsPerMonth / config.contactCount) * 100)}% of the list each month.`}
               </p>
             )}
           </div>
@@ -198,14 +198,14 @@ export function CostEstimateStep({
           ))}
         </dl>
         <p className="mt-2 text-[12px] text-ink-500">
-          Modeled per-minute rates for illustration — not live prices from these vendors. No AI provider or telephony
+          Modeled per-minute rates for illustration, not live prices from these vendors. No AI provider or telephony
           carrier is actually connected here, and real billing depends on the rates you contract with each one.
         </p>
 
         <div className="mt-5 border-t border-ink-950/10 pt-4">
           <FieldLabel
             htmlFor={`${id}-budget`}
-            hint="Optional — we’ll warn you before going live if you’re projected to exceed it"
+            hint="Optional. We’ll warn you before going live if you’re projected to exceed it"
           >
             Monthly budget
           </FieldLabel>
@@ -230,7 +230,7 @@ export function CostEstimateStep({
           </div>
           {currency !== "USD" && (
             <p className="mt-1.5 text-[12px] text-ink-500">
-              Illustrative conversion — billing and the warning threshold are still tracked in USD.
+              Illustrative conversion: billing and the warning threshold are still tracked in USD.
             </p>
           )}
           {overBudget && (
@@ -263,7 +263,7 @@ export function CostEstimateStep({
                   </p>
                   {suggestion.stillOverBudget && (
                     <p className="mt-1.5 text-[12px] text-ink-500">
-                      Still over budget even with our lowest-cost providers — consider lowering expected call volume above.
+                      Still over budget even with our lowest-cost providers. Consider lowering expected call volume above.
                     </p>
                   )}
                   <Button type="button" variant="secondary" size="sm" className="mt-3" onClick={applySuggestion} disabled={!onApplyProviders}>

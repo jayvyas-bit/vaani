@@ -201,7 +201,7 @@ export function TestPanel({
       {sampleShown && (
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ink-950/8 bg-paper-50 px-4 py-2">
           <p className="text-[12px] text-ink-700">
-            <span className="font-semibold">Sample conversation</span> — an example of how this agent might
+            <span className="font-semibold">Sample conversation</span>: an example of how this agent might
             sound. It isn’t a test.
           </p>
           <button
@@ -259,7 +259,7 @@ export function TestPanel({
               {flagged.has(t.id) && (
                 <span className="mt-1 flex items-center gap-1 text-[12px] font-medium text-clay-700">
                   <Icon name="flag" className="size-3" />
-                  Flagged — added to Test scenarios
+                  Flagged and added to Test scenarios
                 </span>
               )}
               {breaches.has(t.id) && (

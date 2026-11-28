@@ -29,25 +29,25 @@ export function CostSummaryPanel({
   const topSwap = suggestCheaperProviders(deploy, agent, 0)?.swaps[0];
 
   return (
-    <section className="rounded-lg border border-ink-950/10 bg-paper-0">
-      <div className="flex items-baseline justify-between gap-2 px-4 pt-3.5">
-        <h2 className="text-[13px] font-semibold text-ink-950">Estimated cost</h2>
-        <span className="text-[12px] text-ink-500 tabular-nums">{formatMoney(perMin, currency, { cents: true })}/min</span>
+    <section className="rounded-xl bg-secondary">
+      <div className="flex items-baseline justify-between gap-2 px-6 pt-6">
+        <h2 className="text-sm font-semibold text-primary">Estimated cost</h2>
+        <span className="text-sm text-tertiary tabular-nums">{formatMoney(perMin, currency, { cents: true })}/min</span>
       </div>
-      <div className="px-4 pb-3.5">
-        <p className="mt-1 text-[26px] font-semibold leading-none tracking-[-0.02em] text-ink-950 tabular-nums">
+      <div className="px-6 pb-6">
+        <p className="mt-3 text-display-sm font-semibold leading-none tracking-[-0.02em] text-primary tabular-nums">
           {formatMoney(total, currency)}
-          <span className="ml-1 text-[12px] font-normal tracking-normal text-ink-500">/ month</span>
+          <span className="ml-1 text-sm font-normal tracking-normal text-tertiary">/ month</span>
         </p>
-        {isDefault && <p className="mt-1.5 text-[12px] text-ink-500">Starting estimate. Adjust to your volume.</p>}
+        {isDefault && <p className="mt-2 text-sm text-tertiary">Starting estimate. Adjust to your volume.</p>}
 
-        <div className="mt-2 space-y-1">
+        <div className="mt-6 space-y-6">
           <div>
-            <div className="flex justify-between text-[12px]">
-              <label id="ws-calls" className="text-ink-600">
+            <div className="flex justify-between text-sm">
+              <label id="ws-calls" className="text-secondary">
                 Calls per month
               </label>
-              <span className="text-ink-900 tabular-nums">{deploy.callsPerMonth.toLocaleString()}</span>
+              <span className="text-primary tabular-nums">{deploy.callsPerMonth.toLocaleString()}</span>
             </div>
             <Slider
               ariaLabelledBy="ws-calls"
@@ -60,11 +60,11 @@ export function CostSummaryPanel({
             />
           </div>
           <div>
-            <div className="flex justify-between text-[12px]">
-              <label id="ws-minutes" className="text-ink-600">
+            <div className="flex justify-between text-sm">
+              <label id="ws-minutes" className="text-secondary">
                 Average call length
               </label>
-              <span className="text-ink-900 tabular-nums">{deploy.avgMinutes.toFixed(1)} min</span>
+              <span className="text-primary tabular-nums">{deploy.avgMinutes.toFixed(1)} min</span>
             </div>
             <Slider
               ariaLabelledBy="ws-minutes"
@@ -78,25 +78,25 @@ export function CostSummaryPanel({
           </div>
         </div>
 
-        <ul className="mt-2 space-y-1.5 border-t border-ink-950/10 pt-3">
+        <ul className="mt-6 space-y-3 border-t border-secondary pt-6">
           {rows.map((row) => (
-            <li key={row.label} className="flex items-center justify-between gap-3 text-[12px]">
-              <span className="min-w-0 truncate text-ink-600">{row.label}</span>
-              <span className="shrink-0 text-ink-900 tabular-nums">{formatMoney(row.amount, currency)}</span>
+            <li key={row.label} className="flex items-center justify-between gap-3 text-sm">
+              <span className="min-w-0 truncate text-secondary">{row.label}</span>
+              <span className="shrink-0 text-primary tabular-nums">{formatMoney(row.amount, currency)}</span>
             </li>
           ))}
         </ul>
         {budget !== undefined && (
-          <p className={`mt-3 text-[12px] ${over ? "font-medium text-warning-700" : "text-ink-500"}`}>
+          <p className={`mt-4 text-sm ${over ? "font-medium text-warning-700" : "text-tertiary"}`}>
             {over
               ? `${formatMoney(total - budget, currency)} over your ${formatMoney(budget, currency)} budget`
               : `Within your ${formatMoney(budget, currency)} budget`}
           </p>
         )}
         {topSwap && topSwap.monthlySavings >= 10 && (
-          <p className="mt-3 rounded-md bg-paper-50 px-2.5 py-2 text-[12px] text-ink-600">
+          <p className="mt-5 rounded-lg bg-primary px-3.5 py-3 text-sm text-secondary">
             Switch {topSwap.label.toLowerCase()} to {topSwap.to} to save{" "}
-            <span className="font-medium text-ink-900">{formatMoney(topSwap.monthlySavings, currency)}</span>/month.
+            <span className="font-medium text-primary">{formatMoney(topSwap.monthlySavings, currency)}</span>/month.
           </p>
         )}
       </div>

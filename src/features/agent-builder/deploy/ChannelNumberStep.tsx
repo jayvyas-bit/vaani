@@ -64,8 +64,8 @@ export function ChannelNumberStep({
   return (
     <div className="flex flex-col gap-7">
       <div>
-        <h1 className="text-[20px] font-semibold text-ink-950">Phone number</h1>
-        <p className="mt-1 text-[15px] text-ink-600">
+        <h1 className="text-display-xs font-semibold tracking-[-0.02em] text-primary">Phone number</h1>
+        <p className="mt-2 text-md text-tertiary">
           {direction === "inbound"
             ? "Callers reach this agent by dialing the number you pick here."
             : "Recipients will see this number on caller ID."}
@@ -123,7 +123,7 @@ export function ChannelNumberStep({
 
       {config.numberMethod === "new" && (
         <div className="flex flex-col gap-4">
-          <div>
+          <div className="max-w-sm">
             <FieldLabel htmlFor={`${id}-country`}>Country</FieldLabel>
             <Select
               id={`${id}-country`}
@@ -139,7 +139,7 @@ export function ChannelNumberStep({
               ))}
             </Select>
           </div>
-          <div>
+          <div className="max-w-sm">
             <FieldLabel htmlFor={`${id}-area`} hint={countryInfo.areaCodeHint}>
               {countryInfo.areaCodeLabel}
             </FieldLabel>
@@ -157,15 +157,15 @@ export function ChannelNumberStep({
             />
             <FieldError id={`${id}-area-err`}>{areaErr}</FieldError>
             {!areaErr && config.provisionedNumber && (
-              <p id={`${id}-area-note`} className="mt-2 flex items-center gap-1.5 text-[13px] text-ink-700">
-                <Icon name="check" className="size-3.5 text-success-600" />
-                <span className="font-medium tabular-nums">{config.provisionedNumber}</span> — reserved for this agent,
-                active once you go live
+              <p id={`${id}-area-note`} className="mt-2 text-sm text-secondary">
+                <Icon name="check" className="mr-1.5 inline size-4 align-text-bottom text-success-600" />
+                <span className="whitespace-nowrap font-medium tabular-nums">{config.provisionedNumber}</span> is reserved for this agent and
+                becomes active once you go live.
               </p>
             )}
           </div>
-          <p className="text-[12px] text-ink-500">
-            Illustrative provisioning only — no carrier is actually reserving a number here. Going live would require
+          <p className="text-sm text-tertiary">
+            Illustrative provisioning only: no carrier is actually reserving a number here. Going live would require
             connecting a real telephony provider.
           </p>
         </div>
@@ -211,7 +211,7 @@ export function ChannelNumberStep({
             <FieldError id={`${id}-port-err`}>{portErr}</FieldError>
           </div>
           <p className="text-[12px] text-ink-500">
-            Illustrative only — no carrier porting request is actually filed here. A real port needs your current
+            Illustrative only: no carrier porting request is actually filed here. A real port needs your current
             carrier account details and typically takes days to complete.
           </p>
         </div>

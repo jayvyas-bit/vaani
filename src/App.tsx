@@ -228,7 +228,7 @@ function buildRecord(values: CreateFormValues & Partial<CreateBriefValues>): Age
     greeting: "",
     tone: persona.tone,
     systemPrompt: "",
-    language: "en",
+    language: values.language ?? "en",
     llmProvider: "System default — balanced (GPT-4.1)",
     sttProvider: "System default (Deepgram Nova-3)",
     ttsProvider: "System default (ElevenLabs Turbo)",
@@ -253,7 +253,7 @@ function buildRecord(values: CreateFormValues & Partial<CreateBriefValues>): Age
     {
       id: newId("sc"),
       title: `${other} asks to speak to a real person`,
-      criteria: "Gets them to a teammate right away — a live transfer if one is set up, otherwise a callback.",
+      criteria: "Gets them to a teammate right away: a live transfer if one is set up, otherwise a callback.",
       source: "manual",
       verdict: "not-run",
     },
@@ -262,7 +262,7 @@ function buildRecord(values: CreateFormValues & Partial<CreateBriefValues>): Age
       title: inbound ? "Caller goes silent for 10 seconds" : "Call reaches voicemail",
       criteria: inbound
         ? "Checks in once, then politely ends the call if there’s still no response."
-        : "Leaves your name and callback number only — no account details.",
+        : "Leaves your name and callback number only, with no account details.",
       source: "manual",
       verdict: "not-run",
     },
@@ -643,9 +643,18 @@ function CreateShell({
             <span className="truncate text-[15px] font-semibold text-ink-950">New agent</span>
           </>
         }
-        center={<Stepper steps={createSteps} activeId={activeId} completedIds={completedIds} />}
+        center={
+          <>
+            <div className="hidden sm:block">
+              <Stepper steps={createSteps} activeId={activeId} completedIds={completedIds} />
+            </div>
+            <div className="sm:hidden">
+              <Stepper compact steps={createSteps} activeId={activeId} completedIds={completedIds} />
+            </div>
+          </>
+        }
       />
-      <div className="flex-1 overflow-hidden">{children}</div>
+      <div className="relative flex-1 overflow-hidden">{children}</div>
     </div>
   );
 }
@@ -979,6 +988,7 @@ export default function App() {
           : [
               { label: "Name and greeting set", done: !!agent.name.trim() && !!agent.greeting.trim(), section: "persona" },
               { label: "At least one guardrail", done: record.businessRules.some((r) => r.enabled), section: "guardrails" },
+              { label: "Knowledge added", done: record.knowledge.some((k) => k.attached !== false) || !!agent.details?.offerings?.length, section: "knowledge" },
               { label: "Test scenarios run", done: record.scenarios.some((s) => s.verdict !== "not-run"), section: "test" },
               {
                 label: "Phone number chosen",
@@ -1016,6 +1026,7 @@ export default function App() {
             direction={agent.direction}
             onTest={() => navigateSection(agent.id)("test")}
             onOpenBuild={() => navigate({ name: "build", agentId: agent.id })}
+            onEdit={(tab) => navigate({ name: "build", agentId: agent.id, tab })}
           />
         </CreateShell>
       </AppShell>

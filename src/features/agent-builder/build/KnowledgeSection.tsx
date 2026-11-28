@@ -63,16 +63,16 @@ function normalizeUrl(raw: string): string | null {
 function SourceRow({ source, onToggle }: { source: KnowledgeSource; onToggle: (attached: boolean) => void }) {
   const { base, ext } = source.kind === "url" ? { base: source.name, ext: "" } : splitFileName(source.name);
   return (
-    <div className="flex items-center gap-3 px-6 py-3">
+    <div className="flex items-center gap-3 py-3">
       <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-paper-100 text-ink-500">
         <Icon name={kindIcon[source.kind]} className="size-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="flex min-w-0 text-[13px] font-medium text-ink-950">
+        <p className="flex min-w-0 text-[14px] font-medium text-ink-950">
           <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{base}</span>
           {ext && <span className="shrink-0">{ext}</span>}
         </p>
-        <p className="text-[12px] text-ink-500">
+        <p className="text-[13px] text-ink-500">
           {source.kind === "url" ? "Web page" : `${source.kind.toUpperCase()} · ${source.sizeLabel}`}
           {!source.attached && " · not used on calls"}
         </p>
@@ -176,16 +176,16 @@ export function KnowledgeSection({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="grid items-start gap-x-14 lg:grid-cols-2 lg:[&>section:nth-child(2)]:border-t-0 lg:[&>section:nth-child(2)]:pt-0">
     {onDetailsChange && <BusinessDetailsCard details={details ?? { offerings: [] }} onChange={onDetailsChange} />}
     <SectionCard
-      title="Knowledge"
-      description="Your business info this agent can answer from, like hours, prices or an FAQ page."
+      title="Sources"
+      description="Pages and files the agent answers from."
       defaultAdvancedOpen={defaultAdvanced}
       guided={
-        <div className="-mx-6 -mb-6 mt-1 divide-y divide-ink-950/8 border-t border-ink-950/8">
+        <div className="mt-1 divide-y divide-ink-950/8 border-t border-ink-950/8">
           {sources.length === 0 && (
-            <p className="px-6 py-5 text-[13px] text-ink-500">
+            <p className="py-5 text-[14px] text-ink-500">
               Nothing attached, so the agent can only answer from its prompt. Add your hours, price
               list or FAQ page and it will quote them on calls instead of guessing.
             </p>
@@ -197,7 +197,7 @@ export function KnowledgeSection({
               onToggle={(attached) => onSourcesChange(sources.map((x) => (x.id === s.id ? { ...x, attached } : x)))}
             />
           ))}
-          <div className="px-6 py-5">
+          <div className="py-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
               <div className="min-w-0 flex-1">
                 <label htmlFor={`${id}-url`} className="sr-only">
@@ -342,12 +342,12 @@ function BusinessDetailsCard({ details, onChange }: { details: BusinessDetails; 
       guided={
         <div className="flex flex-col gap-5 py-1">
           <fieldset>
-            <legend className="mb-1.5 text-[13px] font-medium text-ink-900">Products or services</legend>
+            <legend className="mb-1.5 text-[14px] font-medium text-ink-900">Products or services</legend>
             <ul className="flex flex-col gap-2">
               {rows.map((o, i) => (
                 <li key={o.id} className="flex items-center gap-2">
-                  <Input aria-label={`Offering ${i + 1} name`} value={o.name} onChange={(e) => patch(o.id, { name: e.target.value })} placeholder="Teeth cleaning" className="min-w-0 flex-1" />
-                  <Input aria-label={`Offering ${i + 1} price`} value={o.price ?? ""} onChange={(e) => patch(o.id, { price: e.target.value })} placeholder="$90" className="w-28 shrink-0" />
+                  <Input aria-label={`Offering ${i + 1} name`} value={o.name} onChange={(e) => patch(o.id, { name: e.target.value })} placeholder="Product or service" className="min-w-0 flex-1" />
+                  <Input aria-label={`Offering ${i + 1} price`} value={o.price ?? ""} onChange={(e) => patch(o.id, { price: e.target.value })} placeholder="Price" className="w-28 shrink-0" />
                   <button
                     type="button"
                     aria-label={`Remove offering ${i + 1}`}
@@ -359,18 +359,37 @@ function BusinessDetailsCard({ details, onChange }: { details: BusinessDetails; 
                 </li>
               ))}
             </ul>
-            <button type="button" onClick={() => setRows([...rows, { id: newId("off"), name: "", price: "" }])} className="mt-2 rounded-md px-1 py-1 text-[13px] font-medium text-ink-700 outline-none hover:text-ink-950 focus-visible:ring-2 focus-visible:ring-brand-500/30">
+            <button type="button" onClick={() => setRows([...rows, { id: newId("off"), name: "", price: "" }])} className="mt-2 rounded-md px-1 py-1 text-[14px] font-medium text-ink-700 outline-none hover:text-ink-950 focus-visible:ring-2 focus-visible:ring-brand-500/30">
               + Add another
+            </button>
+          </fieldset>
+          <fieldset>
+            <legend className="mb-1.5 text-[14px] font-medium text-ink-900">Questions callers ask</legend>
+            <ul className="flex flex-col gap-3">
+              {(details.faqs ?? []).map((f, i) => (
+                <li key={f.id} className="flex items-start gap-2">
+                  <div className="flex min-w-0 flex-1 flex-col gap-2">
+                    <Input aria-label={`Question ${i + 1}`} value={f.question} onChange={(e) => onChange({ ...details, faqs: (details.faqs ?? []).map((x) => (x.id === f.id ? { ...x, question: e.target.value } : x)) })} placeholder="Question callers ask" />
+                    <Input aria-label={`Answer ${i + 1}`} value={f.answer} onChange={(e) => onChange({ ...details, faqs: (details.faqs ?? []).map((x) => (x.id === f.id ? { ...x, answer: e.target.value } : x)) })} placeholder="Your answer" />
+                  </div>
+                  <button type="button" aria-label={`Remove question ${i + 1}`} onClick={() => onChange({ ...details, faqs: (details.faqs ?? []).filter((x) => x.id !== f.id) })} className="flex size-8 shrink-0 items-center justify-center rounded-md text-ink-500 outline-none hover:bg-paper-100 hover:text-ink-900 focus-visible:ring-2 focus-visible:ring-brand-500/30">
+                    <Icon name="x" className="size-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button type="button" onClick={() => onChange({ ...details, faqs: [...(details.faqs ?? []), { id: newId("faq"), question: "", answer: "" }] })} className="mt-2 rounded-md px-1 py-1 text-[14px] font-medium text-ink-700 outline-none hover:text-ink-950 focus-visible:ring-2 focus-visible:ring-brand-500/30">
+              + Add a question
             </button>
           </fieldset>
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <FieldLabel htmlFor={`${id}-hours`}>Opening hours</FieldLabel>
-              <Input id={`${id}-hours`} value={details.hours ?? ""} onChange={(e) => onChange({ ...details, hours: e.target.value })} placeholder="Mon–Fri, 9am to 5pm" />
+              <Input id={`${id}-hours`} value={details.hours ?? ""} onChange={(e) => onChange({ ...details, hours: e.target.value })} placeholder="Days and times" />
             </div>
             <div>
               <FieldLabel htmlFor={`${id}-handoff`}>If it can’t help, who follows up?</FieldLabel>
-              <Input id={`${id}-handoff`} value={details.handoff ?? ""} onChange={(e) => onChange({ ...details, handoff: e.target.value })} placeholder="Front desk, 555-0100" />
+              <Input id={`${id}-handoff`} value={details.handoff ?? ""} onChange={(e) => onChange({ ...details, handoff: e.target.value })} placeholder="Name, team or phone number" />
             </div>
           </div>
         </div>

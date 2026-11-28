@@ -716,9 +716,20 @@ function toned(ctx: AgentContext, formal: string, balanced: string, warm: string
 function answerFromDetails(text: string, details: BusinessDetails | undefined): string | undefined {
   if (!details) return undefined;
   if (details.hours?.trim() && /\b(hours?|open|close|closing|opening)\b/.test(text)) {
-    return `We’re open ${lowerFirst(stripPeriod(details.hours.trim()))}.`;
+    return `We’re open ${stripPeriod(details.hours.trim())}.`;
   }
   const t = tokens(text);
+  let bestFaq: { answer: string } | undefined;
+  let bestFaqScore = 0;
+  for (const f of details.faqs ?? []) {
+    if (!f.question.trim() || !f.answer.trim()) continue;
+    const score = overlap(t, tokens(f.question));
+    if (score > bestFaqScore) {
+      bestFaq = f;
+      bestFaqScore = score;
+    }
+  }
+  if (bestFaq) return bestFaq.answer.trim();
   let best: { name: string; price?: string } | undefined;
   let bestScore = 0;
   for (const o of details.offerings) {

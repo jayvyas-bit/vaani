@@ -308,7 +308,7 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
             <option value="">Choose a contact list…</option>
             {lists.map((l) => (
               <option key={l.name} value={l.name}>
-                {l.name} — {contactCountLabel(l.count)}
+                {l.name}, {contactCountLabel(l.count)}
               </option>
             ))}
           </Select>
@@ -345,7 +345,7 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
                 className="mt-0.5 size-3.5 shrink-0"
               />
               {selectedList.consentTracked
-                ? "This list has a consent/opt-in column — this only checks that the column exists, not that each record is current or legally sufficient to call on."
+                ? "This list has a consent/opt-in column. This only checks that the column exists, not that each record is current or legally sufficient to call on."
                 : "No consent/opt-in column found on this list. Confirm you have a legal basis to call these numbers before going live."}
             </p>
           )}
@@ -356,7 +356,7 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
         hint={
           <span className="flex items-center gap-1.5">
             <Icon name="shield" className="size-3.5 shrink-0 text-ink-400" />
-            Applied in each recipient’s local time. Many regions restrict unsolicited calls outside 8:00 AM – 9:00 PM — check the rules where you’re calling.
+            Applied in each recipient’s local time. Many regions restrict unsolicited calls outside 8:00 AM – 9:00 PM. Check the rules where you’re calling.
           </span>
         }
       >
@@ -382,11 +382,11 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
         >
           <option value="internal">Workspace DNC list (214 numbers)</option>
           <option value="federal">Federal + state registries</option>
-          <option value="both">Both — workspace list and registries</option>
+          <option value="both">Both: workspace list and registries</option>
         </Select>
         {config.dncList !== "internal" && (
           <p className="mt-2 text-[12px] text-ink-500">
-            This demo doesn’t connect to a live federal or state registry — there’s no real registry lookup here. Before going live, check numbers against the actual Do Not Call Registry and any state-specific lists.
+            This demo doesn’t connect to a live federal or state registry, so there’s no real registry lookup here. Before going live, check numbers against the actual Do Not Call Registry and any state-specific lists.
           </p>
         )}
       </SettingRow>
@@ -394,7 +394,7 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
         title="Voicemail detection"
         hint={
           config.voicemailDetect
-            ? "Leaves your name and callback number only — no account details."
+            ? "Leaves your name and callback number only, with no account details."
             : "The agent will run its live-call script even when it reaches voicemail."
         }
         control={
@@ -427,10 +427,10 @@ export function ComplianceStep({
   return (
     <div className="flex flex-col gap-7">
       <div>
-        <h1 className="text-[20px] font-semibold text-ink-950">
+        <h1 className="text-display-xs font-semibold tracking-[-0.02em] text-primary">
           {direction === "inbound" ? "Hours" : "Calling rules"}
         </h1>
-        <p className="mt-1 text-[15px] text-ink-600">
+        <p className="mt-2 text-md text-tertiary">
           {direction === "inbound"
             ? "When this agent answers, and what callers get outside those hours."
             : "Who this agent calls, when it may dial, and which numbers it must never call."}

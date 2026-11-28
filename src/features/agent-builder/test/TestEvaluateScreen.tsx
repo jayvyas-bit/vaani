@@ -96,7 +96,13 @@ export function TestEvaluateScreen({
   return (
     <div className="flex h-full flex-col bg-paper-50">
       {!embedded && <BuilderNav agent={agent} active="test" onNavigate={onNavigate} onBack={onBack} />}
-      <div className="grid flex-1 grid-cols-1 gap-4 overflow-y-auto p-4 sm:p-6 lg:grid-cols-2 lg:overflow-hidden">
+      {embedded && (
+        <header className="shrink-0 px-5 pb-2 pt-8 sm:px-6">
+          <h1 className="text-display-xs font-semibold tracking-[-0.02em] text-primary sm:text-display-sm">Test &amp; evaluate</h1>
+          <p className="mt-2 text-md text-tertiary">Talk to the agent, then run scenarios to see where it holds up.</p>
+        </header>
+      )}
+      <div className="animate-step-in grid flex-1 grid-cols-1 gap-6 overflow-y-auto p-4 sm:p-6 lg:grid-cols-2 lg:overflow-hidden">
         <TestPanel
           agent={agent}
           transcript={withLiveGreeting(transcript, agent)}

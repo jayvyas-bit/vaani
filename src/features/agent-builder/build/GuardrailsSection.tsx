@@ -51,7 +51,7 @@ function GuardrailChip({ rule, onEdit }: { rule: BusinessRule; onEdit: () => voi
       type="button"
       onClick={onEdit}
       title={`${limitTypeLabel[rule.limitType]}: ${ruleSentence(rule).action}${rule.enabled ? "" : " (off)"}`}
-      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px] font-medium transition-colors hover:border-gray-300 ${
+      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[13px] font-medium transition-colors hover:border-gray-300 ${
         rule.enabled ? chipToneClasses[tone] : "border-dashed border-gray-200 bg-transparent text-gray-400"
       }`}
     >
@@ -64,7 +64,7 @@ function GuardrailChip({ rule, onEdit }: { rule: BusinessRule; onEdit: () => voi
 function GuardrailRail({ rules, onEdit }: { rules: BusinessRule[]; onEdit: (id: string) => void }) {
   if (rules.length === 0) return null;
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-ink-950/8 bg-paper-25 px-6 py-4">
+    <div className="flex flex-wrap items-center gap-2 border-b border-ink-950/8 bg-paper-25 py-4">
       {rules.map((r) => (
         <GuardrailChip key={r.id} rule={r} onEdit={() => onEdit(r.id)} />
       ))}
@@ -154,15 +154,15 @@ function BusinessRuleRow({
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   return (
-    <div className="flex flex-col gap-2.5 px-6 py-3.5">
+    <div className="flex flex-col gap-2.5 py-3.5">
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
-          <p className={`text-[13px] leading-snug ${rule.enabled ? "text-ink-950" : "text-ink-500"}`}>
+          <p className={`text-[14px] leading-snug ${rule.enabled ? "text-ink-950" : "text-ink-500"}`}>
             <RuleSentence rule={rule} />
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <Badge tone={limitTypeTone[rule.limitType]}>{limitTypeLabel[rule.limitType]}</Badge>
-            {!rule.enabled && <span className="text-[12px] text-ink-500">Off — the agent ignores this rule</span>}
+            {!rule.enabled && <span className="text-[13px] text-ink-500">Off — the agent ignores this rule</span>}
           </div>
         </div>
         <Switch checked={rule.enabled} onChange={onToggle} label={`Rule on: ${rule.label}`} />
@@ -173,7 +173,7 @@ function BusinessRuleRow({
           aria-label="Delete this rule?"
           className="flex flex-col gap-2 rounded-md border border-error-200 bg-error-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
         >
-          <p className="text-[12px] text-ink-800">Delete this rule? The agent stops following it right away.</p>
+          <p className="text-[13px] text-ink-800">Delete this rule? The agent stops following it right away.</p>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(false)}>
               Keep it
@@ -368,7 +368,7 @@ function RuleForm({
         <FieldError id={`${id}-action-err`}>{actionErr}</FieldError>
       </div>
       {preview && (
-        <p className="rounded-md border border-ink-950/8 bg-paper-0 px-3 py-2 text-[12px] text-ink-700">
+        <p className="rounded-md border border-ink-950/8 bg-paper-0 px-3 py-2 text-[13px] text-ink-700">
           <span className="font-medium text-ink-500">Reads as: </span>
           <RuleSentence rule={preview} />
         </p>
@@ -404,13 +404,13 @@ export function GuardrailsSection({
   const shownSafety = safety.filter((s) => s.id !== HUMOR_TOGGLE_ID);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="grid items-start gap-x-14 lg:grid-cols-2 lg:[&>section:nth-child(2)]:border-t-0 lg:[&>section:nth-child(2)]:pt-0">
       <SectionCard
-        title="Guardrails"
-        description="Things this agent must never do, or must hand to a person."
+        title="Your rules"
+        description="Limits specific to your business."
         defaultAdvancedOpen={defaultAdvanced}
         guided={
-          <div className="-mx-6 -mb-6 mt-1 border-t border-ink-950/8">
+          <div className="mt-1 border-t border-ink-950/8">
             <GuardrailRail
               rules={businessRules}
               onEdit={(id) => {
@@ -452,7 +452,7 @@ export function GuardrailsSection({
               </div>
             ) : (
               !adding && (
-                <p className="px-6 pt-5 text-[13px] text-ink-500">
+                <p className="pt-5 text-[14px] text-ink-500">
                   No rules yet, so the agent only follows its persona. Add the first thing it must never
                   do on a call, like quoting a price or promising a refund.
                 </p>
@@ -467,7 +467,7 @@ export function GuardrailsSection({
                 }}
               />
             ) : (
-              <div className={`px-6 pb-5 ${businessRules.length > 0 ? "border-t border-ink-950/8 pt-4" : "pt-4"}`}>
+              <div className={`pb-5 ${businessRules.length > 0 ? "border-t border-ink-950/8 pt-4" : "pt-4"}`}>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -489,7 +489,7 @@ export function GuardrailsSection({
             <FieldLabel hint="The same rules, in the form the agent and your tests read them">Rules as data (JSON)</FieldLabel>
             <pre
               aria-label="Guardrails as JSON"
-              className="overflow-x-auto rounded-md bg-ink-950 p-3 text-[12px] leading-relaxed text-paper-100"
+              className="overflow-x-auto rounded-md bg-ink-950 p-3 text-[13px] leading-relaxed text-paper-100"
             >
 {JSON.stringify(
   businessRules.map(({ id, limitType, label, threshold, priceFloor, action, enabled }) => ({
@@ -514,16 +514,16 @@ export function GuardrailsSection({
         description="Protections that apply to every agent. Required ones can’t be turned off."
         quiet
         guided={
-          <div className="-mx-6 -mb-4 divide-y divide-ink-950/8 border-t border-ink-950/8">
+          <div className="-mb-2 divide-y divide-ink-950/8 border-t border-ink-950/8">
             {shownSafety.map((s) => (
-              <div key={s.id} className="flex items-center justify-between gap-4 px-6 py-3">
+              <div key={s.id} className="flex items-center justify-between gap-4 py-3">
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-ink-950">{s.label}</p>
-                  <p className="text-[12px] text-ink-500">{s.description}</p>
+                  <p className="text-[14px] font-medium text-ink-950">{s.label}</p>
+                  <p className="text-[13px] text-ink-500">{s.description}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2.5">
                   {s.locked && (
-                    <span className="flex items-center gap-1 text-[12px] font-medium text-ink-500">
+                    <span className="flex items-center gap-1 text-[13px] font-medium text-ink-500">
                       <Icon name="lock" className="size-3" />
                       Required
                     </span>

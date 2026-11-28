@@ -137,8 +137,11 @@ const LEADING_OBJECT_WORD = /^(?:you|customers?|clients?|recipients?|folks|peopl
  * hang up as to hear the agent out. Inbound doesn’t get this: the caller
  * already knows why they dialed, and will say so.
  */
+/** The job is written as instructions to the agent ("…, remind them and offer a plan"); only the first clause belongs in what it says aloud. */
+const FOLLOW_ON_INSTRUCTION = /,\s+|\s+and\s+(?=(?:offer|remind|ask|confirm|explain|collect|help|let|tell|make|try|send|log|take)\b)/i;
+
 function outboundPurposeClause(purpose: string): string {
-  const body = lowerFirst(stripPeriod(purpose));
+  const body = lowerFirst(stripPeriod(purpose)).split(FOLLOW_ON_INSTRUCTION)[0].trim();
   const verbMatch = body.match(LEADING_CALL_VERB);
   if (!verbMatch) return body ? ` I’m calling to ${body}.` : "";
   // Purpose already named who's being called ("call customers to run a
@@ -147,7 +150,7 @@ function outboundPurposeClause(purpose: string): string {
   const toClause = rest.match(/^(?:\S+\s+){0,2}?to\s+(.+)$/i);
   if (toClause) return ` I’m calling to ${toClause[1]}.`;
   const withoutObject = rest.replace(LEADING_OBJECT_WORD, "");
-  return withoutObject ? ` I’m calling ${withoutObject}.` : "";
+  return withoutObject ? ` I’m calling ${withoutObject.replace(/^with\s+/i, "about ")}.` : "";
 }
 
 export function compileGreeting(agent: Agent): string {
@@ -156,14 +159,14 @@ export function compileGreeting(agent: Agent): string {
   const band = toneBand(agent.tone);
   if (agent.direction === "inbound") {
     if (band === "formal") return `Thank you for calling ${name}. This is ${who}. How may I assist you?`;
-    if (band === "warm") return `Hi there, thanks so much for calling ${name}! This is ${who} — what can I help you with today?`;
+    if (band === "warm") return `Hi there, thanks so much for calling ${name}! This is ${who}. What can I help you with today?`;
     return `Thanks for calling ${name}, this is ${who}. How can I help you today?`;
   }
   const purpose = outboundPurposeClause(agent.purpose);
   if (band === "formal")
     return `Good day. This is ${who}, an automated assistant calling on behalf of ${name}.${purpose} Is this a convenient time to speak?`;
   if (band === "warm")
-    return `Hi! This is ${who}, an automated assistant with ${name} — hope your day’s going well.${purpose} Do you have a quick minute to chat?`;
+    return `Hi! This is ${who}, an automated assistant with ${name}, hope your day’s going well.${purpose} Do you have a quick minute to chat?`;
   return `Hi, this is ${who}, an automated assistant with ${name}.${purpose} Do you have a quick minute?`;
 }
 
@@ -187,7 +190,12 @@ export function detailsInstruction(details: BusinessDetails | undefined): string
     const list = offerings.map((o) => (o.price?.trim() ? `${o.name.trim()} (${o.price.trim()})` : o.name.trim())).join("; ");
     lines.push(`Offerings and prices: ${list}.`);
   }
-  if (details.hours?.trim()) lines.push(`Hours: ${stripPeriod(details.hours.trim())}.`);
+  const faqs = (details.faqs ?? []).filter((f) => f.question.trim() && f.answer.trim());
+  if (faqs.length > 0) {
+    lines.push(`Common questions and the answers to give: ${faqs.map((f) => `Q: ${f.question.trim()} A: ${f.answer.trim()}`).join(" | ")}.`);
+  }
+  if (details.hours?.trim()) lines.push(`Hours: ${stripPeriod(details.hours.trim())}${details.timezone ? ` (${details.timezone.replace(/_/g, " ")} time)` : ""}.`);
+  if (details.messageFields?.length) lines.push(`When taking a message, collect: ${details.messageFields.join(", ").toLowerCase()}.`);
   if (details.handoff?.trim()) lines.push(`When you can’t answer, hand off to: ${stripPeriod(details.handoff.trim())}.`);
   if (lines.length === 0) return "";
   return ` ${lines.join(" ")} Quote only these facts; if asked about anything else, say you’ll have a teammate confirm instead of guessing.`;
@@ -271,11 +279,11 @@ export function sampleCallTranscript(agent: Agent): TranscriptTurn[] {
   if (agent.direction === "inbound") {
     return [
       { id: "s1", speaker: "agent", text: agent.greeting },
-      { id: "s2", speaker: "caller", text: "Hi, I wasn’t sure who to ask — what can you help me with?" },
+      { id: "s2", speaker: "caller", text: "Hi, I wasn’t sure who to ask. What can you help me with?" },
       {
         id: "s3",
         speaker: "agent",
-        text: `Happy to help — I’m the automated assistant for ${name}. What can I do for you today?`,
+        text: `Happy to help. I’m the automated assistant for ${name}. What can I do for you today?`,
       },
     ];
   }
@@ -285,7 +293,7 @@ export function sampleCallTranscript(agent: Agent): TranscriptTurn[] {
     {
       id: "s3",
       speaker: "agent",
-      text: `Thanks — I’m calling from ${name}, and it should only take a minute. Before I go on, can I confirm I’m speaking with the right person?`,
+      text: `Thanks. I’m calling from ${name}, and it should only take a minute. Before I go on, can I confirm I’m speaking with the right person?`,
     },
   ];
 }

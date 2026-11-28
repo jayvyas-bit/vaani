@@ -25,19 +25,19 @@ function OutcomeRow({
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   return (
-    <div className="flex flex-col gap-2.5 px-6 py-3.5">
+    <div className="flex flex-col gap-2.5 py-3.5">
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-medium text-ink-950">{field.label}</p>
+          <p className="text-[14px] font-medium text-ink-950">{field.label}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <Badge tone="neutral">{typeLabel[field.type]}</Badge>
             {field.type === "enum" && field.options && field.options.length > 0 && (
-              <span className="text-[12px] text-ink-500">{field.options.join(" · ")}</span>
+              <span className="text-[13px] text-ink-500">{field.options.join(" · ")}</span>
             )}
             {field.required ? (
-              <span className="text-[12px] font-medium text-amber-700">Required by end of call</span>
+              <span className="text-[13px] font-medium text-amber-700">Required by end of call</span>
             ) : (
-              <span className="text-[12px] text-ink-500">Optional</span>
+              <span className="text-[13px] text-ink-500">Optional</span>
             )}
           </div>
         </div>
@@ -48,7 +48,7 @@ function OutcomeRow({
           aria-label="Delete this outcome field?"
           className="flex flex-col gap-2 rounded-md border border-error-200 bg-error-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
         >
-          <p className="text-[12px] text-ink-800">Delete this outcome field? It won’t be checked for anymore.</p>
+          <p className="text-[13px] text-ink-800">Delete this outcome field? It won’t be checked for anymore.</p>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(false)}>
               Keep it
@@ -161,8 +161,8 @@ function OutcomeForm({
       <div className="flex items-center gap-3 rounded-lg border border-ink-950/10 bg-paper-0 p-3">
         <Switch checked={required} onChange={setRequired} label="Required by end of call" />
         <div className="min-w-0 flex-1">
-          <p className="text-[12px] font-medium text-ink-800">Required by end of call</p>
-          <p className="mt-0.5 text-[12px] text-ink-500">
+          <p className="text-[13px] font-medium text-ink-800">Required by end of call</p>
+          <p className="mt-0.5 text-[13px] text-ink-500">
             Flag calls where this wasn’t captured, instead of treating it as optional.
           </p>
         </div>
@@ -201,12 +201,12 @@ export function OutcomesSection({
     <div className="flex flex-col gap-4">
       <SectionCard
         title="Required outcomes"
-        description="What this agent must capture or report by the end of a call, like appointment status or whether a callback is needed."
+        description="For example appointment status or whether a callback is needed."
         defaultAdvancedOpen={defaultAdvanced}
         guided={
-          <div className="-mx-6 -mb-6 mt-1 border-t border-ink-950/8">
+          <div>
             {outcomes.length > 0 ? (
-              <div className="divide-y divide-ink-950/8">
+              <div className="divide-y divide-secondary border-y border-secondary">
                 {outcomes.map((f) =>
                   editingId === f.id ? (
                     <OutcomeForm
@@ -236,11 +236,18 @@ export function OutcomesSection({
               </div>
             ) : (
               !adding && (
-                <p className="px-6 pt-5 text-[13px] text-ink-500">
-                  No required outcomes yet, so nothing here is checked at the end of a call. Add the fields
-                  this agent should report, like appointment status, service requested, or whether a callback
-                  is needed.
-                </p>
+                <div className="flex flex-col items-start gap-4 rounded-xl border border-dashed border-primary bg-secondary px-6 py-8 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-md font-semibold text-primary">No required outcomes yet</p>
+                    <p className="mt-1 max-w-[56ch] text-sm text-tertiary">
+                      Nothing is checked at the end of a call. Add the fields this agent should report, like appointment status or whether a callback is needed.
+                    </p>
+                  </div>
+                  <Button className="shrink-0 gap-2" onClick={() => setAdding(true)}>
+                    <Icon name="plus" className="size-4" />
+                    Add an outcome field
+                  </Button>
+                </div>
               )
             )}
             {adding ? (
@@ -252,7 +259,7 @@ export function OutcomesSection({
                 }}
               />
             ) : (
-              <div className={`px-6 pb-5 ${outcomes.length > 0 ? "border-t border-ink-950/8 pt-4" : "pt-4"}`}>
+              outcomes.length === 0 ? null : <div className="pt-4">
                 <Button
                   variant="secondary"
                   size="sm"
@@ -274,7 +281,7 @@ export function OutcomesSection({
             <FieldLabel hint="The same fields, in the form your tests and any export read them">Outcomes as data (JSON)</FieldLabel>
             <pre
               aria-label="Outcomes as JSON"
-              className="overflow-x-auto rounded-md bg-ink-950 p-3 text-[12px] leading-relaxed text-paper-100"
+              className="overflow-x-auto rounded-md bg-ink-950 p-3 text-[13px] leading-relaxed text-paper-100"
             >
 {JSON.stringify(
   outcomes.map(({ id, label, type, options, required }) => ({

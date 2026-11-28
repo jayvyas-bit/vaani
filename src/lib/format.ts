@@ -16,7 +16,7 @@ export const ILLUSTRATIVE_USD_TO_INR_RATE = 83;
 
 export const displayCurrencyLabel: Record<DisplayCurrency, string> = {
   USD: "US dollars (USD)",
-  INR: "Indian rupees (INR, illustrative)",
+  INR: "Indian rupees (INR)",
 };
 
 /** Same cost figure formatUsd would show, converted for on-screen display only when `currency` isn’t USD. */

@@ -1,9 +1,9 @@
 const thumb =
-  "[&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-brand-600 [&::-webkit-slider-thumb]:bg-paper-0 [&::-webkit-slider-thumb]:shadow-xs [&::-webkit-slider-thumb]:transition-[transform,box-shadow] [&::-webkit-slider-thumb]:duration-150 " +
-  "[&::-moz-range-thumb]:size-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-brand-600 [&::-moz-range-thumb]:bg-paper-0 [&::-moz-range-thumb]:shadow-xs [&::-moz-range-thumb]:transition-[transform,box-shadow] [&::-moz-range-thumb]:duration-150 " +
+  "[&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-brand-600 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-xs [&::-webkit-slider-thumb]:transition-[transform,box-shadow] [&::-webkit-slider-thumb]:duration-150 " +
+  "[&::-moz-range-thumb]:size-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-brand-600 [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:shadow-xs [&::-moz-range-thumb]:transition-[transform,box-shadow] [&::-moz-range-thumb]:duration-150 " +
   "hover:[&::-webkit-slider-thumb]:scale-110 hover:[&::-moz-range-thumb]:scale-110 " +
   "" +
-  "focus-visible:[&::-webkit-slider-thumb]:ring-4 focus-visible:[&::-webkit-slider-thumb]:ring-ink-950/15 focus-visible:[&::-moz-range-thumb]:ring-4 focus-visible:[&::-moz-range-thumb]:ring-ink-950/15";
+  "focus-visible:[&::-webkit-slider-thumb]:ring-4 focus-visible:[&::-webkit-slider-thumb]:ring-brand-600/25 focus-visible:[&::-moz-range-thumb]:ring-4 focus-visible:[&::-moz-range-thumb]:ring-brand-600/25";
 
 export function Slider({
   value,
@@ -52,11 +52,11 @@ export function Slider({
         onChange={(e) => onChange?.(Number(e.target.value))}
         className={`block h-1.5 w-full cursor-pointer appearance-none rounded-full outline-none ${thumb}`}
         style={{
-          background: `linear-gradient(to right, var(--color-ink-950) 0%, var(--color-ink-950) ${pct}%, var(--color-paper-200) ${pct}%, var(--color-paper-200) 100%)`,
+          background: `linear-gradient(to right, var(--color-brand-600) 0%, var(--color-brand-600) ${pct}%, var(--color-gray-200) ${pct}%, var(--color-gray-200) 100%)`,
         }}
       />
       {(leftLabel || rightLabel) && (
-        <div className="mt-2.5 flex justify-between text-xs font-medium text-ink-500">
+        <div className="mt-2.5 flex justify-between text-sm text-tertiary">
           <span>{leftLabel}</span>
           <span>{rightLabel}</span>
         </div>

@@ -37,7 +37,7 @@ export function WizardFooter({
           <span />
         )}
         <div className="flex items-center gap-3">
-          {hint && <span className="text-[12px] font-medium text-warning-700">{hint}</span>}
+          {hint && <span className="text-sm font-medium text-warning-700">{hint}</span>}
           {children ?? <span />}
         </div>
       </div>

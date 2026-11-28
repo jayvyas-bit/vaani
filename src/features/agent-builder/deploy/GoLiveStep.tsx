@@ -78,7 +78,7 @@ export function GoLiveStep({
   const rows = [
     {
       label: "Phone number",
-      value: number ? `${number} — ${numberSourceNote[config.numberMethod]}` : "Not reserved yet",
+      value: number ? `${number}, ${numberSourceNote[config.numberMethod]}` : "Not reserved yet",
     },
     ...(agent.direction === "outbound" ? [{ label: "Who to call", value: listSummary ?? "Not set yet" }] : []),
     { label: agent.direction === "inbound" ? "Hours" : "Calling rules", value: hoursValue },
@@ -106,7 +106,7 @@ export function GoLiveStep({
         <div className="animate-success-pop flex size-12 items-center justify-center rounded-full bg-success-100 text-success-700">
           <Icon name="check" className="size-6" strokeWidth={2.2} />
         </div>
-        <h1 className="animate-step-in mt-4 text-[20px] font-semibold text-ink-950 [animation-delay:90ms]">
+        <h1 className="animate-step-in mt-4 text-display-xs font-semibold tracking-[-0.02em] text-primary [animation-delay:90ms]">
           {agent.name} is live
         </h1>
         <p className="animate-step-in mt-1.5 max-w-sm text-[15px] text-ink-600 [animation-delay:140ms]">
@@ -172,7 +172,7 @@ export function GoLiveStep({
     issues.push({
       key: "budget",
       title: `Projected cost exceeds your ${formatMoney(config.monthlyBudget, currency)} monthly budget.`,
-      detail: `At this volume, ${agent.name} is projected to cost ${formatMoney(cost, currency)}/month — ${formatMoney(cost - config.monthlyBudget, currency)} over.`,
+      detail: `At this volume, ${agent.name} is projected to cost ${formatMoney(cost, currency)}/month, ${formatMoney(cost - config.monthlyBudget, currency)} over.`,
     });
   }
   if (tools !== undefined) {
@@ -207,8 +207,8 @@ export function GoLiveStep({
   return (
     <div className="flex flex-col gap-7">
       <div>
-        <h1 className="text-[20px] font-semibold text-ink-950">Review & go live</h1>
-        <p className="mt-1 text-[15px] text-ink-600">{intro}</p>
+        <h1 className="text-display-xs font-semibold tracking-[-0.02em] text-primary">Review & go live</h1>
+        <p className="mt-2 text-md text-tertiary">{intro}</p>
       </div>
 
       <dl className="divide-y divide-ink-950/8 rounded-lg border border-ink-950/10 bg-paper-0">

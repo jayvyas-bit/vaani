@@ -8,7 +8,7 @@ export function BrandMark() {
       <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-paper-0 shadow-brand-sm">
         <Icon name="phone-inbound" className="size-4" strokeWidth={2.2} />
       </div>
-      <p className="min-w-0 truncate text-[15px] font-semibold tracking-[-0.01em] text-ink-950">
+      <p className="min-w-0 truncate text-md font-semibold tracking-[-0.01em] text-ink-950">
         Voice Agent Builder
       </p>
     </div>
@@ -23,13 +23,13 @@ export function BrandMark() {
 export function AppShell({ onGoHome, children }: { onGoHome: () => void; children: ReactNode }) {
   return (
     <div className="flex h-dvh overflow-hidden bg-paper-50">
-      <aside className="flex w-60 shrink-0 flex-col border-r border-ink-950/10 bg-paper-0">
+      <aside className="hidden w-60 shrink-0 flex-col md:flex border-r border-ink-950/10 bg-paper-0">
         <BrandMark />
         <nav className="flex-1 space-y-0.5 px-2.5 pt-1">
           <button
             type="button"
             onClick={onGoHome}
-            className="flex w-full items-center gap-2.5 rounded-md bg-paper-100 px-2.5 py-1.5 text-left text-[13px] font-medium text-ink-950 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand-200"
+            className="flex w-full items-center gap-2.5 rounded-md bg-paper-100 px-2.5 py-1.5 text-left text-sm font-medium text-ink-950 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand-200"
           >
             <Icon name="grid" className="size-4" />
             Agents

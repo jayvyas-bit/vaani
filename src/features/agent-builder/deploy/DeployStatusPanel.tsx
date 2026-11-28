@@ -53,14 +53,14 @@ export function DeployStatusPanel({
       ? `Answering calls to ${agent.phoneNumber ?? "its number"}.`
       : `Placing calls from ${agent.phoneNumber ?? "its number"} inside its calling window.`
     : inbound
-      ? `Paused — calls to ${agent.phoneNumber ?? "its number"} go to your voicemail until you resume.`
-      : "Paused — no calls are being placed until you resume.";
+      ? `Paused: calls to ${agent.phoneNumber ?? "its number"} go to your voicemail until you resume.`
+      : "Paused: no calls are being placed until you resume.";
 
   return (
     <div className="flex flex-col gap-7">
       <div>
-        <h1 className="text-[20px] font-semibold text-ink-950">Deployment</h1>
-        <p className="mt-1 text-[15px] text-ink-600">
+        <h1 className="text-display-xs font-semibold tracking-[-0.02em] text-primary">Deployment</h1>
+        <p className="mt-2 text-md text-tertiary">
           {live ? "This agent is live." : "This agent is paused."} Pause or resume it here at any time.
         </p>
       </div>
@@ -123,14 +123,14 @@ export function DeployStatusPanel({
                   <>
                     Projected {formatUsd(monthlyCost)} of {formatUsd(budget)}
                     {overBudget && (
-                      <span className="font-medium text-warning-700"> — {formatUsd(monthlyCost - budget)} over</span>
+                      <span className="font-medium text-warning-700">, {formatUsd(monthlyCost - budget)} over</span>
                     )}
                   </>
                 )}
               </p>
             ) : (
               <p className="mt-0.5 text-[13px] text-ink-600">
-                No budget set{monthlyCost !== undefined ? ` — projected ${formatUsd(monthlyCost)}/month` : ""}.
+                No budget set{monthlyCost !== undefined ? `, projected ${formatUsd(monthlyCost)}/month` : ""}.
               </p>
             )}
           </div>

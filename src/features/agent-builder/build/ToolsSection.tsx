@@ -53,8 +53,8 @@ function CalendarConfigEditor({
       <div className="flex items-start gap-3 rounded-lg border border-ink-950/10 bg-paper-50 p-3">
         <Switch checked={connected} onChange={setConnected} label={`Simulate ${toolName} as connected`} />
         <div className="min-w-0 flex-1">
-          <p className="text-[12px] font-medium text-ink-800">Simulate as connected (test only)</p>
-          <p className="mt-0.5 text-[12px] text-ink-500">
+          <p className="text-[13px] font-medium text-ink-800">Simulate as connected (test only)</p>
+          <p className="mt-0.5 text-[13px] text-ink-500">
             This demo has no live calendar backend — there’s no real OAuth or account to link. This switch only
             marks the tool as connected for test scenarios; it doesn’t read or write a real calendar.
           </p>
@@ -169,11 +169,11 @@ function DestinationEditor({
           {err ? (
             <FieldError id={`${id}-dest-err`}>{err}</FieldError>
           ) : (
-            <p id={`${id}-dest-help`} className="mt-1.5 text-[12px] text-ink-500">
+            <p id={`${id}-dest-help`} className="mt-1.5 text-[13px] text-ink-500">
               {TRANSFER_HELP}
             </p>
           )}
-          <p className="mt-1.5 text-[12px] text-ink-500">
+          <p className="mt-1.5 text-[13px] text-ink-500">
             This demo never dials or verifies this destination — entering a number here doesn’t confirm it’s
             reachable or that whoever answers has agreed to take transferred calls.
           </p>
@@ -217,39 +217,39 @@ function ToolRow({
           <Icon name="wrench" className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-medium text-ink-950">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] font-medium text-ink-950">
             {tool.name}
             {tool.kind === "custom" && !transfer && <Badge tone="neutral">Custom webhook</Badge>}
             {booking && <Badge tone="neutral">{calendarProviderLabel[tool.calendarProvider ?? "google"]}</Badge>}
           </p>
           {transfer ? (
             destination ? (
-              <p className="text-[12px] text-ink-500">
+              <p className="text-[13px] text-ink-500">
                 Transfers to <span className="font-medium text-ink-800">{destination}</span> — unverified, never
                 dialed by this demo
               </p>
             ) : (
-              <p className="flex items-center gap-1.5 text-[12px] font-medium text-warning-700">
+              <p className="flex items-center gap-1.5 text-[13px] font-medium text-warning-700">
                 <Icon name="alert" className="size-3.5 shrink-0" />
                 No destination set — calls can’t be transferred yet
               </p>
             )
           ) : booking ? (
             tool.calendarConnected ? (
-              <p className="flex items-center gap-1.5 text-[12px] font-medium text-success-700">
+              <p className="flex items-center gap-1.5 text-[13px] font-medium text-success-700">
                 <Icon name="check" className="size-3.5 shrink-0" />
                 Connected (simulated — no live calendar backend)
               </p>
             ) : (
-              <p className="flex items-center gap-1.5 text-[12px] font-medium text-warning-700">
+              <p className="flex items-center gap-1.5 text-[13px] font-medium text-warning-700">
                 <Icon name="alert" className="size-3.5 shrink-0" />
                 Not connected — configure a calendar before relying on this
               </p>
             )
           ) : (
-            <p className="text-[12px] text-ink-500 sm:truncate">
+            <p className="text-[13px] text-ink-500 sm:truncate">
               {tool.method && tool.url ? (
-                <span className="font-mono text-[12px]">
+                <span className="font-mono text-[13px]">
                   {tool.method} {tool.url}
                 </span>
               ) : (
@@ -286,7 +286,7 @@ function ToolRow({
           aria-label={`Delete tool: ${tool.name}?`}
           className="mt-2.5 flex flex-col gap-2 rounded-md border border-error-200 bg-error-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
         >
-          <p className="text-[12px] text-ink-800">Delete this tool? The agent won’t be able to use it anymore.</p>
+          <p className="text-[13px] text-ink-800">Delete this tool? The agent won’t be able to use it anymore.</p>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(false)}>
               Keep it
@@ -394,11 +394,11 @@ function AddToolForm({
         <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600">
           <Icon name="plus" className="size-3.5" />
         </div>
-        <p className="text-[13px] font-semibold text-ink-950">Add a tool</p>
+        <p className="text-[14px] font-semibold text-ink-950">Add a tool</p>
       </div>
       {available.length > 0 && (
         <div>
-          <p className="mb-1.5 text-[12px] font-medium text-ink-500">Quick add</p>
+          <p className="mb-1.5 text-[13px] font-medium text-ink-500">Quick add</p>
           <div className="flex flex-wrap gap-2">
             {available.map((p) => (
               <Button
@@ -427,7 +427,7 @@ function AddToolForm({
       )}
       <form onSubmit={submit} noValidate aria-label="Add a custom tool" className="flex flex-col gap-3">
         {available.length > 0 && (
-          <div className="flex items-center gap-3 text-[12px] font-medium text-ink-500">
+          <div className="flex items-center gap-3 text-[13px] font-medium text-ink-500">
             <span className="h-px flex-1 bg-ink-950/8" />
             or build a custom one
             <span className="h-px flex-1 bg-ink-950/8" />
@@ -466,11 +466,11 @@ function AddToolForm({
             {destErr ? (
               <FieldError id={`${id}-dest-err`}>{destErr}</FieldError>
             ) : (
-              <p id={`${id}-dest-help`} className="mt-1.5 text-[12px] text-ink-500">
+              <p id={`${id}-dest-help`} className="mt-1.5 text-[13px] text-ink-500">
                 {TRANSFER_HELP}
               </p>
             )}
-            <p className="mt-1.5 text-[12px] text-ink-500">
+            <p className="mt-1.5 text-[13px] text-ink-500">
               This demo never dials or verifies this destination — entering a number here doesn’t confirm it’s
               reachable or that whoever answers has agreed to take transferred calls.
             </p>
@@ -548,16 +548,24 @@ export function ToolsSection({
 
   return (
     <SectionCard
-      title="Tools"
-      description="Actions it can take during a call, like booking or transferring."
+      title="Available tools"
+      description="Switch on what it may do during a call."
       defaultAdvancedOpen={defaultAdvanced}
       guided={
-        <div className="-mx-6 -mb-6 mt-1 divide-y divide-ink-950/8 border-t border-ink-950/8">
+        <div className="divide-y divide-secondary">
           {tools.length === 0 && !adding && (
-            <p className="px-6 py-5 text-[13px] text-ink-500">
-              No tools yet, so the agent can talk but can’t act. Add call transfer first so callers can
-              always reach a teammate, then booking or lookups as you need them.
-            </p>
+            <div className="flex flex-col items-start gap-4 rounded-xl border border-dashed border-primary bg-secondary px-6 py-8 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-md font-semibold text-primary">No tools yet</p>
+                <p className="mt-1 max-w-[56ch] text-sm text-tertiary">
+                  The agent can talk but can’t act. Start with call transfer so callers can always reach a teammate, then add booking or lookups.
+                </p>
+              </div>
+              <Button className="shrink-0 gap-2" onClick={() => setAdding(true)}>
+                <Icon name="plus" className="size-4" />
+                Add a tool
+              </Button>
+            </div>
           )}
           {tools.map((t) => (
             <ToolRow
@@ -577,8 +585,8 @@ export function ToolsSection({
                 setAdding(false);
               }}
             />
-          ) : (
-            <div className="px-6 py-5">
+          ) : tools.length === 0 ? null : (
+            <div className="py-5">
               <Button variant="secondary" className="gap-2" onClick={() => setAdding(true)}>
                 <Icon name="plus" className="size-4" />
                 Add a tool
@@ -593,7 +601,7 @@ export function ToolsSection({
             <FieldLabel hint="Exactly what the agent can call, including where transfers go">Tools as data (JSON)</FieldLabel>
             <pre
               aria-label="Tools as JSON"
-              className="overflow-x-auto rounded-md bg-ink-950 p-3 text-[12px] leading-relaxed text-paper-100"
+              className="overflow-x-auto rounded-md bg-ink-950 p-3 text-[13px] leading-relaxed text-paper-100"
             >
 {JSON.stringify(
   tools.map((t) => ({
@@ -627,7 +635,7 @@ export function ToolsSection({
             aria-invalid={!!curlError || undefined}
             aria-describedby={curlError ? `${id}-curl-err` : undefined}
             placeholder={`curl -X POST https://api.yourpractice.com/v1/eligibility \\\n  -H "Authorization: Bearer ..." \\\n  -d '{"memberId": "..."}'`}
-            className="font-mono text-[12px]"
+            className="font-mono text-[13px]"
           />
           <FieldError id={`${id}-curl-err`}>{curlError}</FieldError>
           <div className="flex justify-end">
@@ -637,7 +645,7 @@ export function ToolsSection({
           </div>
           {live && (
             <div className="mt-1 flex flex-col gap-3 rounded-lg border border-success-200 bg-paper-0 p-4">
-              <p className="flex items-center gap-1.5 text-[13px] font-medium text-success-700">
+              <p className="flex items-center gap-1.5 text-[14px] font-medium text-success-700">
                 <Icon name="check" className="size-3.5" />
                 Added “{live.name}” to this agent’s tools
               </p>
@@ -668,7 +676,7 @@ export function ToolsSection({
               </div>
               <pre
                 aria-label="Generated tool schema JSON"
-                className="overflow-x-auto rounded-md bg-ink-950 p-3 text-[12px] leading-relaxed text-paper-100"
+                className="overflow-x-auto rounded-md bg-ink-950 p-3 text-[13px] leading-relaxed text-paper-100"
               >
 {JSON.stringify(
   {

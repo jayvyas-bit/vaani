@@ -1,5 +1,9 @@
 import { useEffect, useId, useState } from "react";
 import { FieldError, FieldLabel, Input, Select, Textarea } from "@/components/ui/Field";
+import { HelpCircle } from "@untitledui/icons";
+import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
+import { Button } from "@/components/ui/Button";
+import { RadioTile, RadioTileGroup, SegmentedGroup, SegmentedItem } from "@/components/base/radio-buttons/radio-variants";
 import { Icon } from "@/components/ui/Icon";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Slider } from "@/components/ui/Slider";
@@ -35,7 +39,7 @@ function CompiledNote({
   onRegenerate: () => void;
 }) {
   return (
-    <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-gray-500">
+    <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm text-tertiary">
       <span>
         {custom
           ? `Edited by hand. Tone changes won’t rewrite it.`
@@ -45,7 +49,7 @@ function CompiledNote({
         <button
           type="button"
           onClick={onRegenerate}
-          className="font-medium text-ink-900 underline underline-offset-[0.2em] hover:text-ink-600"
+          className="font-medium text-primary underline underline-offset-[0.2em] hover:text-secondary"
         >
           Regenerate {what} from fields
         </button>
@@ -98,202 +102,178 @@ export function PersonaSection({
     setSpeaking(true);
   };
 
-  return (
-    <div className="flex flex-col gap-4">
-      <SectionCard
-        title="Who this agent is"
-        description="How it introduces itself and sounds on the call."
-        defaultAdvancedOpen={defaultAdvanced}
-        guided={
-          <div className="grid gap-x-12 gap-y-6 py-4 lg:grid-cols-2">
-            <div className="flex min-w-0 flex-col gap-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <FieldLabel htmlFor={`${id}-name`} required>
-                    Agent name
-                  </FieldLabel>
-                  <Input
-                    id={`${id}-name`}
-                    name="agentName"
-                    value={agent.name}
-                    aria-invalid={agent.name.trim() === "" || undefined}
-                    aria-describedby={agent.name.trim() === "" ? `${id}-name-err` : undefined}
-                    onChange={(e) => onChange({ name: e.target.value })}
-                  />
-                  <FieldError id={`${id}-name-err`}>{agent.name.trim() === "" ? "Give the agent a name." : null}</FieldError>
-                  <p className="mt-1 text-xs text-ink-500">Only you see this.</p>
-                </div>
-                <div>
-                  <FieldLabel htmlFor={`${id}-business`}>Business name</FieldLabel>
-                  <Input
-                    id={`${id}-business`}
-                    name="businessName"
-                    autoComplete="organization"
-                    value={agent.businessName ?? businessNameOf(agent)}
-                    placeholder={suggestedBusinessName}
-                    onChange={(e) => onChange({ businessName: e.target.value })}
-                  />
-                  <p className="mt-1 text-xs text-ink-500">What {outbound ? "recipients" : "callers"} hear.</p>
-                </div>
-              </div>
+  const greetingEmpty = agent.greeting.trim() === "";
+  const greetingLong = agent.greeting.length > 280;
 
-              <fieldset>
-                <legend className="mb-1.5 text-[13px] font-medium text-ink-900">Language</legend>
-                <div className="grid grid-cols-3 gap-1 rounded-md bg-paper-100 p-1">
-                  {(Object.entries(agentLanguageLabel) as [AgentLanguage, string][]).map(([value, label]) => (
-                    <label key={value} className="relative min-w-0">
-                      <input
-                        type="radio"
-                        name={`${id}-language`}
-                        value={value}
-                        checked={languageOf(agent) === value}
-                        onChange={() => onChange({ language: value })}
-                        className="peer sr-only"
-                      />
-                      <span className="block cursor-pointer truncate rounded px-2 py-1.5 text-center text-[13px] text-ink-600 transition-colors hover:text-ink-950 peer-checked:bg-paper-0 peer-checked:font-medium peer-checked:text-ink-950 peer-checked:shadow-xs peer-focus-visible:ring-2 peer-focus-visible:ring-brand-200">
-                        {label.replace(" (bilingual)", "")}
+  return (
+    <div className="grid items-start gap-x-14 lg:grid-cols-2">
+      <div>
+        <SectionCard
+          title="Identity"
+          description={`The name you manage it by, and the business ${outbound ? "recipients" : "callers"} hear.`}
+          guided={
+            <div className="grid gap-5">
+              <div>
+                <FieldLabel htmlFor={`${id}-name`} required tip="Only you see this. It never appears on calls.">
+                  Agent name
+                </FieldLabel>
+                <Input
+                  id={`${id}-name`}
+                  name="agentName"
+                  value={agent.name}
+                  aria-invalid={agent.name.trim() === "" || undefined}
+                  aria-describedby={agent.name.trim() === "" ? `${id}-name-err` : undefined}
+                  onChange={(e) => onChange({ name: e.target.value })}
+                />
+                <FieldError id={`${id}-name-err`}>{agent.name.trim() === "" ? "Give the agent a name." : null}</FieldError>
+              </div>
+              <div>
+                <FieldLabel htmlFor={`${id}-business`} tip={`What ${outbound ? "recipients" : "callers"} hear the agent say it works for.`}>
+                  Business name
+                </FieldLabel>
+                <Input
+                  id={`${id}-business`}
+                  name="businessName"
+                  autoComplete="organization"
+                  value={agent.businessName ?? businessNameOf(agent)}
+                  placeholder={suggestedBusinessName}
+                  onChange={(e) => onChange({ businessName: e.target.value })}
+                />
+              </div>
+            </div>
+          }
+        />
+
+        <SectionCard
+          title="Voice"
+          description="Pick who the agent sounds like."
+          guided={
+            <RadioTileGroup aria-label="Voice" value={agent.voice} onChange={(v) => onChange({ voice: v })}>
+              {withCurrent(voiceOptions, agent.voice).map((v) => {
+                const [voiceName, ...rest] = v.split(" — ");
+                return (
+                  <RadioTile
+                    key={v}
+                    value={v}
+                    label={voiceName}
+                    hint={rest.join(" — ")}
+                    leading={
+                      <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary">
+                        {voiceName.charAt(0)}
                       </span>
-                    </label>
+                    }
+                  />
+                );
+              })}
+            </RadioTileGroup>
+          }
+        />
+      </div>
+
+      <div>
+        <SectionCard
+          title="Style"
+          description="Language and how formal it sounds."
+          guided={
+            <div className="flex flex-col gap-6">
+              <fieldset>
+                <legend className="mb-2 text-sm font-medium text-secondary">
+                  Language
+                  <Tooltip title="Changes the agent's instructions only. Voice and speech support isn't checked." placement="top">
+                    <TooltipTrigger aria-label="More info" className="-my-1.5 ml-0.5 inline-flex translate-y-0.5 cursor-pointer rounded-full p-1.5 text-fg-quaternary outline-focus-ring hover:text-fg-quaternary_hover focus-visible:outline-2">
+                      <HelpCircle className="size-4" />
+                    </TooltipTrigger>
+                  </Tooltip>
+                </legend>
+                <SegmentedGroup aria-label="Language" value={languageOf(agent)} onChange={(v) => onChange({ language: v as AgentLanguage })}>
+                  {(Object.entries(agentLanguageLabel) as [AgentLanguage, string][]).map(([value, label]) => (
+                    <SegmentedItem key={value} value={value} label={label.replace(" (bilingual)", "")} />
                   ))}
-                </div>
-                <p className="mt-1.5 text-xs text-ink-500">
-                  Changes the agent's instructions only. Voice and speech support isn't checked.
-                </p>
+                </SegmentedGroup>
               </fieldset>
 
               <div>
-                <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                  <span id={`${id}-tone-label`} className="text-[13px] font-medium text-ink-900">
+                <div className="mb-2 flex items-baseline justify-between gap-3">
+                  <span id={`${id}-tone-label`} className="text-sm font-medium text-secondary">
                     Tone
                   </span>
-                  <span className="text-xs text-ink-500 tabular-nums">
-                    {toneBandLabel[band]} · {agent.tone}
-                  </span>
-                </div>
-                <div role="group" aria-labelledby={`${id}-tone-label`} className="mb-1 flex flex-wrap gap-1.5">
-                  {tonePresets.map((t) => {
-                    const active = band === t.band;
-                    return (
-                      <button
-                        key={t.band}
-                        type="button"
-                        aria-pressed={active}
-                        onClick={() => onChange({ tone: t.value })}
-                        className={`rounded-md border px-3.5 py-1.5 text-[13px] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand-200 ${
-                          active
-                            ? "border-brand-600 bg-brand-600 text-white"
-                            : "border-ink-950/45 bg-paper-0 text-ink-700 hover:border-ink-950/70"
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    );
-                  })}
+                  <span className="text-sm text-tertiary tabular-nums">{toneBandLabel[band]} · {agent.tone}</span>
                 </div>
                 <Slider
                   id={`${id}-tone`}
                   name="tone"
                   value={agent.tone}
                   onChange={(v) => onChange({ tone: v })}
+                  ariaLabelledBy={`${id}-tone-label`}
                   valueText={`${agent.tone}, ${toneBandLabel[band]}`}
-                  leftLabel="Formal & brief"
-                  rightLabel="Warm & chatty"
                 />
+                <div role="group" aria-labelledby={`${id}-tone-label`} className="mt-1 flex justify-between">
+                  {tonePresets.map((t) => (
+                    <button
+                      key={t.band}
+                      type="button"
+                      aria-pressed={band === t.band}
+                      onClick={() => onChange({ tone: t.value })}
+                      className={`rounded-md px-2.5 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand-200 ${
+                        band === t.band ? "font-medium text-brand-700" : "text-tertiary hover:text-primary"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {humor && (
-                <div className="flex items-start justify-between gap-4 rounded-md border border-ink-950/15 px-3.5 py-3">
+                <div className="flex items-center justify-between gap-4 rounded-lg bg-secondary px-4 py-3">
                   <div className="min-w-0">
-                    <p className="text-[13px] font-medium text-ink-900">{humor.label}</p>
-                    <p className="mt-0.5 text-xs text-ink-500">{humor.description}</p>
+                    <p className="text-sm font-medium text-primary">{humor.label}</p>
+                    <p className="mt-0.5 text-sm text-tertiary">{humor.description}</p>
                   </div>
-                  <Switch
-                    checked={humor.enabled}
-                    disabled={humor.locked || !onHumorChange}
-                    label={humor.label}
-                    onChange={onHumorChange}
-                  />
+                  <Switch checked={humor.enabled} disabled={humor.locked || !onHumorChange} label={humor.label} onChange={onHumorChange} />
                 </div>
               )}
             </div>
+          }
+        />
 
-            <div className="flex min-w-0 flex-col gap-6">
-              <fieldset>
-                <legend className="mb-1.5 text-[13px] font-medium text-ink-900">Voice</legend>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {withCurrent(voiceOptions, agent.voice).map((v) => {
-                    const [voiceName, ...rest] = v.split(" — ");
-                    const selected = v === agent.voice;
-                    return (
-                      <div key={v} className="relative">
-                        <label className="block">
-                          <input
-                            type="radio"
-                            name={`${id}-voice`}
-                            value={v}
-                            checked={selected}
-                            onChange={() => onChange({ voice: v })}
-                            className="peer sr-only"
-                          />
-                          <span className="flex cursor-pointer items-center gap-2.5 rounded-md border border-ink-950/45 bg-paper-0 py-2.5 pl-2.5 pr-11 transition-colors hover:border-ink-950/70 peer-checked:border-brand-600 peer-checked:bg-paper-50 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-200">
-                            <span
-                              aria-hidden="true"
-                              className={`flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${
-                                selected ? "bg-brand-600 text-white" : "bg-paper-100 text-ink-700"
-                              }`}
-                            >
-                              {voiceName.charAt(0)}
-                            </span>
-                            <span className="min-w-0">
-                              <span className="block truncate text-[13px] font-medium text-ink-950">{voiceName}</span>
-                              <span className="block truncate text-xs text-ink-500">{rest.join(" — ")}</span>
-                            </span>
-                          </span>
-                        </label>
-                        {selected && canSpeak && (
-                          <button
-                            type="button"
-                            aria-pressed={speaking}
-                            aria-label={speaking ? "Stop the sample" : "Play the greeting as a sample"}
-                            onClick={playSample}
-                            className="absolute right-2 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-brand-600 text-white outline-none hover:bg-brand-700 focus-visible:ring-2 focus-visible:ring-brand-200"
-                          >
-                            <Icon name={speaking ? "x" : "play"} className="size-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                {canSpeak && <p className="mt-1.5 text-xs text-ink-500">Play reads the greeting in your browser's voice.</p>}
-              </fieldset>
-
-              <div>
-                <FieldLabel htmlFor={`${id}-greeting`}>{outbound ? "Opening line" : "Greeting"}</FieldLabel>
-                <Textarea
-                  id={`${id}-greeting`}
-                  name="greeting"
-                  rows={3}
-                  value={agent.greeting}
-                  onChange={(e) => onChange({ greeting: e.target.value })}
-                />
-                <p className="mt-1 text-xs text-ink-500">
-                  {outbound ? "What recipients hear when they pick up." : "What callers hear first."}
-                </p>
-                <CompiledNote
-                  custom={agent.greetingCustom}
-                  what={lineName}
-                  fromPurpose={outbound}
-                  onRegenerate={() => onChange({ greetingCustom: false })}
-                />
-              </div>
+      <SectionCard
+        title={outbound ? "Opening line" : "Greeting"}
+        description={outbound ? "The first thing recipients hear when they pick up." : "The first thing callers hear."}
+        defaultAdvancedOpen={defaultAdvanced}
+        guided={
+          <div>
+            <Textarea
+              id={`${id}-greeting`}
+              name="greeting"
+              aria-label={outbound ? "Opening line" : "Greeting"}
+              aria-invalid={greetingEmpty || undefined}
+              aria-describedby={greetingEmpty ? `${id}-greeting-err` : undefined}
+              rows={4}
+              value={agent.greeting}
+              onChange={(e) => onChange({ greeting: e.target.value })}
+            />
+            <FieldError id={`${id}-greeting-err`}>{greetingEmpty ? `Write the ${lineName} the agent says first.` : null}</FieldError>
+            <div className="mt-2 flex items-center justify-between gap-3 text-sm">
+              <span className={`tabular-nums ${greetingLong ? "font-medium text-warning-700" : "text-tertiary"}`}>
+                {agent.greeting.length} {agent.greeting.length === 1 ? "character" : "characters"}{greetingLong ? ". Shorter is easier to listen to." : ""}
+              </span>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <CompiledNote custom={agent.greetingCustom} what={lineName} fromPurpose={outbound} onRegenerate={() => onChange({ greetingCustom: false })} />
+              {canSpeak && (
+                <Button variant="secondary" size="sm" onClick={playSample} aria-pressed={speaking} disabled={greetingEmpty && !speaking}>
+                  <Icon name={speaking ? "x" : "play"} className="size-4" />
+                  {speaking ? "Stop" : "Hear it"}
+                </Button>
+              )}
             </div>
           </div>
         }
         advanced={
           <div className="flex flex-col gap-4">
             <div>
-              <FieldLabel htmlFor={`${id}-prompt`} hint="Written from the fields above — editable">
+              <FieldLabel htmlFor={`${id}-prompt`} hint="Written from the fields above. Editable.">
                 Instructions the agent follows (system prompt)
               </FieldLabel>
               <Textarea
@@ -302,16 +282,12 @@ export function PersonaSection({
                 rows={5}
                 value={agent.systemPrompt}
                 onChange={(e) => onChange({ systemPrompt: e.target.value })}
-                className="font-mono text-[12px]"
+                className="font-mono text-sm"
               />
-              <CompiledNote
-                custom={agent.promptCustom}
-                what="instructions"
-                onRegenerate={() => onChange({ promptCustom: false })}
-              />
+              <CompiledNote custom={agent.promptCustom} what="instructions" onRegenerate={() => onChange({ promptCustom: false })} />
             </div>
             <div>
-              <FieldLabel htmlFor={`${id}-temp`} hint={`${agent.temperature.toFixed(1)} — lower is more consistent`}>
+              <FieldLabel htmlFor={`${id}-temp`} hint={`${agent.temperature.toFixed(1)}. Lower is more consistent.`}>
                 Temperature
               </FieldLabel>
               <Slider
@@ -381,6 +357,7 @@ export function PersonaSection({
           </div>
         }
       />
+      </div>
     </div>
   );
 }

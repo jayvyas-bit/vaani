@@ -24,18 +24,18 @@ export function RadioCard({
       onClick={disabled ? undefined : onSelect}
       disabled={disabled}
       aria-pressed={selected}
-      className={`flex w-full items-start gap-3.5 rounded-xl border p-4 text-left outline-none transition-[border-color,box-shadow,transform,background-color] duration-150 ease-[var(--ease-out-quart)] focus-visible:ring-4 focus-visible:ring-brand-500/25 active:scale-[0.99] ${
+      className={`flex w-full items-center gap-3.5 rounded-xl px-4 py-3.5 text-left outline-focus-ring transition duration-100 ease-linear focus-visible:outline-2 focus-visible:outline-offset-2 ${
         disabled
-          ? "cursor-not-allowed border-paper-200 bg-paper-0 opacity-60 shadow-none"
+          ? "cursor-not-allowed bg-primary opacity-50 ring-1 ring-primary ring-inset"
           : selected
-            ? "border-brand-600 bg-brand-50/60 shadow-[var(--shadow-brand-sm)] ring-1 ring-brand-600"
-            : "border-paper-200 bg-paper-0 shadow-xs hover:border-ink-300 hover:shadow-sm"
+            ? "bg-brand-25 ring-2 ring-brand ring-inset"
+            : "bg-primary ring-1 ring-primary ring-inset hover:ring-brand-300"
       }`}
     >
       {icon && (
         <div
           className={`flex size-9 shrink-0 items-center justify-center rounded-full ring-4 transition-colors ${
-            selected ? "bg-brand-600 text-white ring-brand-100" : "bg-paper-100 text-ink-500 ring-paper-50"
+            selected ? "bg-brand-solid text-white ring-brand-100" : "bg-secondary text-fg-quaternary ring-primary"
           }`}
         >
           {icon}
@@ -43,21 +43,21 @@ export function RadioCard({
       )}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`line-clamp-2 text-sm font-semibold ${selected ? "text-brand-800" : "text-ink-950"}`}>
+          <span className={`line-clamp-2 text-sm font-semibold ${selected ? "text-brand-secondary" : "text-secondary"}`}>
             {title}
           </span>
           {badge}
         </div>
         {description && (
-          <p className={`mt-0.5 text-sm leading-5 ${selected ? "text-brand-700" : "text-ink-600"}`}>{description}</p>
+          <p className="text-sm text-tertiary">{description}</p>
         )}
       </div>
       <div
-        className={`mt-0.5 flex size-[18px] shrink-0 items-center justify-center rounded-full border transition-colors ${
-          selected ? "border-brand-600 bg-brand-600" : "border-ink-300 bg-paper-0"
+        className={`flex size-5 shrink-0 items-center justify-center rounded-full ring-1 ring-inset transition duration-100 ${
+          selected ? "bg-brand-solid ring-brand-solid" : "bg-primary ring-gray-300"
         }`}
       >
-        {selected && <span key={title} className="size-2 animate-check-in rounded-full bg-paper-0" />}
+        {selected && <span key={title} className="size-2 rounded-full bg-white" />}
       </div>
     </button>
   );
