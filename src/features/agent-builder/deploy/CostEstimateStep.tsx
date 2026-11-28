@@ -13,6 +13,7 @@ import {
 } from "@/lib/deploy";
 import {
   currencySymbol,
+  ILLUSTRATIVE_USD_TO_INR_RATE,
   displayCurrencyLabel,
   formatMoney,
   fromDisplayAmount,
@@ -133,8 +134,8 @@ export function CostEstimateStep({
         </p>
         {currency !== "USD" && (
           <p className="mt-1 text-[12px] text-ink-500">
-            Illustrative conversion at a fixed rate for display only. You’re billed in USD, and this is not a live or
-            verified exchange rate.
+            Illustrative conversion at a fixed ₹{ILLUSTRATIVE_USD_TO_INR_RATE} per $1, for display only. You’re billed in USD, and this is not a live or
+            verified exchange rate. Call volume and per-minute rates are your own estimates.
           </p>
         )}
 

@@ -489,7 +489,7 @@ function AgentRow({
     <div
       role="button"
       tabIndex={0}
-      aria-label={`Open ${agent.name || "untitled agent"}`}
+      aria-label={`Open ${agent.name || "untitled agent"}, ${agent.direction}, ${agent.status}${agent.purpose ? `, ${agent.purpose}` : ""}`}
       onClick={onOpen}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -592,6 +592,9 @@ function AgentsList({
   onDelete: (id: string) => void;
   onAddCounterpart?: (id: string) => void;
 }) {
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const shown = q ? records.filter((r) => `${r.agent.name} ${r.agent.purpose} ${r.agent.direction} ${r.agent.status}`.toLowerCase().includes(q)) : records;
   return (
     <div className="h-full overflow-y-auto bg-paper-50">
       <PageHeader
@@ -624,10 +627,26 @@ function AgentsList({
               </Button>
             </div>
           )}
+          {records.length > 6 && (
+            <div className="mb-4">
+              <input
+                type="search"
+                aria-label="Search agents"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search by name, job, direction or status"
+                className="w-full max-w-md rounded-lg border border-ink-950/10 bg-paper-0 px-3 py-2 text-[13px] text-ink-950 outline-none placeholder:text-ink-500 focus-visible:ring-2 focus-visible:ring-brand-500"
+              />
+              <p role="status" className="mt-1.5 text-[12px] text-ink-500">
+                {q ? `${shown.length} of ${records.length} agents` : `${records.length} agents`}
+              </p>
+            </div>
+          )}
           {records.length > 0 ? (
             <div className="overflow-hidden rounded-lg border border-ink-950/10 bg-paper-0">
               <div className="divide-y divide-ink-950/8">
-                {records.map((r) => (
+                {shown.length === 0 && <p className="px-4 py-6 text-[13px] text-ink-500">No agents match “{query}”.</p>}
+                {shown.map((r) => (
                   <AgentRow
                     key={r.agent.id}
                     agent={r.agent}

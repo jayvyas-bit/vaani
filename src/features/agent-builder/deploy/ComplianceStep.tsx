@@ -376,14 +376,14 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
           }
         />
       </SettingRow>
-      <SettingRow title="Do-not-call list" labelFor={`${id}-dnc`} hint="Every number is checked against the selected list before it’s dialed.">
+      <SettingRow title="Do-not-call list" labelFor={`${id}-dnc`} hint="Your choice is recorded for the dialing setup. This demo does not dial or check any list itself.">
         <Select
           id={`${id}-dnc`}
           name="dncList"
           value={config.dncList}
           onChange={(e) => update({ dncList: e.target.value as DncList })}
         >
-          <option value="internal">Workspace DNC list (214 numbers)</option>
+          <option value="internal">Workspace DNC list (you supply the numbers)</option>
           <option value="federal">National and regional registries</option>
           <option value="both">Both: workspace list and registries</option>
         </Select>

@@ -159,7 +159,10 @@ export function CreateBrief({
   const inbound = direction === "inbound";
   const autoName = businessName.trim() ? `${businessName.trim()} ${inbound ? "inbound" : "outbound"} agent` : "";
   const purposeErr = tried && step === "job" && !purpose.trim() ? "Say what the agent should do on a call." : null;
-  const businessErr = tried && step === "business" && !businessName.trim() ? "Callers hear this, so it can’t be blank." : null;
+  const businessErr =
+    tried && step === "business" && businessName.trim().length < 2
+      ? businessName.trim() ? "Use at least 2 characters." : "Callers hear this, so it can’t be blank."
+      : null;
 
   const handoffErr = tried && step === "business" && handoffMode === "person" && !handoff.trim() ? "Say who follows up, or choose Take a message." : null;
 
@@ -194,8 +197,12 @@ export function CreateBrief({
   const peakCalls = inbound && peakNum > 0 ? peakNum : undefined;
   const monthlyBudget = budget.trim() && budgetNum > 0 ? fromDisplayAmount(budgetNum, budgetCurrency) : undefined;
 
+  // Shown as you type: a stray "-" or letter must not be silently stripped into a different number.
+  const budgetErr = budget.trim() && (!/^[\d,.\s₹$]+$/.test(budget) || !(budgetNum > 0)) ? "Enter a number above 0, such as 15000." : null;
+  const peakErr = peak.trim() && (!/^[\d,\s]+$/.test(peak) || !(peakNum > 0)) ? "Enter a whole number above 0, such as 1000." : null;
+
   const create = () => {
-    if (!businessName.trim() || (handoffMode === "person" && !handoff.trim())) {
+    if (businessName.trim().length < 2 || budgetErr || peakErr || (handoffMode === "person" && !handoff.trim())) {
       setTried(true);
       return;
     }
@@ -413,8 +420,10 @@ export function CreateBrief({
                       inputMode="decimal"
                       value={budget}
                       onChange={setBudget}
+                      isInvalid={!!budgetErr}
+                      hint={budgetErr ?? undefined}
                       placeholder={budgetCurrency === "INR" ? "e.g. 15000" : "e.g. 200"}
-                      className="max-w-[12rem]"
+                      className="max-w-[16rem]"
                     />
                   </div>
                 </Row>
@@ -426,6 +435,8 @@ export function CreateBrief({
                       inputMode="numeric"
                       value={peak}
                       onChange={setPeak}
+                      isInvalid={!!peakErr}
+                      hint={peakErr ?? undefined}
                       placeholder="Calls at the same time, e.g. 1000"
                       className="max-w-[16rem]"
                     />
@@ -523,7 +534,7 @@ export function CreateBrief({
                       color="tertiary"
                       size="md"
                       onClick={() => {
-                        if (!businessName.trim()) return setTried(true);
+                        if (businessName.trim().length < 2 || budgetErr || peakErr) return setTried(true);
                         onCreate?.({
                           name: customName.trim() || autoName,
                           purpose: purpose.trim(),

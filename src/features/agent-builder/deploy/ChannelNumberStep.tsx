@@ -94,7 +94,7 @@ export function ChannelNumberStep({
             onSelect={() => choose("new")}
             icon={<Icon name="plus" className="size-4" />}
             title="Get a new local number"
-            description="We’ll reserve one in the area code you choose."
+            description="Pick the area code you want. This demo does not buy a number; connect a phone provider to get a real one."
           />
           <RadioCard
             selected={config.numberMethod === "port"}

@@ -156,6 +156,14 @@ export function GoLiveStep({
       blocking: failing > 0,
     });
   }
+  if (agent.direction === "outbound") {
+    issues.push({
+      key: "optout",
+      title: "Opt-outs are not enforced across campaigns.",
+      detail:
+        "The agent can record a do-not-call request in its result fields, but this demo keeps no suppression list. Remove opted-out numbers from your own call list before dialing.",
+    });
+  }
   if (ruleOnlyPasses > 0) {
     issues.push({
       key: "rule-only",
