@@ -2,13 +2,13 @@ import type { ReactNode } from "react";
 import { Icon } from "./Icon";
 
 /** Logo + product name, shared by the app sidebar and the per-agent sidebar. */
-export function BrandMark() {
+export function BrandMark({ inverted = false }: { inverted?: boolean }) {
   return (
     <div className="flex items-center gap-2.5 px-4 py-4">
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-paper-0 shadow-brand-sm">
+      <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${inverted ? "bg-lime-400 text-brand-900" : "bg-brand-600 text-paper-0 shadow-brand-sm"}`}>
         <Icon name="phone-inbound" className="size-4" strokeWidth={2.2} />
       </div>
-      <p className="min-w-0 truncate text-md font-semibold tracking-[-0.01em] text-ink-950">
+      <p className={`min-w-0 truncate text-md font-semibold tracking-[-0.01em] ${inverted ? "text-white" : "text-ink-950"}`}>
         Voice Agent Builder
       </p>
     </div>

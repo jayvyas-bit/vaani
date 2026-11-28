@@ -1,9 +1,8 @@
 import { useId, useState, type FormEvent } from "react";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FieldError, FieldLabel, Input, Select } from "@/components/ui/Field";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { SectionCard } from "@/components/ui/SectionCard";
+import { Drawer, Section } from "@/components/ui/PanelCard";
 import { Switch } from "@/components/ui/Switch";
 import { HUMOR_TOGGLE_ID } from "@/lib/persona";
 import { newId } from "@/lib/useControllable";
@@ -17,14 +16,6 @@ const limitTypeLabel: Record<LimitType, string> = {
   follow_up_limit: "Follow-up limit",
 };
 
-const limitTypeTone: Record<LimitType, "accent" | "clay" | "amber" | "neutral"> = {
-  discount_limit: "neutral",
-  forbidden_promise: "clay",
-  escalation_trigger: "amber",
-  payment_plan_limit: "neutral",
-  follow_up_limit: "accent",
-};
-
 const limitTypeIcon: Record<LimitType, IconName> = {
   discount_limit: "ruler",
   forbidden_promise: "x",
@@ -33,44 +24,14 @@ const limitTypeIcon: Record<LimitType, IconName> = {
   follow_up_limit: "clock",
 };
 
-const chipToneClasses: Record<"accent" | "clay" | "amber" | "neutral", string> = {
-  accent: "border-brand-200 bg-brand-50 text-brand-700",
-  clay: "border-error-200 bg-error-50 text-error-700",
-  amber: "border-warning-200 bg-warning-50 text-warning-700",
-  neutral: "border-gray-200 bg-gray-50 text-gray-700",
+/** Outlined, never tinted: the type reads from the icon and the label. */
+const limitTypeTag: Record<LimitType, string> = {
+  discount_limit: "text-secondary ring-ink-950/20",
+  forbidden_promise: "text-terracotta-500 ring-terracotta-500",
+  escalation_trigger: "text-brand-700 ring-brand-600",
+  payment_plan_limit: "text-secondary ring-ink-950/20",
+  follow_up_limit: "text-brand-700 ring-brand-600",
 };
-
-/**
- * One rule as a small, clickable chip — lets you scan everything this agent
- * is guarded by without reading every row, and jumps straight to editing it.
- */
-function GuardrailChip({ rule, onEdit }: { rule: BusinessRule; onEdit: () => void }) {
-  const tone = limitTypeTone[rule.limitType];
-  return (
-    <button
-      type="button"
-      onClick={onEdit}
-      title={`${limitTypeLabel[rule.limitType]}: ${ruleSentence(rule).action}${rule.enabled ? "" : " (off)"}`}
-      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[13px] font-medium transition-colors hover:border-gray-300 ${
-        rule.enabled ? chipToneClasses[tone] : "border-dashed border-gray-200 bg-transparent text-gray-400"
-      }`}
-    >
-      <Icon name={limitTypeIcon[rule.limitType]} className="size-3.5" />
-      <span className="max-w-[180px] truncate">{rule.label}</span>
-    </button>
-  );
-}
-
-function GuardrailRail({ rules, onEdit }: { rules: BusinessRule[]; onEdit: (id: string) => void }) {
-  if (rules.length === 0) return null;
-  return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-ink-950/8 bg-paper-25 py-4">
-      {rules.map((r) => (
-        <GuardrailChip key={r.id} rule={r} onEdit={() => onEdit(r.id)} />
-      ))}
-    </div>
-  );
-}
 
 const hasLimit = (t: LimitType) => t === "discount_limit" || t === "payment_plan_limit";
 
@@ -153,52 +114,72 @@ function BusinessRuleRow({
   onDelete: () => void;
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const { condition, action } = ruleSentence(rule);
+  const btn =
+    "h-9 rounded-lg px-3 text-sm font-medium text-secondary outline-focus-ring hover:bg-primary_hover focus-visible:outline-2";
   return (
-    <div className="flex flex-col gap-2.5 py-3.5">
-      <div className="flex items-start gap-4">
-        <div className="min-w-0 flex-1">
-          <p className={`text-[14px] leading-snug ${rule.enabled ? "text-ink-950" : "text-ink-500"}`}>
-            <RuleSentence rule={rule} />
-          </p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <Badge tone={limitTypeTone[rule.limitType]}>{limitTypeLabel[rule.limitType]}</Badge>
-            {!rule.enabled && <span className="text-[13px] text-ink-500">Off — the agent ignores this rule</span>}
-          </div>
-        </div>
-        <Switch checked={rule.enabled} onChange={onToggle} label={`Rule on: ${rule.label}`} />
-      </div>
-      {confirmingDelete ? (
-        <div
-          role="alertdialog"
-          aria-label="Delete this rule?"
-          className="flex flex-col gap-2 rounded-md border border-error-200 bg-error-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <p className="text-[13px] text-ink-800">Delete this rule? The agent stops following it right away.</p>
-          <div className="flex gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(false)}>
-              Keep it
-            </Button>
-            <Button size="sm" variant="destructive" onClick={onDelete}>
-              Delete rule
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex gap-1">
-          <Button size="sm" variant="ghost" className="-ml-2.5" onClick={onEdit} aria-label={`Edit rule: ${rule.label}`}>
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setConfirmingDelete(true)}
-            aria-label={`Delete rule: ${rule.label}`}
+    <li className="flex items-start gap-4 py-5">
+      <span
+        aria-hidden="true"
+        className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${rule.enabled ? "bg-brand-600 text-lime-300" : "bg-paper-50 text-fg-quaternary ring-1 ring-inset ring-ink-950/15"}`}
+      >
+        <Icon name={limitTypeIcon[rule.limitType]} className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex h-6 items-center gap-2">
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${limitTypeTag[rule.limitType]}`}
           >
-            Delete
-          </Button>
+            {limitTypeLabel[rule.limitType]}
+          </span>
+          {!rule.enabled && (
+            <span className="text-sm text-tertiary">Off. The agent ignores this rule.</span>
+          )}
         </div>
-      )}
-    </div>
+        <p className={`mt-2 text-md leading-snug ${rule.enabled ? "text-secondary" : "text-tertiary"}`}>
+          {condition}
+        </p>
+        <p
+          className={`mt-1.5 text-md font-semibold leading-snug ${rule.enabled ? "text-primary" : "text-tertiary"}`}
+        >
+          <span className="sr-only">Then: </span>
+          <span aria-hidden="true" className="mr-1.5 text-fg-quaternary">→</span>
+          {action}
+        </p>
+        <div className="-ml-3 mt-2 flex h-9 items-center gap-1">
+          {confirmingDelete ? (
+            <div role="alertdialog" aria-label="Delete this rule?" className="flex items-center gap-1">
+              <span className="px-3 text-sm font-medium text-terracotta-500">Delete this rule?</span>
+              <button type="button" className={btn} onClick={() => setConfirmingDelete(false)}>
+                Keep it
+              </button>
+              <button
+                type="button"
+                className="h-9 rounded-lg bg-terracotta-500 px-3 text-sm font-semibold text-white outline-focus-ring hover:opacity-90 focus-visible:outline-2"
+                onClick={onDelete}
+              >
+                Delete
+              </button>
+            </div>
+          ) : (
+            <>
+              <button type="button" className={btn} onClick={onEdit} aria-label={`Edit rule: ${rule.label}`}>
+                Edit
+              </button>
+              <button
+                type="button"
+                className={btn}
+                onClick={() => setConfirmingDelete(true)}
+                aria-label={`Delete rule: ${rule.label}`}
+              >
+                Delete
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      <Switch checked={rule.enabled} onChange={onToggle} label={`Rule on: ${rule.label}`} />
+    </li>
   );
 }
 
@@ -273,7 +254,7 @@ function RuleForm({
       onSubmit={submit}
       noValidate
       aria-label={initial ? "Edit guardrail" : "Add a guardrail"}
-      className="flex flex-col gap-3 border-t border-ink-950/8 bg-paper-50 px-6 py-5 first:border-t-0"
+      className="flex flex-col gap-4 py-6"
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
@@ -295,9 +276,8 @@ function RuleForm({
           <FieldLabel
             htmlFor={`${id}-threshold`}
             required={limitNeeded}
-            hint={limitNeeded ? undefined : "Optional"}
           >
-            {limitNeeded ? "Limit" : "Details"}
+            {limitNeeded ? "Limit" : "Details (optional)"}
           </FieldLabel>
           <Input
             id={`${id}-threshold`}
@@ -321,7 +301,7 @@ function RuleForm({
       </div>
       {isDiscount && (
         <div>
-          <FieldLabel htmlFor={`${id}-floor`} hint="Optional — never discount below this, per item">
+          <FieldLabel htmlFor={`${id}-floor`} hint="Optional. Never discount below this, per item">
             Price floor (per item)
           </FieldLabel>
           <Input
@@ -368,8 +348,8 @@ function RuleForm({
         <FieldError id={`${id}-action-err`}>{actionErr}</FieldError>
       </div>
       {preview && (
-        <p className="rounded-md border border-ink-950/8 bg-paper-0 px-3 py-2 text-[13px] text-ink-700">
-          <span className="font-medium text-ink-500">Reads as: </span>
+        <p className="rounded-xl px-4 py-3 text-sm text-secondary ring-1 ring-inset ring-ink-950/15">
+          <span className="font-medium text-tertiary">Reads as: </span>
           <RuleSentence rule={preview} />
         </p>
       )}
@@ -390,7 +370,6 @@ export function GuardrailsSection({
   businessRules,
   onSafetyChange,
   onBusinessRulesChange,
-  defaultAdvanced = false,
 }: {
   safety: SafetyToggle[];
   businessRules: BusinessRule[];
@@ -398,98 +377,140 @@ export function GuardrailsSection({
   onBusinessRulesChange: (next: BusinessRule[]) => void;
   defaultAdvanced?: boolean;
 }) {
-  const [adding, setAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // One drawer at a time: add a rule, edit one, or read them as JSON. Nothing expands in the page.
+  const [panel, setPanel] = useState<"add" | "json" | { editId: string } | null>(null);
   // Humor is a tone choice and lives in Persona.
   const shownSafety = safety.filter((s) => s.id !== HUMOR_TOGGLE_ID);
+  const onCount = businessRules.filter((r) => r.enabled).length;
+  const editing =
+    panel && typeof panel === "object" ? businessRules.find((r) => r.id === panel.editId) : undefined;
+  const close = () => setPanel(null);
 
   return (
-    <div className="grid items-start gap-x-14 lg:grid-cols-2 lg:[&>section:nth-child(2)]:border-t-0 lg:[&>section:nth-child(2)]:pt-0">
-      <SectionCard
-        title="Your rules"
-        description="Limits specific to your business."
-        defaultAdvancedOpen={defaultAdvanced}
-        guided={
-          <div className="mt-1 border-t border-ink-950/8">
-            <GuardrailRail
-              rules={businessRules}
-              onEdit={(id) => {
-                setAdding(false);
-                setEditingId(id);
-              }}
-            />
-            {businessRules.length > 0 ? (
-              <div className="divide-y divide-ink-950/8">
-                {businessRules.map((r) =>
-                  editingId === r.id ? (
-                    <RuleForm
-                      key={r.id}
-                      initial={r}
-                      onCancel={() => setEditingId(null)}
-                      onSave={(rule) => {
-                        onBusinessRulesChange(businessRules.map((x) => (x.id === r.id ? rule : x)));
-                        setEditingId(null);
-                      }}
-                    />
-                  ) : (
-                    <BusinessRuleRow
-                      key={r.id}
-                      rule={r}
-                      onToggle={(enabled) =>
-                        onBusinessRulesChange(businessRules.map((x) => (x.id === r.id ? { ...x, enabled } : x)))
-                      }
-                      onEdit={() => {
-                        setAdding(false);
-                        setEditingId(r.id);
-                      }}
-                      onDelete={() => {
-                        onBusinessRulesChange(businessRules.filter((x) => x.id !== r.id));
-                        if (editingId === r.id) setEditingId(null);
-                      }}
-                    />
-                  ),
-                )}
-              </div>
-            ) : (
-              !adding && (
-                <p className="pt-5 text-[14px] text-ink-500">
-                  No rules yet, so the agent only follows its persona. Add the first thing it must never
-                  do on a call, like quoting a price or promising a refund.
-                </p>
-              )
-            )}
-            {adding ? (
-              <RuleForm
-                onCancel={() => setAdding(false)}
-                onSave={(rule) => {
-                  onBusinessRulesChange([...businessRules, rule]);
-                  setAdding(false);
-                }}
-              />
-            ) : (
-              <div className={`pb-5 ${businessRules.length > 0 ? "border-t border-ink-950/8 pt-4" : "pt-4"}`}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => {
-                    setEditingId(null);
-                    setAdding(true);
-                  }}
-                >
-                  <Icon name="plus" className="size-3.5" />
-                  Add a guardrail
-                </Button>
-              </div>
+    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,440px)] xl:gap-10">
+      <div className="min-w-0">
+        <Section
+          title="Your rules"
+          icon="shield"
+          summary={
+            businessRules.length === 0
+              ? "None yet"
+              : `${businessRules.length} ${businessRules.length === 1 ? "rule" : "rules"} · ${onCount} on`
+          }
+        >
+          {businessRules.length > 0 ? (
+            <ul className="divide-y divide-ink-950/10">
+              {businessRules.map((r) => (
+                <BusinessRuleRow
+                  key={r.id}
+                  rule={r}
+                  onToggle={(enabled) =>
+                    onBusinessRulesChange(businessRules.map((x) => (x.id === r.id ? { ...x, enabled } : x)))
+                  }
+                  onEdit={() => setPanel({ editId: r.id })}
+                  onDelete={() => onBusinessRulesChange(businessRules.filter((x) => x.id !== r.id))}
+                />
+              ))}
+            </ul>
+          ) : (
+            <p className="py-6 text-md text-tertiary">
+              No rules yet, so the agent only follows its persona. Add the first thing it must never do on a
+              call, like quoting a price or promising a refund.
+            </p>
+          )}
+          <div className="flex min-h-[4.5rem] items-center justify-between gap-4 py-4">
+            <button
+              type="button"
+              onClick={() => setPanel("add")}
+              aria-haspopup="dialog"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-brand-600 px-5 text-sm font-semibold text-white outline-focus-ring hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              <Icon name="plus" className="size-4" />
+              Add a guardrail
+            </button>
+            {businessRules.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setPanel("json")}
+                aria-haspopup="dialog"
+                className="h-11 rounded-lg px-3 text-sm font-medium text-secondary outline-focus-ring hover:bg-primary_hover focus-visible:outline-2"
+              >
+                View as JSON
+              </button>
             )}
           </div>
-        }
-        advanced={
-          <div>
-            <FieldLabel hint="The same rules, in the form the agent and your tests read them">Rules as data (JSON)</FieldLabel>
+        </Section>
+      </div>
+
+      <aside className="xl:sticky xl:top-0">
+        <Section
+          title="Content safety"
+          icon="lock"
+          summary={`${shownSafety.filter((s) => s.enabled).length} of ${shownSafety.length} on`}
+        >
+          <p className="py-4 text-sm text-tertiary">
+            Protections that apply to every agent. Required ones can’t be turned off.
+          </p>
+          {shownSafety.map((s) => (
+            <div key={s.id} className="flex items-center justify-between gap-4 py-4">
+              <div className="min-w-0">
+                <p className="text-md font-semibold text-primary">{s.label}</p>
+                <p className="mt-0.5 text-sm text-tertiary">{s.description}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2.5">
+                {s.locked && (
+                  <span className="flex items-center gap-1 text-sm font-medium text-tertiary">
+                    <Icon name="lock" className="size-3.5" />
+                    Required
+                  </span>
+                )}
+                <Switch
+                  checked={s.enabled}
+                  disabled={s.locked}
+                  label={s.label}
+                  onChange={
+                    s.locked
+                      ? undefined
+                      : (enabled) => onSafetyChange(safety.map((x) => (x.id === s.id ? { ...x, enabled } : x)))
+                  }
+                />
+              </div>
+            </div>
+          ))}
+        </Section>
+      </aside>
+
+      {panel === "add" && (
+        <Drawer title="Add a guardrail" onClose={close} padBottom={false}>
+          <RuleForm
+            onCancel={close}
+            onSave={(rule) => {
+              onBusinessRulesChange([...businessRules, rule]);
+              close();
+            }}
+          />
+        </Drawer>
+      )}
+      {editing && (
+        <Drawer title="Edit guardrail" onClose={close} padBottom={false}>
+          <RuleForm
+            key={editing.id}
+            initial={editing}
+            onCancel={close}
+            onSave={(rule) => {
+              onBusinessRulesChange(businessRules.map((x) => (x.id === editing.id ? rule : x)));
+              close();
+            }}
+          />
+        </Drawer>
+      )}
+      {panel === "json" && (
+        <Drawer title="Rules as data" onClose={close} padBottom={false}>
+          <div className="py-6">
+            <p className="mb-3 text-sm text-tertiary">The same rules, in the form the agent and your tests read them.</p>
             <pre
               aria-label="Guardrails as JSON"
-              className="overflow-x-auto rounded-md bg-ink-950 p-3 text-[13px] leading-relaxed text-paper-100"
+              className="overflow-x-auto rounded-xl bg-ink-950 p-4 text-sm leading-relaxed text-paper-100"
             >
 {JSON.stringify(
   businessRules.map(({ id, limitType, label, threshold, priceFloor, action, enabled }) => ({
@@ -506,44 +527,8 @@ export function GuardrailsSection({
 )}
             </pre>
           </div>
-        }
-      />
-
-      <SectionCard
-        title="Content safety"
-        description="Protections that apply to every agent. Required ones can’t be turned off."
-        quiet
-        guided={
-          <div className="-mb-2 divide-y divide-ink-950/8 border-t border-ink-950/8">
-            {shownSafety.map((s) => (
-              <div key={s.id} className="flex items-center justify-between gap-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-[14px] font-medium text-ink-950">{s.label}</p>
-                  <p className="text-[13px] text-ink-500">{s.description}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2.5">
-                  {s.locked && (
-                    <span className="flex items-center gap-1 text-[13px] font-medium text-ink-500">
-                      <Icon name="lock" className="size-3" />
-                      Required
-                    </span>
-                  )}
-                  <Switch
-                    checked={s.enabled}
-                    disabled={s.locked}
-                    label={s.label}
-                    onChange={
-                      s.locked
-                        ? undefined
-                        : (enabled) => onSafetyChange(safety.map((x) => (x.id === s.id ? { ...x, enabled } : x)))
-                    }
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        }
-      />
+        </Drawer>
+      )}
     </div>
   );
 }

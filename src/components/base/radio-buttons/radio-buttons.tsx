@@ -23,7 +23,7 @@ export const RadioItem = ({ label, hint, leading, className, ...props }: RadioIt
             cx(
                 "flex cursor-pointer items-center gap-3.5 rounded-xl bg-primary px-4 py-3.5 ring-1 ring-primary outline-focus-ring transition duration-100 ease-linear ring-inset focus-visible:outline-2 focus-visible:outline-offset-2",
                 "hover:ring-brand-300",
-                state.isSelected && "bg-brand-25 ring-2 ring-brand",
+                state.isSelected && "ring-2 ring-brand",
                 state.isDisabled && "cursor-not-allowed opacity-50",
                 typeof className === "function" ? className(state) : className,
             )

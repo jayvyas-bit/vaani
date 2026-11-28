@@ -8,7 +8,8 @@ export type AgentStatus = "draft" | "testing" | "live" | "paused";
  * STT or TTS provider actually supports Hindi. Confirm that separately before
  * relying on it for real calls.
  */
-export type AgentLanguage = "en" | "hi" | "en-hi";
+/** A language code from `languageOptions` in persona.ts. Older agents may hold "en-hi". */
+export type AgentLanguage = string;
 
 /** One thing the business sells or offers, as the agent may quote it. */
 export interface Offering {
@@ -62,6 +63,8 @@ export interface Agent {
   systemPrompt: string;
   /** Defaults to "en" — see `languageOf` in persona.ts. */
   language?: AgentLanguage;
+  /** Other languages the agent can switch into, beyond `language`. */
+  extraLanguages?: AgentLanguage[];
   llmProvider: string;
   sttProvider: string;
   ttsProvider: string;

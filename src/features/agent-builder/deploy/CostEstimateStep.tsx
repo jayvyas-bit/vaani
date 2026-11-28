@@ -99,7 +99,7 @@ export function CostEstimateStep({
     <div className="flex flex-col gap-7">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-display-xs font-semibold tracking-[-0.02em] text-primary">Cost estimate</h1>
+          <h1 className="text-xl font-semibold tracking-[-0.01em] text-primary">Cost estimate</h1>
           <p className="mt-2 text-md text-tertiary">
             Set your expected volume to see what this agent will cost to run.
           </p>

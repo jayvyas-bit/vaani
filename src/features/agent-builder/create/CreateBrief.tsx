@@ -10,7 +10,7 @@ import { Select } from "@/components/base/select/select";
 import { TextArea } from "@/components/base/textarea/textarea";
 import { VoiceWaveform } from "@/components/ui/VoiceWaveform";
 import { fromDisplayAmount, type DisplayCurrency } from "@/lib/format";
-import { agentLanguageLabel, cleanBusinessName, compileGreeting, inferPersonaDefaults } from "@/lib/persona";
+import { cleanBusinessName, compileGreeting, inferPersonaDefaults, languageOptions } from "@/lib/persona";
 import { agentTemplates } from "@/lib/templates";
 import type { Agent, AgentLanguage, BusinessDetails, CallDirection, Offering, Faq } from "@/lib/types";
 import { newId } from "@/lib/useControllable";
@@ -161,7 +161,7 @@ export function CreateBrief({
   const purposeErr = tried && step === "job" && !purpose.trim() ? "Say what the agent should do on a call." : null;
   const businessErr =
     tried && step === "business" && businessName.trim().length < 2
-      ? businessName.trim() ? "Use at least 2 characters." : "Callers hear this, so it can’t be blank."
+      ? businessName.trim() ? "Use at least 2 characters." : `${inbound ? "Callers" : "People you call"} hear this, so it can’t be blank.`
       : null;
 
   const handoffErr = tried && step === "business" && handoffMode === "person" && !handoff.trim() ? "Say who follows up, or choose Take a message." : null;
@@ -204,6 +204,8 @@ export function CreateBrief({
   const create = () => {
     if (businessName.trim().length < 2 || budgetErr || peakErr || (handoffMode === "person" && !handoff.trim())) {
       setTried(true);
+      // Errors can sit above the fold; take the person to the first one.
+      if (businessName.trim().length < 2) nameRef.current?.focus();
       return;
     }
     onCreate?.({
@@ -245,7 +247,7 @@ export function CreateBrief({
 
 
   return (
-    <form onSubmit={submit} noValidate className="flex h-full bg-white">
+    <form onSubmit={submit} noValidate className="flex h-full bg-paper-50">
       <div ref={scrollRef} className="min-w-0 flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-[600px] px-5 py-10 sm:px-8 sm:py-14">
           <div className="grid">
@@ -308,7 +310,7 @@ export function CreateBrief({
                 <Row title="Start from a template" badge="Optional">
                   <RadioGroup aria-label="Template" className="gap-2" value={picked ?? ""} onChange={(v) => pickTemplate(v)}>
                     {templates.map((t) => (
-                      <RadioItem key={t.id} value={t.id} label={t.title} hint={t.tagline} leading={<FeaturedIcon icon={templateIcons[t.icon as keyof typeof templateIcons]} color="brand" theme="light" size="md" />} />
+                      <RadioItem key={t.id} value={t.id} label={t.title} hint={t.tagline} leading={<FeaturedIcon icon={templateIcons[t.icon as keyof typeof templateIcons]} color="gray" theme="light" size="md" />} />
                     ))}
                   </RadioGroup>
                   {allTemplates.length > 3 && (
@@ -374,12 +376,12 @@ export function CreateBrief({
                   </Button>
                 </Row>
 
-                <Row title="Questions callers ask" tip="Address, parking, insurance, policies. The agent gives your answer word for word.">
+                <Row title={inbound ? "Questions callers ask" : "Questions people may ask"} tip="Address, parking, insurance, policies. The agent gives your answer word for word.">
                   <ul className="flex flex-col gap-5">
                     {faqs.map((f, i) => (
                       <li key={f.id} className="flex items-start gap-2">
                         <div className="flex min-w-0 flex-1 flex-col gap-3">
-                          <Input aria-label={`Question ${i + 1}`} value={f.question} onChange={(v) => setFaqs((r) => r.map((x) => (x.id === f.id ? { ...x, question: v } : x)))} placeholder="Question callers ask" />
+                          <Input aria-label={`Question ${i + 1}`} value={f.question} onChange={(v) => setFaqs((r) => r.map((x) => (x.id === f.id ? { ...x, question: v } : x)))} placeholder={inbound ? "Question callers ask" : "Question people may ask"} />
                           <Input aria-label={`Answer ${i + 1}`} value={f.answer} onChange={(v) => setFaqs((r) => r.map((x) => (x.id === f.id ? { ...x, answer: v } : x)))} placeholder="Your answer" />
                         </div>
                         {(faqs.length > 1 || f.question || f.answer) && (
@@ -395,7 +397,7 @@ export function CreateBrief({
 
                 <div className="grid gap-x-5 sm:grid-cols-2">
                   <Row title="Language" tip="The language the agent speaks on calls. Check that your voice provider supports it before going live.">
-                    <Select aria-label="Language" selectedKey={language} onSelectionChange={(k) => setLanguage(k as AgentLanguage)} items={(Object.keys(agentLanguageLabel) as AgentLanguage[]).map((l) => ({ id: l, label: agentLanguageLabel[l] }))}>
+                    <Select aria-label="Language" selectedKey={language} onSelectionChange={(k) => setLanguage(k as AgentLanguage)} items={languageOptions.map((l) => ({ id: l.code, label: l.label }))}>
                       {(item) => <Select.Item id={item.id} label={item.label} />}
                     </Select>
                   </Row>
@@ -625,40 +627,65 @@ function BriefPreview({
     !(details.faqs ?? []).length && "other questions",
   ].filter(Boolean) as string[];
 
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
-    <aside aria-label="Preview" className="hidden w-[40%] max-w-[560px] shrink-0 flex-col items-center gap-4 overflow-y-auto border-l border-secondary bg-secondary px-10 pt-[88px] pb-10 xl:flex">
-      <p className="flex w-full max-w-[460px] items-center gap-2 text-xs font-medium tracking-wide text-tertiary uppercase">
-        <span className="size-1.5 animate-pulse rounded-full bg-brand-300" />
-        Live preview
-      </p>
-      <div className="w-full max-w-[460px] overflow-hidden rounded-2xl bg-white shadow-xs ring-1 ring-secondary">
-        <div className="flex items-center gap-3 border-b border-gray-200 px-5 py-4">
-          <span className="relative flex size-10 items-center justify-center rounded-full bg-brand-600 text-white">
-            <VoiceWaveform variant="idle" className="h-4" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-primary">{isExample ? "Your agent" : `${biz} agent`}</p>
-            <p className="truncate text-xs text-tertiary">{purpose.trim() || (direction === "inbound" ? "Answers incoming calls" : "Makes outgoing calls")}</p>
-          </div>
-        </div>
-        <div className="min-h-[220px] space-y-3 px-5 py-5">
-          <div key={greeting} className="animate-fade-in">
-            <Bubble who="agent">{greeting}</Bubble>
-          </div>
-          {shown.map((x) => (
-            <div key={x.q} className="animate-step-in space-y-3">
-              <Bubble who="person">{x.q}</Bubble>
-              <Bubble who="agent">{x.a}</Bubble>
+    <div className="pointer-events-none fixed right-5 bottom-5 z-20 flex flex-col items-end gap-3 sm:right-8 sm:bottom-8">
+      {open && (
+        <section
+          id="brief-preview"
+          aria-label="Live preview"
+          className="animate-fade-in pointer-events-auto max-h-[70dvh] w-[min(380px,calc(100vw-2.5rem))] overflow-y-auto rounded-2xl bg-white shadow-lg ring-1 ring-secondary"
+        >
+          <div className="flex items-center gap-3 border-b border-gray-200 px-5 py-4">
+            <span className="relative flex size-10 items-center justify-center rounded-full bg-brand-600 text-white">
+              <VoiceWaveform variant="idle" className="h-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-primary">{isExample ? "Your agent" : `${biz} agent`}</p>
+              <p className="truncate text-xs text-tertiary">{purpose.trim() || (direction === "inbound" ? "Answers incoming calls" : "Makes outgoing calls")}</p>
             </div>
-          ))}
-          {typed && gaps.length > 0 && (
-            <p className="border-t border-secondary pt-3 text-xs text-tertiary">
-              Without {gaps.join(", ")}, the agent says a teammate will confirm.
-            </p>
-          )}
-        </div>
-      </div>
-    </aside>
+            <button type="button" aria-label="Close preview" onClick={() => setOpen(false)} className="rounded-md p-1 text-tertiary outline-focus-ring hover:bg-primary_hover focus-visible:outline-2">
+              <XClose className="size-4" />
+            </button>
+          </div>
+          <div className="space-y-3 px-5 py-5">
+            <div key={greeting} className="animate-fade-in">
+              <Bubble who="agent">{greeting}</Bubble>
+            </div>
+            {shown.map((x) => (
+              <div key={x.q} className="animate-step-in space-y-3">
+                <Bubble who="person">{x.q}</Bubble>
+                <Bubble who="agent">{x.a}</Bubble>
+              </div>
+            ))}
+            {typed && gaps.length > 0 && (
+              <p className="border-t border-secondary pt-3 text-xs text-tertiary">
+                Without {gaps.join(", ")}, the agent says a teammate will confirm.
+              </p>
+            )}
+          </div>
+        </section>
+      )}
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls="brief-preview"
+        onClick={() => setOpen((v) => !v)}
+        className="pointer-events-auto flex items-center gap-2.5 rounded-full bg-white py-2 pr-5 pl-2 text-sm font-medium text-primary shadow-lg ring-1 ring-secondary outline-focus-ring transition-shadow hover:shadow-xl focus-visible:outline-2"
+      >
+        <span className="flex size-9 items-center justify-center rounded-full bg-brand-600 text-white">
+          <VoiceWaveform variant="idle" className="h-3.5" />
+        </span>
+        Preview
+      </button>
+    </div>
   );
 }
 

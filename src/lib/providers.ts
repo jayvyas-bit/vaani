@@ -53,3 +53,41 @@ export const ttsTradeoff: Record<string, string> = {
   "System default (ElevenLabs Turbo)": "Natural-sounding voice at standard latency.",
   "Low-latency streaming (ElevenLabs Flash)": "Faster voice response with fewer pauses, at a higher cost.",
 };
+
+/**
+ * More models and services to choose from. Names only: no cost multiplier or
+ * tradeoff has been set for these, so the picker shows "Cost not set" and the
+ * estimate counts them at the default rate. Confirm each is enabled in your
+ * voice stack before relying on it, and add a multiplier above once its rate is known.
+ */
+export const moreLlmOptions = [
+  "GPT-4.1 nano (OpenAI)",
+  "GPT-4o (OpenAI)",
+  "GPT-4o mini (OpenAI)",
+  "Claude Sonnet 4.5 (Anthropic)",
+  "Claude Haiku 4.5 (Anthropic)",
+  "Gemini 2.5 Pro (Google)",
+  "Gemini 2.5 Flash (Google)",
+  "Gemini 2.5 Flash-Lite (Google)",
+  "Llama 3.3 70B (Meta)",
+  "Mistral Large (Mistral AI)",
+  "DeepSeek V3 (DeepSeek)",
+];
+export const moreSttOptions = [
+  "Nova-2 (Deepgram)",
+  "Whisper (OpenAI)",
+  "Cloud Speech-to-Text (Google)",
+  "Azure AI Speech (Microsoft)",
+  "Amazon Transcribe (AWS)",
+  "Speechmatics (Speechmatics)",
+];
+export const moreTtsOptions = [
+  "Multilingual v2 (ElevenLabs)",
+  "Sonic (Cartesia)",
+  "Aura (Deepgram)",
+  "OpenAI TTS (OpenAI)",
+  "Cloud Text-to-Speech (Google)",
+  "Azure AI Speech (Microsoft)",
+  "Amazon Polly (AWS)",
+  "Mist (Rime)",
+];

@@ -98,7 +98,7 @@ export function TestEvaluateScreen({
       {!embedded && <BuilderNav agent={agent} active="test" onNavigate={onNavigate} onBack={onBack} />}
       {embedded && (
         <header className="shrink-0 px-5 pb-2 pt-8 sm:px-6">
-          <h1 className="text-display-xs font-semibold tracking-[-0.02em] text-primary sm:text-display-sm">Test &amp; evaluate</h1>
+          <h1 className="text-xl font-semibold tracking-[-0.01em] text-primary">Test &amp; evaluate</h1>
           <p className="mt-2 text-md text-tertiary">Talk to the agent, then run scenarios to see where it holds up.</p>
         </header>
       )}

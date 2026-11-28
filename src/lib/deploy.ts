@@ -442,7 +442,7 @@ export function suggestCheaperProviders(
 
   const candidates = SWAP_COMPONENTS.map((c) => {
     const current = c.multipliers[providers[c.field]] ?? 1;
-    const cheapest = c.options.reduce((best, opt) => ((c.multipliers[opt] ?? 1) < (c.multipliers[best] ?? 1) ? opt : best), c.options[0]);
+    const cheapest = c.options.filter((o) => o in c.multipliers).reduce((best, opt) => ((c.multipliers[opt] ?? 1) < (c.multipliers[best] ?? 1) ? opt : best), c.options[0]);
     const cheapestMult = c.multipliers[cheapest] ?? 1;
     if (cheapestMult >= current) return undefined;
     return {

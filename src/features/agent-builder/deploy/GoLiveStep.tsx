@@ -236,7 +236,7 @@ export function GoLiveStep({
   return (
     <div className="flex flex-col gap-7">
       <div>
-        <h1 className="text-display-xs font-semibold tracking-[-0.02em] text-primary">Review & go live</h1>
+        <h1 className="text-xl font-semibold tracking-[-0.01em] text-primary">Review & go live</h1>
         <p className="mt-2 text-md text-tertiary">{intro}</p>
       </div>
 

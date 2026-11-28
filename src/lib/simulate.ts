@@ -1,5 +1,5 @@
 import type { DeployConfig } from "./deploy";
-import { businessNameOf, toneBand, voiceFirstName } from "./persona";
+import { businessNameOf, languagesOf, toneBand, voiceFirstName } from "./persona";
 import { bookingTool, enabledTransferTool, workingBookingTool, workingTransferTool } from "./tools";
 import type {
   Agent,
@@ -460,9 +460,9 @@ function evaluateCore(scenario: Scenario, ctx: AgentContext): Evaluation {
   }
   // A language switch needs the language configured; the quality of the speech can only be heard on a live call.
   if (/(switch|chang|speak|reply|respond)\w*[^.]{0,40}\b(hindi|english|language)\b|\b(hindi|english)\b[^.]{0,30}\b(mid-call|midway|switch)/.test(text) && /\b(hindi|language)\b/.test(text)) {
-    const lang = ctx.agent.language ?? "en";
-    if (lang !== "en-hi" && lang !== "hi") {
-      return { verdict: "fail", reason: "The agent is set to English only, so it has no configured Hindi to switch into. Set the language to English + Hindi (bilingual)." };
+    const { primary, extras } = languagesOf(ctx.agent);
+    if (extras.length === 0 && primary === "en") {
+      return { verdict: "fail", reason: "The agent is set to English only, so it has no configured Hindi to switch into. Add Hindi under Language in Persona." };
     }
     return { verdict: "inconclusive", reason: "Bilingual is configured, but whether the agent switches cleanly and keeps context can only be heard on a live call. Check that your voice provider supports Hindi, then test it." };
   }

@@ -1,9 +1,8 @@
 import { useId, useState, type FormEvent } from "react";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FieldError, FieldLabel, Input, Select, Textarea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
-import { SectionCard } from "@/components/ui/SectionCard";
+import { Drawer, Section } from "@/components/ui/PanelCard";
 import { Switch } from "@/components/ui/Switch";
 import { parseCurl } from "@/lib/simulate";
 import { isBookingTool, isTransferTool } from "@/lib/tools";
@@ -193,6 +192,8 @@ function DestinationEditor({
   );
 }
 
+const toolTag = "rounded-full px-2.5 py-0.5 text-xs font-medium text-secondary ring-1 ring-inset ring-ink-950/20";
+
 function ToolRow({
   tool,
   onToggle,
@@ -210,134 +211,133 @@ function ToolRow({
   const destination = tool.destination?.trim();
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const warn = "flex items-center gap-1.5 text-sm font-medium text-terracotta-500";
+  const editLabel = transfer
+    ? destination
+      ? "Edit"
+      : "Set destination"
+    : booking
+      ? "Configure"
+      : "Edit";
+  const editAria = transfer
+    ? `Edit transfer destination for ${tool.name}`
+    : booking
+      ? `Configure calendar for ${tool.name}`
+      : `Edit description for ${tool.name}`;
+  const close = () => setEditing(false);
   return (
-    <div className="px-6 py-3.5">
-      <div className="flex items-center gap-4">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-paper-100 text-ink-500">
-          <Icon name="wrench" className="size-4" />
+    <li className="flex items-start gap-4 py-5">
+      <span
+        className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${
+          tool.enabled ? "bg-brand-600 text-lime-300" : "text-tertiary ring-1 ring-inset ring-ink-950/20"
+        }`}
+      >
+        <Icon name={transfer ? "phone-outbound" : booking ? "clock" : "wrench"} className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className={`text-md font-semibold ${tool.enabled ? "text-primary" : "text-tertiary"}`}>{tool.name}</p>
+          {tool.kind === "custom" && !transfer && <span className={toolTag}>Custom webhook</span>}
+          {booking && <span className={toolTag}>{calendarProviderLabel[tool.calendarProvider ?? "google"]}</span>}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] font-medium text-ink-950">
-            {tool.name}
-            {tool.kind === "custom" && !transfer && <Badge tone="neutral">Custom webhook</Badge>}
-            {booking && <Badge tone="neutral">{calendarProviderLabel[tool.calendarProvider ?? "google"]}</Badge>}
-          </p>
-          {transfer ? (
-            destination ? (
-              <p className="text-[13px] text-ink-500">
-                Transfers to <span className="font-medium text-ink-800">{destination}</span>: unverified, never
-                dialed by this demo
-              </p>
-            ) : (
-              <p className="flex items-center gap-1.5 text-[13px] font-medium text-warning-700">
-                <Icon name="alert" className="size-3.5 shrink-0" />
-                No destination set: calls can’t be transferred yet
-              </p>
-            )
-          ) : booking ? (
-            tool.calendarConnected ? (
-              <p className="flex items-center gap-1.5 text-[13px] font-medium text-success-700">
-                <Icon name="check" className="size-3.5 shrink-0" />
-                Connected (simulated, no live calendar backend)
-              </p>
-            ) : (
-              <p className="flex items-center gap-1.5 text-[13px] font-medium text-warning-700">
-                <Icon name="alert" className="size-3.5 shrink-0" />
-                Not connected: configure a calendar before relying on this
-              </p>
-            )
-          ) : (
-            <p className="text-[13px] text-ink-500 sm:truncate">
-              {tool.method && tool.url ? (
-                <span className="font-mono text-[13px]">
-                  {tool.method} {tool.url}
-                </span>
-              ) : (
-                tool.description
-              )}
+        {transfer ? (
+          destination ? (
+            <p className="mt-1 text-md text-secondary">
+              Transfers to <span className="font-semibold text-primary">{destination}</span>
+              <span className="text-tertiary">. Unverified, never dialed by this demo.</span>
             </p>
+          ) : (
+            <p className={`mt-1 ${warn}`}>
+              <Icon name="alert" className="size-4 shrink-0" />
+              No destination set. Calls can’t be transferred yet.
+            </p>
+          )
+        ) : booking ? (
+          tool.calendarConnected ? (
+            <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-brand-700">
+              <Icon name="check" className="size-4 shrink-0" />
+              Connected (simulated, no live calendar backend)
+            </p>
+          ) : (
+            <p className={`mt-1 ${warn}`}>
+              <Icon name="alert" className="size-4 shrink-0" />
+              Not connected. Configure a calendar before relying on this.
+            </p>
+          )
+        ) : (
+          <p className="mt-1 text-md text-secondary">
+            {tool.method && tool.url ? <span className="font-mono text-sm">{tool.method} {tool.url}</span> : tool.description}
+          </p>
+        )}
+        <div className="mt-2 flex h-9 items-center gap-1">
+          {confirmingDelete ? (
+            <div role="alertdialog" aria-label={`Delete tool: ${tool.name}?`} className="flex items-center gap-3">
+              <span className="text-sm font-medium text-terracotta-500">Delete this tool?</span>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(false)}>
+                Keep it
+              </Button>
+              <Button size="sm" variant="destructive" onClick={onDelete}>
+                Delete
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Button size="sm" variant="ghost" className="-ml-2.5" onClick={() => setEditing(true)} aria-label={editAria}>
+                {editLabel}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(true)} aria-label={`Delete tool: ${tool.name}`}>
+                Delete
+              </Button>
+            </>
           )}
         </div>
-        {transfer && !editing && (
-          <Button size="sm" variant="ghost" onClick={() => setEditing(true)} aria-label={`Edit transfer destination for ${tool.name}`}>
-            {destination ? "Edit" : "Set destination"}
-          </Button>
-        )}
-        {booking && !editing && (
-          <Button size="sm" variant="ghost" onClick={() => setEditing(true)} aria-label={`Configure calendar for ${tool.name}`}>
-            Configure
-          </Button>
-        )}
-        {plain && !editing && (
-          <Button size="sm" variant="ghost" onClick={() => setEditing(true)} aria-label={`Edit description for ${tool.name}`}>
-            Edit
-          </Button>
-        )}
-        {!confirmingDelete && (
-          <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(true)} aria-label={`Delete tool: ${tool.name}`}>
-            Delete
-          </Button>
-        )}
-        <Switch checked={tool.enabled} onChange={onToggle} label={`Tool on: ${tool.name}`} />
       </div>
-      {confirmingDelete && (
-        <div
-          role="alertdialog"
-          aria-label={`Delete tool: ${tool.name}?`}
-          className="mt-2.5 flex flex-col gap-2 rounded-md border border-error-200 bg-error-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+      <Switch checked={tool.enabled} onChange={onToggle} label={`Tool on: ${tool.name}`} />
+      {editing && (
+        <Drawer
+          title={transfer ? "Transfer destination" : booking ? "Calendar" : "Edit tool"}
+          onClose={close}
+          padBottom={false}
         >
-          <p className="text-[13px] text-ink-800">Delete this tool? The agent won’t be able to use it anymore.</p>
-          <div className="flex gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(false)}>
-              Keep it
-            </Button>
-            <Button size="sm" variant="destructive" onClick={onDelete}>
-              Delete
-            </Button>
+          <div className="py-6">
+            {plain && (
+              <DescriptionEditor
+                toolName={tool.name}
+                initial={tool.description}
+                onCancel={close}
+                onSave={(next) => {
+                  onChange({ description: next });
+                  close();
+                }}
+              />
+            )}
+            {transfer && (
+              <DestinationEditor
+                toolName={tool.name}
+                initial={tool.destination ?? ""}
+                onCancel={close}
+                onSave={(next) => {
+                  onChange({ destination: next });
+                  close();
+                }}
+              />
+            )}
+            {booking && (
+              <CalendarConfigEditor
+                toolName={tool.name}
+                initialProvider={tool.calendarProvider ?? "google"}
+                initialConnected={!!tool.calendarConnected}
+                onCancel={close}
+                onSave={(patch) => {
+                  onChange(patch);
+                  close();
+                }}
+              />
+            )}
           </div>
-        </div>
+        </Drawer>
       )}
-      {plain && editing && (
-        <div className="pl-12">
-          <DescriptionEditor
-            toolName={tool.name}
-            initial={tool.description}
-            onCancel={() => setEditing(false)}
-            onSave={(next) => {
-              onChange({ description: next });
-              setEditing(false);
-            }}
-          />
-        </div>
-      )}
-      {transfer && editing && (
-        <div className="pl-12">
-          <DestinationEditor
-            toolName={tool.name}
-            initial={tool.destination ?? ""}
-            onCancel={() => setEditing(false)}
-            onSave={(next) => {
-              onChange({ destination: next });
-              setEditing(false);
-            }}
-          />
-        </div>
-      )}
-      {booking && editing && (
-        <div className="pl-12">
-          <CalendarConfigEditor
-            toolName={tool.name}
-            initialProvider={tool.calendarProvider ?? "google"}
-            initialConnected={!!tool.calendarConnected}
-            onCancel={() => setEditing(false)}
-            onSave={(patch) => {
-              onChange(patch);
-              setEditing(false);
-            }}
-          />
-        </div>
-      )}
-    </div>
+    </li>
   );
 }
 
@@ -389,13 +389,7 @@ function AddToolForm({
   };
 
   return (
-    <div className="flex flex-col gap-4 bg-paper-50 px-6 py-5">
-      <div className="flex items-center gap-2">
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600">
-          <Icon name="plus" className="size-3.5" />
-        </div>
-        <p className="text-[14px] font-semibold text-ink-950">Add a tool</p>
-      </div>
+    <div className="flex flex-col gap-5 py-6">
       {available.length > 0 && (
         <div>
           <p className="mb-1.5 text-[13px] font-medium text-ink-500">Quick add</p>
@@ -504,14 +498,13 @@ function AddToolForm({
 export function ToolsSection({
   tools,
   onToolsChange,
-  defaultAdvanced = false,
 }: {
   tools: ToolDef[];
   onToolsChange: (next: ToolDef[]) => void;
   defaultAdvanced?: boolean;
 }) {
   const id = useId();
-  const [adding, setAdding] = useState(false);
+  const [panel, setPanel] = useState<"add" | "curl" | "json" | null>(null);
   const [curl, setCurl] = useState("");
   const [curlError, setCurlError] = useState<string | null>(null);
   const [generated, setGenerated] = useState<ToolDef | null>(null);
@@ -548,62 +541,105 @@ export function ToolsSection({
     onToolsChange(tools.map((t) => (t.id === live.id ? { ...t, ...patch } : t)));
   };
 
+  const close = () => setPanel(null);
+  const on = tools.filter((t) => t.enabled).length;
+  const quick = builtinPresets.filter((p) => !tools.some((t) => t.name === p.name));
+  const quickAdd = (p: Pick<ToolDef, "name" | "description">) =>
+    isTransferTool(p)
+      ? setPanel("add")
+      : onToolsChange([
+          ...tools,
+          {
+            id: newId("tool"),
+            ...p,
+            kind: "builtin",
+            enabled: true,
+            ...(isBookingTool(p) && { calendarProvider: "google", calendarConnected: false }),
+          },
+        ]);
   return (
-    <SectionCard
-      title="Available tools"
-      description="Switch on what it may do during a call."
-      defaultAdvancedOpen={defaultAdvanced}
-      guided={
-        <div className="divide-y divide-secondary">
-          {tools.length === 0 && !adding && (
-            <div className="flex flex-col items-start gap-4 rounded-xl border border-dashed border-primary bg-secondary px-6 py-8 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-md font-semibold text-primary">No tools yet</p>
-                <p className="mt-1 max-w-[56ch] text-sm text-tertiary">
-                  The agent can talk but can’t act. Start with call transfer so callers can always reach a teammate, then add booking or lookups.
-                </p>
-              </div>
-              <Button className="shrink-0 gap-2" onClick={() => setAdding(true)}>
-                <Icon name="plus" className="size-4" />
-                Add a tool
+    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,440px)] xl:gap-10">
+      <Section
+        title="Available tools"
+        icon="wrench"
+        summary={tools.length === 0 ? "None yet" : `${tools.length} ${tools.length === 1 ? "tool" : "tools"} · ${on} on`}
+      >
+        {tools.length === 0 ? (
+          <p className="py-6 text-md text-secondary">
+            The agent can talk but can’t act. Start with call transfer so people can always reach a teammate, then add booking or lookups.
+          </p>
+        ) : (
+          <ul className="divide-y divide-ink-950/10">
+            {tools.map((t) => (
+              <ToolRow
+                key={t.id}
+                tool={t}
+                onToggle={(enabled) => onToolsChange(tools.map((x) => (x.id === t.id ? { ...x, enabled } : x)))}
+                onChange={(patch) => onToolsChange(tools.map((x) => (x.id === t.id ? { ...x, ...patch } : x)))}
+                onDelete={() => onToolsChange(tools.filter((x) => x.id !== t.id))}
+              />
+            ))}
+          </ul>
+        )}
+        <div className="flex min-h-[4.5rem] items-center justify-between gap-4">
+          <Button className="gap-2 rounded-full" onClick={() => setPanel("add")}>
+            <Icon name="plus" className="size-4" />
+            Add a tool
+          </Button>
+          <div className="flex gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setPanel("curl")}>
+              Import from cURL
+            </Button>
+            {tools.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => setPanel("json")}>
+                View as JSON
               </Button>
-            </div>
-          )}
-          {tools.map((t) => (
-            <ToolRow
-              key={t.id}
-              tool={t}
-              onToggle={(enabled) => onToolsChange(tools.map((x) => (x.id === t.id ? { ...x, enabled } : x)))}
-              onChange={(patch) => onToolsChange(tools.map((x) => (x.id === t.id ? { ...x, ...patch } : x)))}
-              onDelete={() => onToolsChange(tools.filter((x) => x.id !== t.id))}
-            />
-          ))}
-          {adding ? (
-            <AddToolForm
-              existing={tools}
-              onCancel={() => setAdding(false)}
-              onSave={(tool) => {
-                onToolsChange([...tools, tool]);
-                setAdding(false);
-              }}
-            />
-          ) : tools.length === 0 ? null : (
-            <div className="py-5">
-              <Button variant="secondary" className="gap-2" onClick={() => setAdding(true)}>
-                <Icon name="plus" className="size-4" />
-                Add a tool
-              </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      }
-      advanced={
-        <div className="flex flex-col gap-3">
-          <div>
-            <FieldLabel hint="Exactly what the agent can call, including where transfers go">Tools as data (JSON)</FieldLabel>
+      </Section>
+
+      <aside className="xl:sticky xl:top-0">
+        <Section title="Quick add" icon="plus" summary={quick.length === 0 ? "All added" : `${quick.length} available`}>
+          {quick.length === 0 ? (
+            <p className="py-5 text-md text-secondary">Every common action is already on this agent.</p>
+          ) : (
+            <ul className="divide-y divide-ink-950/10">
+              {quick.map((p) => (
+                <li key={p.name} className="flex items-center justify-between gap-4 py-4">
+                  <div className="min-w-0">
+                    <p className="text-md font-semibold text-primary">{p.name}</p>
+                    <p className="mt-0.5 text-sm text-tertiary">{p.description}</p>
+                  </div>
+                  <Button size="sm" variant="secondary" className="shrink-0 rounded-full" onClick={() => quickAdd(p)} aria-label={`Add ${p.name}`}>
+                    Add
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+      </aside>
+
+      {panel === "add" && (
+        <Drawer title="Add a tool" onClose={close} padBottom={false}>
+          <AddToolForm
+            existing={tools}
+            onCancel={close}
+            onSave={(tool) => {
+              onToolsChange([...tools, tool]);
+              close();
+            }}
+          />
+        </Drawer>
+      )}
+      {panel === "json" && (
+        <Drawer title="Tools as data" onClose={close} padBottom={false}>
+          <div className="py-6">
+            <p className="mb-3 text-sm text-tertiary">Exactly what the agent can call, including where transfers go.</p>
             <pre
               aria-label="Tools as JSON"
-              className="overflow-x-auto rounded-md bg-ink-950 p-3 text-[13px] leading-relaxed text-paper-100"
+              className="overflow-x-auto rounded-xl bg-ink-950 p-4 text-[13px] leading-relaxed text-paper-100"
             >
 {JSON.stringify(
   tools.map((t) => ({
@@ -624,6 +660,11 @@ export function ToolsSection({
 )}
             </pre>
           </div>
+        </Drawer>
+      )}
+      {panel === "curl" && (
+        <Drawer title="Import from cURL" onClose={close} padBottom={false}>
+          <div className="flex flex-col gap-3 py-6">
           <FieldLabel htmlFor={`${id}-curl`} hint="We’ll infer the method, endpoint, and parameters">
             Paste a cURL command to generate a custom tool
           </FieldLabel>
@@ -701,8 +742,9 @@ export function ToolsSection({
               </pre>
             </div>
           )}
-        </div>
-      }
-    />
+          </div>
+        </Drawer>
+      )}
+    </div>
   );
 }

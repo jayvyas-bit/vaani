@@ -1,12 +1,18 @@
 import { useId, useState, type FormEvent } from "react";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FieldError, FieldLabel, Input, Select } from "@/components/ui/Field";
-import { Icon } from "@/components/ui/Icon";
-import { SectionCard } from "@/components/ui/SectionCard";
+import { Icon, type IconName } from "@/components/ui/Icon";
+import { Drawer, Section } from "@/components/ui/PanelCard";
 import { Switch } from "@/components/ui/Switch";
 import { newId } from "@/lib/useControllable";
 import type { OutcomeField, OutcomeFieldType } from "@/lib/types";
+
+const typeIcon: Record<OutcomeFieldType, IconName> = {
+  text: "file",
+  number: "ruler",
+  boolean: "check",
+  enum: "list",
+};
 
 const typeLabel: Record<OutcomeFieldType, string> = {
   text: "Text",
@@ -26,52 +32,51 @@ function OutcomeRow({
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   return (
-    <div className="flex flex-col gap-2.5 py-3.5">
-      <div className="flex items-start gap-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-[14px] font-medium text-ink-950">{field.label}</p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <Badge tone="neutral">{typeLabel[field.type]}</Badge>
-            {field.type === "enum" && field.options && field.options.length > 0 && (
-              <span className="text-[13px] text-ink-500">{field.options.join(" · ")}</span>
-            )}
-            {field.required ? (
-              <span className="text-[13px] font-medium text-amber-700">
-                {field.requiredWhen?.trim() ? `Required when ${field.requiredWhen.trim()}` : "Required by end of call"}
-              </span>
-            ) : (
-              <span className="text-[13px] text-ink-500">Optional</span>
-            )}
-          </div>
+    <li className="flex items-start gap-4 py-5">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-lime-300">
+        <Icon name={typeIcon[field.type]} className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-md font-semibold text-primary">{field.label}</p>
+          <span className="rounded-full px-2.5 py-0.5 text-xs font-medium text-secondary ring-1 ring-inset ring-ink-950/20">
+            {typeLabel[field.type]}
+          </span>
+        </div>
+        {field.type === "enum" && field.options && field.options.length > 0 && (
+          <p className="mt-1 text-md text-secondary">{field.options.join(" · ")}</p>
+        )}
+        <p className="mt-1 text-sm text-tertiary">
+          {field.required
+            ? field.requiredWhen?.trim()
+              ? `Required when ${field.requiredWhen.trim()}`
+              : "Required by end of call"
+            : "Optional"}
+        </p>
+        <div className="mt-2 flex h-9 items-center gap-1">
+          {confirmingDelete ? (
+            <div role="alertdialog" aria-label="Delete this outcome field?" className="flex items-center gap-3">
+              <span className="text-sm font-medium text-terracotta-500">Delete this field?</span>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(false)}>
+                Keep it
+              </Button>
+              <Button size="sm" variant="destructive" onClick={onDelete}>
+                Delete
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Button size="sm" variant="ghost" className="-ml-2.5" onClick={onEdit} aria-label={`Edit outcome field: ${field.label}`}>
+                Edit
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(true)} aria-label={`Delete outcome field: ${field.label}`}>
+                Delete
+              </Button>
+            </>
+          )}
         </div>
       </div>
-      {confirmingDelete ? (
-        <div
-          role="alertdialog"
-          aria-label="Delete this outcome field?"
-          className="flex flex-col gap-2 rounded-md border border-error-200 bg-error-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <p className="text-[13px] text-ink-800">Delete this outcome field? It won’t be checked for anymore.</p>
-          <div className="flex gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(false)}>
-              Keep it
-            </Button>
-            <Button size="sm" variant="destructive" onClick={onDelete}>
-              Delete
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex gap-1">
-          <Button size="sm" variant="ghost" className="-ml-2.5" onClick={onEdit} aria-label={`Edit outcome field: ${field.label}`}>
-            Edit
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(true)} aria-label={`Delete outcome field: ${field.label}`}>
-            Delete
-          </Button>
-        </div>
-      )}
-    </div>
+    </li>
   );
 }
 
@@ -118,7 +123,7 @@ function OutcomeForm({
       onSubmit={submit}
       noValidate
       aria-label={initial ? "Edit outcome field" : "Add an outcome field"}
-      className="flex flex-col gap-3 border-t border-ink-950/8 bg-paper-50 px-6 py-5 first:border-t-0"
+      className="flex flex-col gap-4 py-6"
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
@@ -208,116 +213,129 @@ function OutcomeForm({
 export function OutcomesSection({
   outcomes,
   onOutcomesChange,
-  defaultAdvanced = false,
 }: {
   outcomes: OutcomeField[];
   onOutcomesChange: (next: OutcomeField[]) => void;
   defaultAdvanced?: boolean;
 }) {
-  const [adding, setAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [panel, setPanel] = useState<"add" | "json" | { editId: string } | null>(null);
+  const close = () => setPanel(null);
+  const editing =
+    panel && typeof panel === "object" ? outcomes.find((o) => o.id === panel.editId) : undefined;
 
+  const suggestions = ([
+    { label: "Appointment booked", type: "boolean" },
+    { label: "Callback needed", type: "boolean" },
+    { label: "Call result", type: "enum", options: ["Resolved", "Needs follow-up", "Not interested"] },
+  ] as { label: string; type: OutcomeFieldType; options?: string[] }[]).filter((x) => !outcomes.some((o) => o.label.toLowerCase() === x.label.toLowerCase()));
   return (
-    <div className="flex flex-col gap-4">
-      <SectionCard
+    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,440px)] xl:gap-10">
+      <Section
         title="Required outcomes"
-        description="For example appointment status or whether a callback is needed."
-        defaultAdvancedOpen={defaultAdvanced}
-        guided={
-          <div>
-            {outcomes.length > 0 ? (
-              <div className="divide-y divide-secondary border-y border-secondary">
-                {outcomes.map((f) =>
-                  editingId === f.id ? (
-                    <OutcomeForm
-                      key={f.id}
-                      initial={f}
-                      onCancel={() => setEditingId(null)}
-                      onSave={(field) => {
-                        onOutcomesChange(outcomes.map((x) => (x.id === f.id ? field : x)));
-                        setEditingId(null);
-                      }}
-                    />
-                  ) : (
-                    <OutcomeRow
-                      key={f.id}
-                      field={f}
-                      onEdit={() => {
-                        setAdding(false);
-                        setEditingId(f.id);
-                      }}
-                      onDelete={() => {
-                        onOutcomesChange(outcomes.filter((x) => x.id !== f.id));
-                        if (editingId === f.id) setEditingId(null);
-                      }}
-                    />
-                  ),
-                )}
-              </div>
-            ) : (
-              !adding && (
-                <div className="flex flex-col items-start gap-4 rounded-xl border border-dashed border-primary bg-secondary px-6 py-8 sm:flex-row sm:items-center sm:justify-between">
+        icon="check"
+        summary={outcomes.length === 0 ? "None yet" : `${outcomes.length} ${outcomes.length === 1 ? "field" : "fields"}`}
+      >
+        {outcomes.length > 0 ? (
+          <ul className="divide-y divide-ink-950/10">
+            {outcomes.map((f) => (
+              <OutcomeRow
+                key={f.id}
+                field={f}
+                onEdit={() => setPanel({ editId: f.id })}
+                onDelete={() => onOutcomesChange(outcomes.filter((x) => x.id !== f.id))}
+              />
+            ))}
+          </ul>
+        ) : (
+          <p className="py-6 text-md text-secondary">
+            Nothing is checked at the end of a call. Add the fields this agent should report, like appointment status or whether a callback is needed.
+          </p>
+        )}
+        <div className="flex min-h-[4.5rem] items-center justify-between gap-4">
+          <Button className="gap-2 rounded-full" onClick={() => setPanel("add")}>
+            <Icon name="plus" className="size-4" />
+            Add an outcome field
+          </Button>
+          {outcomes.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => setPanel("json")}>
+              View as JSON
+            </Button>
+          )}
+        </div>
+      </Section>
+
+      <aside className="xl:sticky xl:top-0">
+        <Section title="Common fields" icon="sparkles" summary={suggestions.length === 0 ? "All added" : `${suggestions.length} available`}>
+          {suggestions.length === 0 ? (
+            <p className="py-5 text-md text-secondary">Every suggested field is already on this agent.</p>
+          ) : (
+            <ul className="divide-y divide-ink-950/10">
+              {suggestions.map((x) => (
+                <li key={x.label} className="flex items-center justify-between gap-4 py-4">
                   <div className="min-w-0">
-                    <p className="text-md font-semibold text-primary">No required outcomes yet</p>
-                    <p className="mt-1 max-w-[56ch] text-sm text-tertiary">
-                      Nothing is checked at the end of a call. Add the fields this agent should report, like appointment status or whether a callback is needed.
+                    <p className="text-md font-semibold text-primary">{x.label}</p>
+                    <p className="mt-0.5 text-sm text-tertiary">
+                      {typeLabel[x.type]}
+                      {x.options ? `: ${x.options.join(", ")}` : ""}
                     </p>
                   </div>
-                  <Button className="shrink-0 gap-2" onClick={() => setAdding(true)}>
-                    <Icon name="plus" className="size-4" />
-                    Add an outcome field
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="shrink-0 rounded-full"
+                    aria-label={`Add ${x.label}`}
+                    onClick={() => onOutcomesChange([...outcomes, { id: newId("outcome"), label: x.label, type: x.type, options: x.options, required: true }])}
+                  >
+                    Add
                   </Button>
-                </div>
-              )
-            )}
-            {adding ? (
-              <OutcomeForm
-                onCancel={() => setAdding(false)}
-                onSave={(field) => {
-                  onOutcomesChange([...outcomes, field]);
-                  setAdding(false);
-                }}
-              />
-            ) : (
-              outcomes.length === 0 ? null : <div className="pt-4">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => {
-                    setEditingId(null);
-                    setAdding(true);
-                  }}
-                >
-                  <Icon name="plus" className="size-3.5" />
-                  Add an outcome field
-                </Button>
-              </div>
-            )}
-          </div>
-        }
-        advanced={
-          <div>
-            <FieldLabel hint="The same fields, in the form your tests and any export read them">Outcomes as data (JSON)</FieldLabel>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+      </aside>
+
+      {panel === "add" && (
+        <Drawer title="Add an outcome field" onClose={close} padBottom={false}>
+          <OutcomeForm
+            onCancel={close}
+            onSave={(field) => {
+              onOutcomesChange([...outcomes, field]);
+              close();
+            }}
+          />
+        </Drawer>
+      )}
+      {editing && (
+        <Drawer title="Edit outcome field" onClose={close} padBottom={false}>
+          <OutcomeForm
+            key={editing.id}
+            initial={editing}
+            onCancel={close}
+            onSave={(field) => {
+              onOutcomesChange(outcomes.map((x) => (x.id === editing.id ? field : x)));
+              close();
+            }}
+          />
+        </Drawer>
+      )}
+      {panel === "json" && (
+        <Drawer title="Outcomes as data" onClose={close} padBottom={false}>
+          <div className="py-6">
+            <p className="mb-3 text-sm text-tertiary">The same fields, in the form your tests and any export read them.</p>
             <pre
               aria-label="Outcomes as JSON"
-              className="overflow-x-auto rounded-md bg-ink-950 p-3 text-[13px] leading-relaxed text-paper-100"
+              className="overflow-x-auto rounded-xl bg-ink-950 p-4 text-[13px] leading-relaxed text-paper-100"
             >
 {JSON.stringify(
-  outcomes.map(({ id, label, type, options, required }) => ({
-    id,
-    label,
-    type,
-    options: options ?? null,
-    required,
-  })),
+  outcomes.map(({ id, label, type, options, required }) => ({ id, label, type, options: options ?? null, required })),
   null,
   2,
 )}
             </pre>
           </div>
-        }
-      />
+        </Drawer>
+      )}
     </div>
   );
 }

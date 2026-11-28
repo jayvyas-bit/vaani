@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/Button";
 import { FieldError, FieldLabel, Input, Textarea } from "@/components/ui/Field";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { RadioCard } from "@/components/ui/RadioCard";
-import { SectionCard } from "@/components/ui/SectionCard";
+import { Drawer, Section } from "@/components/ui/PanelCard";
 import { Switch } from "@/components/ui/Switch";
 import { newId } from "@/lib/useControllable";
 import type { BusinessDetails, KnowledgeSettings, KnowledgeSource, Offering } from "@/lib/types";
@@ -60,25 +60,47 @@ function normalizeUrl(raw: string): string | null {
   }
 }
 
-function SourceRow({ source, onToggle }: { source: KnowledgeSource; onToggle: (attached: boolean) => void }) {
+function SourceRow({ source, onToggle, onRemove }: { source: KnowledgeSource; onToggle: (attached: boolean) => void; onRemove: () => void }) {
   const { base, ext } = source.kind === "url" ? { base: source.name, ext: "" } : splitFileName(source.name);
+  const [confirming, setConfirming] = useState(false);
   return (
-    <div className="flex items-center gap-3 py-3">
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-paper-100 text-ink-500">
-        <Icon name={kindIcon[source.kind]} className="size-4" />
-      </div>
+    <li className="flex items-start gap-4 py-5">
+      <span
+        className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${
+          source.attached ? "bg-brand-600 text-lime-300" : "text-tertiary ring-1 ring-inset ring-ink-950/20"
+        }`}
+      >
+        <Icon name={kindIcon[source.kind]} className="size-5" />
+      </span>
       <div className="min-w-0 flex-1">
-        <p className="flex min-w-0 text-[14px] font-medium text-ink-950">
+        <p className={`flex min-w-0 text-md font-semibold ${source.attached ? "text-primary" : "text-tertiary"}`}>
           <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{base}</span>
           {ext && <span className="shrink-0">{ext}</span>}
         </p>
-        <p className="text-[13px] text-ink-500">
+        <p className="mt-0.5 text-sm text-tertiary">
           {source.kind === "url" ? "Web page" : `${source.kind.toUpperCase()} · ${source.sizeLabel}`}
-          {!source.attached && " · not used on calls"}
+          {!source.attached && ". Not used on calls."}
         </p>
+        <div className="mt-1 flex h-9 items-center gap-1">
+          {confirming ? (
+            <div role="alertdialog" aria-label={`Remove ${source.name}?`} className="flex items-center gap-3">
+              <span className="text-sm font-medium text-terracotta-500">Remove this source?</span>
+              <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
+                Keep it
+              </Button>
+              <Button size="sm" variant="destructive" onClick={onRemove}>
+                Remove
+              </Button>
+            </div>
+          ) : (
+            <Button size="sm" variant="ghost" className="-ml-2.5" onClick={() => setConfirming(true)} aria-label={`Remove source: ${source.name}`}>
+              Remove
+            </Button>
+          )}
+        </div>
       </div>
       <Switch checked={source.attached} onChange={onToggle} label={`Use on calls: ${source.name}`} />
-    </div>
+    </li>
   );
 }
 
@@ -87,10 +109,11 @@ export function KnowledgeSection({
   onSourcesChange,
   settings = defaultKnowledgeSettings,
   onSettingsChange,
-  defaultAdvanced = false,
   details,
   onDetailsChange,
+  outbound,
 }: {
+  outbound?: boolean;
   details?: BusinessDetails;
   onDetailsChange?: (next: BusinessDetails) => void;
   sources: KnowledgeSource[];
@@ -103,10 +126,12 @@ export function KnowledgeSection({
   const fileRef = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
-  const [addingText, setAddingText] = useState(false);
+  const [panel, setPanel] = useState<"web" | "text" | "details" | null>(null);
   const [textTitle, setTextTitle] = useState("");
   const [textBody, setTextBody] = useState("");
   const [textSubmitted, setTextSubmitted] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const addUrl = () => {
     const normalized = normalizeUrl(url);
@@ -124,6 +149,7 @@ export function KnowledgeSection({
     ]);
     setUrl("");
     setUrlError(null);
+    setPanel(null);
   };
 
   const onUrlKey = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -154,60 +180,183 @@ export function KnowledgeSection({
     setTextTitle("");
     setTextBody("");
     setTextSubmitted(false);
-    setAddingText(false);
+    setPanel(null);
+  };
+
+  const isPdf = (f: File) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
+
+  const addFiles = (files: File[]) => {
+    const pdfs = files.filter(isPdf);
+    setFileError(
+      pdfs.length < files.length
+        ? "Only PDF files can be uploaded. Use Add text for anything else."
+        : null,
+    );
+    if (pdfs.length === 0) return;
+    onSourcesChange([
+      ...sources,
+      ...pdfs.map<KnowledgeSource>((f) => ({
+        id: newId("kb"),
+        name: f.name,
+        kind: "pdf",
+        sizeLabel: formatBytes(f.size),
+        attached: true,
+      })),
+    ]);
   };
 
   const onFiles = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    if (files.length > 0) {
-      onSourcesChange([
-        ...sources,
-        ...files.map<KnowledgeSource>((f) => ({
-          id: newId("kb"),
-          name: f.name,
-          kind: f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf") ? "pdf" : "text",
-          sizeLabel: formatBytes(f.size),
-          attached: true,
-        })),
-      ]);
-    }
+    addFiles(Array.from(e.target.files ?? []));
     // Reset so picking the same file again still fires onChange.
     e.target.value = "";
   };
 
+  const list = (details ?? { offerings: [] }) as BusinessDetails;
+  const nProducts = list.offerings.filter((o) => o.name.trim()).length;
+  const nFaqs = (list.faqs ?? []).filter((f) => f.question.trim()).length;
+  const detailRows: { label: string; value: string }[] = [
+    { label: "Products or services", value: nProducts ? `${nProducts} listed` : "None yet" },
+    { label: outbound ? "Questions people may ask" : "Questions callers ask", value: nFaqs ? `${nFaqs} answered` : "None yet" },
+    { label: "Opening hours", value: list.hours?.trim() || "Not set" },
+    { label: "If it can’t help", value: list.handoff?.trim() || "Not set" },
+  ];
+  const closePanel = () => {
+    setPanel(null);
+    setUrlError(null);
+    setTextSubmitted(false);
+  };
+  const addButtons = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button className="gap-2 rounded-full" onClick={() => fileRef.current?.click()}>
+        <Icon name="file" className="size-4" />
+        Upload PDF
+      </Button>
+      <Button variant="secondary" className="gap-2 rounded-full" onClick={() => setPanel("web")}>
+        <Icon name="link" className="size-4" />
+        Add a web page
+      </Button>
+      <Button variant="secondary" className="gap-2 rounded-full" onClick={() => setPanel("text")}>
+        <Icon name="plus" className="size-4" />
+        Add text
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="grid items-start gap-x-14 lg:grid-cols-2 lg:[&>section:nth-child(2)]:border-t-0 lg:[&>section:nth-child(2)]:pt-0">
-    {onDetailsChange && <BusinessDetailsCard details={details ?? { offerings: [] }} onChange={onDetailsChange} />}
-    <SectionCard
-      title="Sources"
-      description="Pages and files the agent answers from."
-      defaultAdvancedOpen={defaultAdvanced}
-      guided={
-        <div className="mt-1 divide-y divide-ink-950/8 border-t border-ink-950/8">
-          {sources.length === 0 && (
-            <p className="py-5 text-[14px] text-ink-500">
-              Nothing attached, so the agent can only answer from its prompt. Add your hours, price
-              list or FAQ page and it will quote them on calls instead of guessing.
+    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,440px)] xl:gap-10">
+      <input
+        ref={fileRef}
+        id={`${id}-file`}
+        name="knowledgeFile"
+        type="file"
+        accept=".pdf,application/pdf"
+        multiple
+        className="sr-only"
+        tabIndex={-1}
+        aria-label="Upload PDF"
+        onChange={onFiles}
+      />
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          addFiles(Array.from(e.dataTransfer.files));
+        }}
+        className={dragging ? "rounded-2xl outline-2 -outline-offset-2 outline-dashed outline-brand-600" : ""}
+      >
+        <Section
+          title="Sources"
+          icon="book"
+          summary={
+            sources.length === 0
+              ? "None yet"
+              : `${sources.length} ${sources.length === 1 ? "source" : "sources"} · ${sources.filter((x) => x.attached).length} on`
+          }
+        >
+          {sources.length === 0 ? (
+            <p className="py-6 text-md text-secondary">
+              Drop a PDF here, or add a web page or text. With nothing attached, the agent can only answer from its prompt and won’t quote your hours or prices. No documents? Add hours and prices under Business details.
+            </p>
+          ) : (
+            <ul className="divide-y divide-ink-950/10">
+              {sources.map((src) => (
+                <SourceRow
+                  key={src.id}
+                  source={src}
+                  onToggle={(attached) => onSourcesChange(sources.map((x) => (x.id === src.id ? { ...x, attached } : x)))}
+                  onRemove={() => onSourcesChange(sources.filter((x) => x.id !== src.id))}
+                />
+              ))}
+            </ul>
+          )}
+          <div className="flex min-h-[4.5rem] items-center py-3">{addButtons}</div>
+          {fileError && (
+            <p role="alert" className="pb-4 text-sm text-terracotta-500">
+              {fileError}
             </p>
           )}
-          {sources.map((s) => (
-            <SourceRow
-              key={s.id}
-              source={s}
-              onToggle={(attached) => onSourcesChange(sources.map((x) => (x.id === s.id ? { ...x, attached } : x)))}
-            />
-          ))}
-          <div className="py-5">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+        </Section>
+      </div>
+
+      <aside className="xl:sticky xl:top-0">
+        {onDetailsChange && (
+          <Section
+            title="Business details"
+            icon="info"
+            summary={nProducts || nFaqs || list.hours?.trim() || list.handoff?.trim() ? "Added" : "Optional"}
+          >
+            <dl className="divide-y divide-ink-950/10">
+              {detailRows.map((r) => (
+                <div key={r.label} className="flex items-baseline justify-between gap-4 py-3.5">
+                  <dt className="text-sm text-tertiary">{r.label}</dt>
+                  <dd className="min-w-0 truncate text-right text-md font-medium text-primary">{r.value}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="flex min-h-[4.5rem] items-center">
+              <Button variant="secondary" className="rounded-full" onClick={() => setPanel("details")}>
+                {nProducts || nFaqs || list.hours?.trim() || list.handoff?.trim() ? "Edit details" : "Add details"}
+              </Button>
+            </div>
+          </Section>
+        )}
+        {sources.length > 0 && (
+          <Section title="Answer style" icon="sparkles" summary={answerStyleOf(settings) === "quick" ? "Quick" : "Thorough"}>
+            <div className="flex flex-col gap-3 py-5">
+              <RadioCard
+                selected={answerStyleOf(settings) === "quick"}
+                onSelect={() => onSettingsChange?.(knowledgeAnswerStylePresets.quick)}
+                title="Quick answers"
+                description="Short, fast lookups. Best for FAQs and simple info."
+              />
+              <RadioCard
+                selected={answerStyleOf(settings) === "thorough"}
+                onSelect={() => onSettingsChange?.(knowledgeAnswerStylePresets.thorough)}
+                title="Thorough search"
+                description="Reads more of your documents per question. Best for long manuals or detailed policies."
+              />
+            </div>
+          </Section>
+        )}
+      </aside>
+
+      {panel === "web" && (
+        <Drawer title="Add a web page" onClose={closePanel} padBottom={false}>
+          <div className="py-6">
+            <FieldLabel htmlFor={`${id}-url`}>Web address</FieldLabel>
+            <div className="flex gap-2">
               <div className="min-w-0 flex-1">
-                <label htmlFor={`${id}-url`} className="sr-only">
-                  Add a web page by URL
-                </label>
                 <Input
                   id={`${id}-url`}
                   name="knowledgeUrl"
                   type="url"
                   inputMode="url"
+                  autoFocus
                   value={url}
                   onChange={(e) => {
                     setUrl(e.target.value);
@@ -216,184 +365,139 @@ export function KnowledgeSection({
                   onKeyDown={onUrlKey}
                   aria-invalid={!!urlError || undefined}
                   aria-describedby={urlError ? `${id}-url-err` : undefined}
-                  placeholder="Paste a URL and press Enter…"
+                  placeholder="example.com/faq"
                 />
-                <FieldError id={`${id}-url-err`}>{urlError}</FieldError>
               </div>
-              <input
-                ref={fileRef}
-                id={`${id}-file`}
-                name="knowledgeFile"
-                type="file"
-                accept=".pdf,application/pdf"
-                multiple
-                className="sr-only"
-                tabIndex={-1}
-                aria-label="Upload PDF"
-                onChange={onFiles}
-              />
-              <Button variant="secondary" className="gap-1.5" onClick={() => fileRef.current?.click()}>
-                <Icon name="file" className="size-4" />
-                Upload PDF
-              </Button>
-              <Button
-                variant="secondary"
-                className="gap-1.5"
-                onClick={() => setAddingText((v) => !v)}
-                aria-expanded={addingText}
-              >
-                <Icon name="plus" className="size-4" />
-                Add text
-              </Button>
+              <Button onClick={addUrl}>Add</Button>
             </div>
-            {addingText && (
-              <form
-                onSubmit={submitText}
-                noValidate
-                aria-label="Add a text knowledge source"
-                className="mt-3 flex flex-col gap-3 rounded-lg border border-ink-950/10 bg-paper-50 p-4"
-              >
-                <div>
-                  <FieldLabel htmlFor={`${id}-text-title`} required>
-                    Title
-                  </FieldLabel>
-                  <Input
-                    id={`${id}-text-title`}
-                    name="knowledgeTextTitle"
-                    autoFocus
-                    value={textTitle}
-                    onChange={(e) => setTextTitle(e.target.value)}
-                    aria-invalid={!!textTitleErr || undefined}
-                    aria-describedby={textTitleErr ? `${id}-text-title-err` : undefined}
-                    placeholder="e.g. Office hours & holiday schedule"
-                  />
-                  <FieldError id={`${id}-text-title-err`}>{textTitleErr}</FieldError>
-                </div>
-                <div>
-                  <FieldLabel htmlFor={`${id}-text-body`} required>
-                    Text
-                  </FieldLabel>
-                  <Textarea
-                    id={`${id}-text-body`}
-                    name="knowledgeTextBody"
-                    rows={5}
-                    value={textBody}
-                    onChange={(e) => setTextBody(e.target.value)}
-                    aria-invalid={!!textBodyErr || undefined}
-                    aria-describedby={textBodyErr ? `${id}-text-body-err` : undefined}
-                    placeholder="Paste hours, prices, policies, or anything else this agent should know…"
-                  />
-                  <FieldError id={`${id}-text-body-err`}>{textBodyErr}</FieldError>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setAddingText(false);
-                      setTextTitle("");
-                      setTextBody("");
-                      setTextSubmitted(false);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" size="sm">
-                    Save text
-                  </Button>
-                </div>
-              </form>
-            )}
+            <FieldError id={`${id}-url-err`}>{urlError}</FieldError>
           </div>
-        </div>
-      }
-      advanced={
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <RadioCard
-            selected={answerStyleOf(settings) === "quick"}
-            onSelect={() => onSettingsChange?.(knowledgeAnswerStylePresets.quick)}
-            title="Quick answers"
-            description="Short, fast lookups. Best for FAQs and simple info."
-          />
-          <RadioCard
-            selected={answerStyleOf(settings) === "thorough"}
-            onSelect={() => onSettingsChange?.(knowledgeAnswerStylePresets.thorough)}
-            title="Thorough search"
-            description="Reads more of your documents per question. Best for long manuals or detailed policies."
-          />
-        </div>
-      }
-    />
+        </Drawer>
+      )}
+      {panel === "text" && (
+        <Drawer title="Add text" onClose={closePanel} padBottom={false}>
+          <form onSubmit={submitText} noValidate aria-label="Add a text knowledge source" className="flex flex-col gap-4 py-6">
+            <div>
+              <FieldLabel htmlFor={`${id}-text-title`} required>
+                Title
+              </FieldLabel>
+              <Input
+                id={`${id}-text-title`}
+                name="knowledgeTextTitle"
+                autoFocus
+                value={textTitle}
+                onChange={(e) => setTextTitle(e.target.value)}
+                aria-invalid={!!textTitleErr || undefined}
+                aria-describedby={textTitleErr ? `${id}-text-title-err` : undefined}
+                placeholder="e.g. Office hours & holiday schedule"
+              />
+              <FieldError id={`${id}-text-title-err`}>{textTitleErr}</FieldError>
+            </div>
+            <div>
+              <FieldLabel htmlFor={`${id}-text-body`} required>
+                Text
+              </FieldLabel>
+              <Textarea
+                id={`${id}-text-body`}
+                name="knowledgeTextBody"
+                rows={8}
+                value={textBody}
+                onChange={(e) => setTextBody(e.target.value)}
+                aria-invalid={!!textBodyErr || undefined}
+                aria-describedby={textBodyErr ? `${id}-text-body-err` : undefined}
+                placeholder="Paste hours, prices, policies, or anything else this agent should know…"
+              />
+              <FieldError id={`${id}-text-body-err`}>{textBodyErr}</FieldError>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  closePanel();
+                  setTextTitle("");
+                  setTextBody("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Save text</Button>
+            </div>
+          </form>
+        </Drawer>
+      )}
+      {panel === "details" && onDetailsChange && (
+        <Drawer title="Business details" onClose={closePanel} padBottom={false}>
+          <BusinessDetailsForm details={details ?? { offerings: [] }} onChange={onDetailsChange} outbound={outbound} />
+        </Drawer>
+      )}
     </div>
   );
 }
 
 /** The facts callers ask about most. The agent quotes only what is listed here. */
-function BusinessDetailsCard({ details, onChange }: { details: BusinessDetails; onChange: (next: BusinessDetails) => void }) {
+function BusinessDetailsForm({ details, onChange, outbound }: { details: BusinessDetails; onChange: (next: BusinessDetails) => void; outbound?: boolean }) {
   const id = useId();
   const rows = details.offerings.length ? details.offerings : [{ id: newId("off"), name: "", price: "" }];
   const setRows = (offerings: Offering[]) => onChange({ ...details, offerings });
   const patch = (offId: string, p: Partial<Offering>) => setRows(rows.map((r) => (r.id === offId ? { ...r, ...p } : r)));
   return (
-    <SectionCard
-      title="Business details"
-      description="Products, prices and hours. The agent quotes only what is listed and hands off the rest."
-      guided={
-        <div className="flex flex-col gap-5 py-1">
-          <fieldset>
-            <legend className="mb-1.5 text-[14px] font-medium text-ink-900">Products or services</legend>
-            <ul className="flex flex-col gap-2">
-              {rows.map((o, i) => (
-                <li key={o.id} className="flex items-center gap-2">
-                  <Input aria-label={`Offering ${i + 1} name`} value={o.name} onChange={(e) => patch(o.id, { name: e.target.value })} placeholder="Product or service" className="min-w-0 flex-1" />
-                  <Input aria-label={`Offering ${i + 1} price`} value={o.price ?? ""} onChange={(e) => patch(o.id, { price: e.target.value })} placeholder="Price" className="w-28 shrink-0" />
-                  <button
-                    type="button"
-                    aria-label={`Remove offering ${i + 1}`}
-                    onClick={() => setRows(rows.filter((r) => r.id !== o.id))}
-                    className="flex size-8 shrink-0 items-center justify-center rounded-md text-ink-500 outline-none hover:bg-paper-100 hover:text-ink-900 focus-visible:ring-2 focus-visible:ring-brand-500/30"
-                  >
-                    <Icon name="x" className="size-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <button type="button" onClick={() => setRows([...rows, { id: newId("off"), name: "", price: "" }])} className="mt-2 rounded-md px-1 py-1 text-[14px] font-medium text-ink-700 outline-none hover:text-ink-950 focus-visible:ring-2 focus-visible:ring-brand-500/30">
-              + Add another
-            </button>
-          </fieldset>
-          <fieldset>
-            <legend className="mb-1.5 text-[14px] font-medium text-ink-900">Questions callers ask</legend>
-            <ul className="flex flex-col gap-3">
-              {(details.faqs ?? []).map((f, i) => (
-                <li key={f.id} className="flex items-start gap-2">
-                  <div className="flex min-w-0 flex-1 flex-col gap-2">
-                    <Input aria-label={`Question ${i + 1}`} value={f.question} onChange={(e) => onChange({ ...details, faqs: (details.faqs ?? []).map((x) => (x.id === f.id ? { ...x, question: e.target.value } : x)) })} placeholder="Question callers ask" />
-                    <Input aria-label={`Answer ${i + 1}`} value={f.answer} onChange={(e) => onChange({ ...details, faqs: (details.faqs ?? []).map((x) => (x.id === f.id ? { ...x, answer: e.target.value } : x)) })} placeholder="Your answer" />
-                  </div>
-                  <button type="button" aria-label={`Remove question ${i + 1}`} onClick={() => onChange({ ...details, faqs: (details.faqs ?? []).filter((x) => x.id !== f.id) })} className="flex size-8 shrink-0 items-center justify-center rounded-md text-ink-500 outline-none hover:bg-paper-100 hover:text-ink-900 focus-visible:ring-2 focus-visible:ring-brand-500/30">
-                    <Icon name="x" className="size-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <button type="button" onClick={() => onChange({ ...details, faqs: [...(details.faqs ?? []), { id: newId("faq"), question: "", answer: "" }] })} className="mt-2 rounded-md px-1 py-1 text-[14px] font-medium text-ink-700 outline-none hover:text-ink-950 focus-visible:ring-2 focus-visible:ring-brand-500/30">
-              + Add a question
-            </button>
-          </fieldset>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <FieldLabel htmlFor={`${id}-hours`}>Opening hours</FieldLabel>
-              <Input id={`${id}-hours`} value={details.hours ?? ""} onChange={(e) => onChange({ ...details, hours: e.target.value })} placeholder="Days and times" />
-            </div>
-            <div>
-              <FieldLabel htmlFor={`${id}-handoff`}>If it can’t help, who follows up?</FieldLabel>
-              <Input id={`${id}-handoff`} value={details.handoff ?? ""} onChange={(e) => onChange({ ...details, handoff: e.target.value })} placeholder="Name, team or phone number" />
+    <div className="py-6">
+          <div className="flex flex-col gap-8">
+            <fieldset>
+              <legend className="mb-1.5 text-[14px] font-medium text-ink-900">Products or services</legend>
+              <ul className="flex flex-col gap-2">
+                {rows.map((o, i) => (
+                  <li key={o.id} className="flex items-center gap-2">
+                    <Input aria-label={`Offering ${i + 1} name`} value={o.name} onChange={(e) => patch(o.id, { name: e.target.value })} placeholder="Product or service" className="min-w-0 flex-1" />
+                    <Input aria-label={`Offering ${i + 1} price`} value={o.price ?? ""} onChange={(e) => patch(o.id, { price: e.target.value })} placeholder="Price" className="w-28 shrink-0" />
+                    <button
+                      type="button"
+                      aria-label={`Remove offering ${i + 1}`}
+                      onClick={() => setRows(rows.filter((r) => r.id !== o.id))}
+                      className="flex size-10 shrink-0 items-center justify-center rounded-lg text-ink-500 outline-none hover:bg-paper-100 hover:text-ink-900 focus-visible:ring-2 focus-visible:ring-brand-500/30"
+                    >
+                      <Icon name="x" className="size-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button type="button" onClick={() => setRows([...rows, { id: newId("off"), name: "", price: "" }])} className="mt-2 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2.5 text-[14px] font-medium text-brand-700 outline-none hover:bg-paper-100 focus-visible:ring-2 focus-visible:ring-brand-500/30">
+                <Icon name="plus" className="size-4" />
+                Add another
+              </button>
+            </fieldset>
+            <fieldset>
+              <legend className="mb-1.5 text-[14px] font-medium text-ink-900">{outbound ? "Questions people may ask" : "Questions callers ask"}</legend>
+              <ul className="flex flex-col gap-3">
+                {(details.faqs ?? []).map((f, i) => (
+                  <li key={f.id} className="flex items-start gap-2">
+                    <div className="flex min-w-0 flex-1 flex-col gap-2">
+                      <Input aria-label={`Question ${i + 1}`} value={f.question} onChange={(e) => onChange({ ...details, faqs: (details.faqs ?? []).map((x) => (x.id === f.id ? { ...x, question: e.target.value } : x)) })} placeholder={outbound ? "Question people may ask" : "Question callers ask"} />
+                      <Input aria-label={`Answer ${i + 1}`} value={f.answer} onChange={(e) => onChange({ ...details, faqs: (details.faqs ?? []).map((x) => (x.id === f.id ? { ...x, answer: e.target.value } : x)) })} placeholder="Your answer" />
+                    </div>
+                    <button type="button" aria-label={`Remove question ${i + 1}`} onClick={() => onChange({ ...details, faqs: (details.faqs ?? []).filter((x) => x.id !== f.id) })} className="flex size-10 shrink-0 items-center justify-center rounded-lg text-ink-500 outline-none hover:bg-paper-100 hover:text-ink-900 focus-visible:ring-2 focus-visible:ring-brand-500/30">
+                      <Icon name="x" className="size-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button type="button" onClick={() => onChange({ ...details, faqs: [...(details.faqs ?? []), { id: newId("faq"), question: "", answer: "" }] })} className="mt-2 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2.5 text-[14px] font-medium text-brand-700 outline-none hover:bg-paper-100 focus-visible:ring-2 focus-visible:ring-brand-500/30">
+                <Icon name="plus" className="size-4" />
+                Add a question
+              </button>
+            </fieldset>
+            <div className="grid gap-5 border-t border-ink-950/10 pt-6 sm:grid-cols-2">
+              <div>
+                <FieldLabel htmlFor={`${id}-hours`}>Opening hours</FieldLabel>
+                <Input id={`${id}-hours`} value={details.hours ?? ""} onChange={(e) => onChange({ ...details, hours: e.target.value })} placeholder="Days and times" />
+              </div>
+              <div>
+                <FieldLabel htmlFor={`${id}-handoff`}>If it can’t help, who follows up?</FieldLabel>
+                <Input id={`${id}-handoff`} value={details.handoff ?? ""} onChange={(e) => onChange({ ...details, handoff: e.target.value })} placeholder="Name, team or phone number" />
+              </div>
             </div>
           </div>
-        </div>
-      }
-    />
+    </div>
   );
 }

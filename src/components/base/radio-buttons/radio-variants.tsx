@@ -82,7 +82,7 @@ export const RadioTile = ({ label, hint, leading, className, ...props }: RadioLi
             cx(
                 "relative flex cursor-pointer items-center gap-3 rounded-lg bg-primary px-3 py-2.5 ring-1 ring-primary outline-focus-ring transition duration-100 ease-linear ring-inset focus-visible:outline-2 focus-visible:outline-offset-2",
                 "hover:bg-primary_hover",
-                state.isSelected && "bg-brand-25 ring-2 ring-brand hover:bg-brand-25",
+                state.isSelected && "ring-2 ring-brand",
                 state.isDisabled && "cursor-not-allowed opacity-50",
                 typeof className === "function" ? className(state) : className,
             )

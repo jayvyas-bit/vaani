@@ -1,5 +1,5 @@
 import { enabledTransferTool } from "./tools";
-import type { Agent, AgentLanguage, BusinessDetails, CallDirection, ToolDef, TranscriptTurn } from "./types";
+import type { Agent, BusinessDetails, CallDirection, ToolDef, TranscriptTurn } from "./types";
 
 /**
  * Persona "compiler": the greeting and system prompt are written from the
@@ -10,7 +10,7 @@ import type { Agent, AgentLanguage, BusinessDetails, CallDirection, ToolDef, Tra
 
 export const voiceOptions = [
   "Ava — clear, friendly",
-  "Sam — clear, friendly",
+  "Sam — relaxed, casual",
   "Maya — warm, even pace",
   "Daniel — calm, neutral pace",
   "Priya — bright, upbeat",
@@ -51,15 +51,71 @@ export function inferPersonaDefaults(purpose: string, direction: CallDirection):
   return { voice: inbound ? voiceOptions[0] : voiceOptions[1], tone: 50 };
 }
 
-export const agentLanguageLabel: Record<AgentLanguage, string> = {
-  en: "English",
-  hi: "Hindi",
-  "en-hi": "English + Hindi (bilingual)",
-};
+export interface LanguageOption {
+  code: string;
+  label: string;
+  /** The language’s own name, shown beside the English one. */
+  native: string;
+}
 
-/** Defaults to "en" for agents created before this field existed. */
-export function languageOf(agent: Pick<Agent, "language">): AgentLanguage {
-  return agent.language ?? "en";
+/** Every language the picker offers. A starting set: trim or extend it to the languages your voice stack really supports. */
+export const languageOptions: LanguageOption[] = [
+  { code: "en", label: "English", native: "English" },
+  { code: "hi", label: "Hindi", native: "हिन्दी" },
+  { code: "bn", label: "Bengali", native: "বাংলা" },
+  { code: "ta", label: "Tamil", native: "தமிழ்" },
+  { code: "te", label: "Telugu", native: "తెలుగు" },
+  { code: "mr", label: "Marathi", native: "मराठी" },
+  { code: "gu", label: "Gujarati", native: "ગુજરાતી" },
+  { code: "kn", label: "Kannada", native: "ಕನ್ನಡ" },
+  { code: "ml", label: "Malayalam", native: "മലയാളം" },
+  { code: "pa", label: "Punjabi", native: "ਪੰਜਾਬੀ" },
+  { code: "ur", label: "Urdu", native: "اردو" },
+  { code: "es", label: "Spanish", native: "Español" },
+  { code: "fr", label: "French", native: "Français" },
+  { code: "de", label: "German", native: "Deutsch" },
+  { code: "it", label: "Italian", native: "Italiano" },
+  { code: "pt", label: "Portuguese", native: "Português" },
+  { code: "nl", label: "Dutch", native: "Nederlands" },
+  { code: "sv", label: "Swedish", native: "Svenska" },
+  { code: "pl", label: "Polish", native: "Polski" },
+  { code: "tr", label: "Turkish", native: "Türkçe" },
+  { code: "ru", label: "Russian", native: "Русский" },
+  { code: "ar", label: "Arabic", native: "العربية" },
+  { code: "he", label: "Hebrew", native: "עברית" },
+  { code: "fa", label: "Persian", native: "فارسی" },
+  { code: "zh", label: "Chinese", native: "中文" },
+  { code: "ja", label: "Japanese", native: "日本語" },
+  { code: "ko", label: "Korean", native: "한국어" },
+  { code: "th", label: "Thai", native: "ไทย" },
+  { code: "vi", label: "Vietnamese", native: "Tiếng Việt" },
+  { code: "id", label: "Indonesian", native: "Bahasa Indonesia" },
+  { code: "ms", label: "Malay", native: "Bahasa Melayu" },
+  { code: "fil", label: "Filipino", native: "Filipino" },
+];
+
+export function languageLabel(code: string): string {
+  return languageOptions.find((l) => l.code === code)?.label ?? code;
+}
+
+/** Primary language plus extras. Agents saved as "en-hi" read as English with Hindi added. */
+export function languagesOf(agent: Pick<Agent, "language" | "extraLanguages">): { primary: string; extras: string[] } {
+  const raw = agent.language ?? "en";
+  if (raw === "en-hi") return { primary: "en", extras: ["hi"] };
+  const extras = (agent.extraLanguages ?? []).filter((c) => c !== raw);
+  return { primary: raw, extras };
+}
+
+/** "English", or "English + Hindi" when extras are set. */
+export function languageSummary(agent: Pick<Agent, "language" | "extraLanguages">): string {
+  const { primary, extras } = languagesOf(agent);
+  return [primary, ...extras].map(languageLabel).join(" + ");
+}
+
+/** Saved agents may hold an older description of the same voice; match by name. */
+export function canonicalVoice(voice: string) {
+  const name = voice.split(/\s+[—–-]\s+/)[0]?.trim().toLowerCase();
+  return voiceOptions.find((o) => o.split(" — ")[0].toLowerCase() === name) ?? voice;
 }
 
 export function voiceFirstName(voice: string) {
@@ -143,8 +199,12 @@ const FOLLOW_ON_INSTRUCTION = /[,:;]\s+|\s+and\s+(?=(?:offer|remind|ask|confirm|
 /** "remind eligible customers about X" is written about the recipient; spoken to them it is "remind you about X", with no internal qualifier like "eligible". */
 const ADDRESSED_VERB_OBJECT = /\b(remind|notify|inform|update|tell|invite|alert)\s+(?:(?:all|our|your|eligible|existing|selected|registered)\s+)*(?:customers?|clients?|members?|owners?|users?|patients?)\b/i;
 
+const ADDRESSED_VERB_PRONOUN = /\b(remind|notify|inform|update|tell|invite|alert)\s+them\b/i;
+
 function addressRecipient(body: string): string {
-  return body.replace(ADDRESSED_VERB_OBJECT, "$1 you");
+  const addressed = body.replace(ADDRESSED_VERB_OBJECT, "$1 you").replace(ADDRESSED_VERB_PRONOUN, "$1 you");
+  // Once the recipient is "you", their own things are "your" things.
+  return addressed === body ? body : addressed.replace(/\btheir\b/gi, "your").replace(/\b(remind|notify|inform|tell|alert) you your\b/i, "$1 you that your");
 }
 
 function outboundPurposeClause(purpose: string): string {
@@ -216,12 +276,13 @@ export function compileSystemPrompt(agent: Agent, tools: ToolDef[] = []): string
   const handoff = enabledTransferTool(tools)
     ? `If you are unsure or ${other} asks for a person, offer to transfer them to a teammate.`
     : `If you are unsure or ${other} asks for a person, take their name and number so a teammate can call them back.`;
-  const language = languageOf(agent);
+  const { primary, extras } = languagesOf(agent);
+  const extraNames = extras.map(languageLabel);
   const languageInstruction =
-    language === "hi"
-      ? " Speak only in Hindi."
-      : language === "en-hi"
-        ? " Speak English by default, and switch fluently to Hindi whenever the other party uses Hindi."
+    extras.length > 0
+      ? ` Speak ${languageLabel(primary)} by default, and switch fluently to ${extraNames.join(" or ")} whenever the other party uses ${extras.length > 1 ? "one of them" : extraNames[0]}.`
+      : primary !== "en"
+        ? ` Speak only in ${languageLabel(primary)}.`
         : "";
   return `You are ${who}, the ${agent.direction} voice assistant for ${name}.${purpose} ${toneInstruction[toneBand(agent.tone)]}${languageInstruction} ${handoff}${detailsInstruction(agent.details)}`;
 }

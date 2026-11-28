@@ -3,7 +3,10 @@ import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Tabs, type TabItem } from "@/components/ui/Tabs";
 import { WizardFooter } from "@/components/ui/WizardFooter";
-import { BuilderNav, type PrimarySection } from "@/features/agent-builder/BuilderNav";
+import {
+  BuilderNav,
+  type PrimarySection,
+} from "@/features/agent-builder/BuilderNav";
 import { applyPersonaPatch, HUMOR_TOGGLE_ID } from "@/lib/persona";
 import type {
   Agent,
@@ -21,7 +24,8 @@ import { OutcomesSection } from "./OutcomesSection";
 import { PersonaSection } from "./PersonaSection";
 import { ToolsSection } from "./ToolsSection";
 
-export type BuildTab = "persona" | "guardrails" | "knowledge" | "tools" | "outcomes";
+export type BuildTab =
+  "persona" | "guardrails" | "knowledge" | "tools" | "outcomes";
 
 const tabs: TabItem[] = [
   {
@@ -40,13 +44,15 @@ const tabs: TabItem[] = [
     id: "knowledge",
     label: "Knowledge",
     icon: <Icon name="book" className="size-4" />,
-    description: "Your business info this agent can answer from, like hours, prices or an FAQ page.",
+    description:
+      "Your business info this agent can answer from, like hours, prices or an FAQ page.",
   },
   {
     id: "tools",
     label: "Tools",
     icon: <Icon name="wrench" className="size-4" />,
-    description: "Actions it can take during a call, like booking or transferring.",
+    description:
+      "Actions it can take during a call, like booking or transferring.",
   },
   {
     id: "outcomes",
@@ -110,7 +116,8 @@ export function BuildEditorPage({
 }) {
   const [localTab, setLocalTab] = useState<BuildTab>(initialTab);
   const tab = controlledTab ?? localTab;
-  const setTab = (next: BuildTab) => (onTabChange ? onTabChange(next) : setLocalTab(next));
+  const setTab = (next: BuildTab) =>
+    onTabChange ? onTabChange(next) : setLocalTab(next);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -120,18 +127,29 @@ export function BuildEditorPage({
   const [localAgent, setLocalAgent] = useState(agent);
   const currentAgent = onAgentChange ? agent : localAgent;
   const patchAgent = (patch: Partial<Agent>) =>
-    onAgentChange ? onAgentChange(patch) : setLocalAgent((a) => applyPersonaPatch(a, patch, tools));
+    onAgentChange
+      ? onAgentChange(patch)
+      : setLocalAgent((a) => applyPersonaPatch(a, patch, tools));
 
   const [safetyState, setSafety] = useControllable(safety, onSafetyChange);
-  const [rules, setRules] = useControllable(businessRules, onBusinessRulesChange);
+  const [rules, setRules] = useControllable(
+    businessRules,
+    onBusinessRulesChange,
+  );
   const [sources, setSources] = useControllable(knowledge, onKnowledgeChange);
-  const [kbSettings, setKbSettings] = useControllable(knowledgeSettings, onKnowledgeSettingsChange);
+  const [kbSettings, setKbSettings] = useControllable(
+    knowledgeSettings,
+    onKnowledgeSettingsChange,
+  );
   const [toolList, setTools] = useControllable(tools, onToolsChange);
-  const [outcomeList, setOutcomes] = useControllable(outcomes, onOutcomesChange);
+  const [outcomeList, setOutcomes] = useControllable(
+    outcomes,
+    onOutcomesChange,
+  );
   const humor = safetyState.find((s) => s.id === HUMOR_TOGGLE_ID);
 
   return (
-    <div className="flex h-full flex-col bg-paper-0">
+    <div className="flex h-full flex-col bg-paper-50">
       {!embedded && (
         <BuilderNav
           agent={currentAgent}
@@ -141,40 +159,61 @@ export function BuildEditorPage({
         />
       )}
       {!embedded && currentAgent.status === "live" && (
-        <div role="status" className="flex items-center gap-2 border-b border-warning-200 bg-warning-50 px-4 py-2 sm:px-6">
+        <div
+          role="status"
+          className="flex items-center gap-2 border-b border-warning-200 bg-warning-50 px-4 py-2 sm:px-6"
+        >
           <Icon name="alert" className="size-3.5 shrink-0 text-warning-600" />
           <p className="text-[13px] text-ink-800">
-            <span className="font-semibold">This agent is live.</span> Changes here take effect immediately for real{" "}
+            <span className="font-semibold">This agent is live.</span> Changes
+            here take effect immediately for real{" "}
             {currentAgent.direction === "inbound" ? "callers" : "calls"}.
           </p>
         </div>
       )}
       {currentAgent.status === "paused" && (
-        <div role="status" className="flex items-center gap-2 border-b border-ink-950/10 bg-paper-50 px-4 py-2 sm:px-6">
+        <div
+          role="status"
+          className="flex items-center gap-2 border-b border-ink-950/10 bg-paper-50 px-4 py-2 sm:px-6"
+        >
           <Icon name="clock" className="size-3.5 shrink-0 text-ink-400" />
-          <p className="text-[13px] text-ink-600">This agent is paused. Changes take effect once you resume it from Deploy.</p>
+          <p className="text-[13px] text-ink-600">
+            This agent is paused. Changes take effect once you resume it from
+            Deploy.
+          </p>
         </div>
       )}
       {!embedded && (
-        <div className="border-b border-ink-950/10 bg-paper-0 px-4 sm:px-6">
-          <div className="mx-auto w-full max-w-[1200px]">
-            <Tabs items={tabs} active={tab} onChange={(id) => setTab(id as BuildTab)} />
+        <div className="border-b border-ink-950/10 bg-paper-50 px-4 sm:px-6">
+          <div className="w-full">
+            <Tabs
+              items={tabs}
+              active={tab}
+              onChange={(id) => setTab(id as BuildTab)}
+            />
           </div>
         </div>
       )}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-10 sm:px-8 sm:py-14">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto px-5 py-6 sm:px-8 sm:py-8"
+      >
         <div
           key={tab}
-          className="animate-step-in mx-auto flex w-full max-w-[1040px] flex-col"
+          className={`animate-step-in mx-auto flex w-full flex-col max-w-none`}
           role="tabpanel"
           aria-label={tabs.find((t) => t.id === tab)?.label}
         >
-          <header className="mb-10">
-            <h1 className="text-display-xs font-semibold tracking-[-0.02em] text-primary sm:text-display-sm">
-              {tabs.find((t) => t.id === tab)?.label}
-            </h1>
-            <p className="mt-2 text-md text-tertiary">{tabs.find((t) => t.id === tab)?.description}</p>
-          </header>
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-[-0.02em] text-primary">
+                {tabs.find((t) => t.id === tab)?.label}
+              </h1>
+              <p className="mt-1 text-md text-tertiary">
+                {tabs.find((t) => t.id === tab)?.description}
+              </p>
+            </div>
+          </div>
           {tab === "persona" && (
             <PersonaSection
               agent={currentAgent}
@@ -182,7 +221,11 @@ export function BuildEditorPage({
               defaultAdvanced={defaultAdvanced}
               humor={humor}
               onHumorChange={(enabled) =>
-                setSafety(safetyState.map((s) => (s.id === HUMOR_TOGGLE_ID ? { ...s, enabled } : s)))
+                setSafety(
+                  safetyState.map((s) =>
+                    s.id === HUMOR_TOGGLE_ID ? { ...s, enabled } : s,
+                  ),
+                )
               }
             />
           )}
@@ -204,18 +247,27 @@ export function BuildEditorPage({
               defaultAdvanced={defaultAdvanced}
               details={currentAgent.details}
               onDetailsChange={(details) => patchAgent({ details })}
+              outbound={currentAgent.direction === "outbound"}
             />
           )}
           {tab === "tools" && (
-            <ToolsSection tools={toolList} onToolsChange={setTools} defaultAdvanced={defaultAdvanced} />
+            <ToolsSection
+              tools={toolList}
+              onToolsChange={setTools}
+              defaultAdvanced={defaultAdvanced}
+            />
           )}
           {tab === "outcomes" && (
-            <OutcomesSection outcomes={outcomeList} onOutcomesChange={setOutcomes} defaultAdvanced={defaultAdvanced} />
+            <OutcomesSection
+              outcomes={outcomeList}
+              onOutcomesChange={setOutcomes}
+              defaultAdvanced={defaultAdvanced}
+            />
           )}
         </div>
       </div>
       {!embedded && (
-        <WizardFooter showBack={false} maxWidthClassName="max-w-[1200px]">
+        <WizardFooter showBack={false} maxWidthClassName="max-w-none">
           <Button className="gap-1.5" onClick={() => onNavigate?.("test")}>
             Continue to Test & Evaluate
             <Icon name="chevron-right" className="size-4" />

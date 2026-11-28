@@ -1063,7 +1063,7 @@ export default function App() {
         agent.status === "live"
           ? undefined
           : [
-              { label: "Name and greeting set", done: !!agent.name.trim() && !!agent.greeting.trim(), section: "persona" },
+              { label: "Name, business and greeting set", done: !!agent.name.trim() && !!(agent.businessName ?? "").trim() && !!agent.greeting.trim(), section: "persona" },
               { label: "At least one guardrail", done: record.businessRules.some((r) => r.enabled), section: "guardrails" },
               { label: "Knowledge added", done: record.knowledge.some((k) => k.attached !== false) || !!agent.details?.offerings?.length, section: "knowledge" },
               {

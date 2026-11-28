@@ -20,6 +20,7 @@ export function SectionCard({
   advanced,
   defaultAdvancedOpen = false,
   quiet = false,
+  advancedLabel = "Advanced",
 }: {
   title: string;
   description?: string;
@@ -31,18 +32,20 @@ export function SectionCard({
    * flatter and smaller so the primary section on a tab owns the weight.
    */
   quiet?: boolean;
+  /** Names what the toggle reveals, e.g. "Search settings". */
+  advancedLabel?: string;
 }) {
   const [open, setOpen] = useState(defaultAdvancedOpen);
 
   return (
     <section
-      className="border-t border-secondary py-8 first:border-t-0 first:pt-0"
+      className="rounded-xl border border-ink-950/10 bg-paper-0 p-5 shadow-xs"
     >
-      <header className={`flex items-start justify-between gap-4 ${quiet ? "pb-2" : "pb-5"}`}>
+      <header
+        className={`flex flex-wrap items-start justify-between gap-x-4 gap-y-2 ${quiet ? "pb-3" : "pb-4"}`}
+      >
         <div className="min-w-0">
-          <h2 className={`font-semibold text-primary ${quiet ? "text-sm" : "text-lg"}`}>
-            {title}
-          </h2>
+          <h2 className="text-md font-semibold text-primary">{title}</h2>
           {description && <p className="mt-0.5 text-sm text-tertiary">{description}</p>}
         </div>
         {advanced && (
@@ -50,11 +53,11 @@ export function SectionCard({
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
-            className={`-mr-2 flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-2 text-sm font-semibold outline-focus-ring transition-colors focus-visible:outline-2 ${
+            className={`-mr-2 flex shrink-0 items-center gap-1 rounded-md px-2 py-1.5 text-sm font-semibold outline-focus-ring transition-colors focus-visible:outline-2 ${
               open ? "bg-active text-secondary" : "text-tertiary hover:bg-primary_hover hover:text-secondary"
             }`}
           >
-            Advanced
+            {advancedLabel}
             <Icon
               name="chevron-down"
               className={`size-4 text-fg-quaternary transition-transform ${open ? "rotate-180" : ""}`}
@@ -63,25 +66,27 @@ export function SectionCard({
         )}
       </header>
 
-      {guided != null && <div>{guided}</div>}
+      <div className="min-w-0">
+        {guided != null && <div>{guided}</div>}
 
-      {advanced && (
-        <div
-          className={`grid transition-[grid-template-rows] duration-200 ease-[var(--ease-out-quart)] ${
-            open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-          }`}
-        >
-          <div className="min-h-0 overflow-hidden">
-            <div className="mt-5 rounded-xl border border-secondary bg-secondary px-4 py-4">
-              <div className="mb-3 flex items-center gap-1.5 text-sm font-medium text-tertiary">
-                <Icon name="wrench" className="size-3.5" />
-                Advanced settings
+        {advanced && (
+          <div
+            className={`grid transition-[grid-template-rows] duration-200 ease-[var(--ease-out-quart)] ${
+              open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+            }`}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <div className="mt-4 rounded-xl border border-secondary bg-secondary px-4 py-4">
+                <div className="mb-3 flex items-center gap-1.5 text-sm font-medium text-tertiary">
+                  <Icon name="wrench" className="size-3.5" />
+                  {advancedLabel}
+                </div>
+                {advanced}
               </div>
-              {advanced}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </section>
   );
 }

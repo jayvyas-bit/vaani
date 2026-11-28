@@ -446,7 +446,7 @@ export function ComplianceStep({
   return (
     <div className="flex flex-col gap-7">
       <div>
-        <h1 className="text-display-xs font-semibold tracking-[-0.02em] text-primary">
+        <h1 className="text-xl font-semibold tracking-[-0.01em] text-primary">
           {direction === "inbound" ? "Hours" : "Calling rules"}
         </h1>
         <p className="mt-2 text-md text-tertiary">

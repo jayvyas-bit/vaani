@@ -4,7 +4,7 @@ import { Button } from "@/components/base/buttons/button";
 import { Check, Edit01, Play } from "@untitledui/icons";
 import { VoiceWaveform } from "@/components/ui/VoiceWaveform";
 import { FeaturedIcon } from "@/components/foundations/featured-icon/featured-icon";
-import { agentLanguageLabel, businessNameOf, languageOf } from "@/lib/persona";
+import { businessNameOf, languageSummary } from "@/lib/persona";
 import type { Agent, BusinessRule, CallDirection, OutcomeField, Scenario, ToolDef } from "@/lib/types";
 
 export function CreateSuccess({
@@ -60,7 +60,7 @@ export function CreateSuccess({
       value: agent ? businessNameOf(agent) : "Taken from the agent name",
     },
     { label: "Voice", value: agent ? agent.voice : "System default, assigned for you" },
-    { label: "Language", value: agent ? agentLanguageLabel[languageOf(agent)] : agentLanguageLabel.en },
+    { label: "Language", value: agent ? languageSummary(agent) : "English" },
     { label: "AI settings", value: "Standard (balanced cost and speed)" },
   ];
 
@@ -104,7 +104,7 @@ export function CreateSuccess({
   );
 
   return (
-    <div className="h-full overflow-y-auto bg-white">
+    <div className="h-full overflow-y-auto bg-paper-50">
       <div className="mx-auto w-full max-w-[720px] px-5 py-10 sm:px-8 sm:py-14">
         <div className="animate-step-in">
           <div className="flex flex-wrap items-center gap-2">
