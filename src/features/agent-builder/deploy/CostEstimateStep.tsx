@@ -99,7 +99,7 @@ export function CostEstimateStep({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-[20px] font-semibold text-ink-950">Cost estimate</h1>
-          <p className="mt-1 text-[14px] text-ink-600">
+          <p className="mt-1 text-[15px] text-ink-600">
             Set your expected volume to see what this agent will cost to run.
           </p>
         </div>
@@ -122,17 +122,17 @@ export function CostEstimateStep({
       </div>
 
       <div className="rounded-lg border border-ink-950/10 bg-paper-0 p-5">
-        <p className="text-[12.5px] font-medium text-ink-500">Projected monthly cost</p>
+        <p className="text-[12px] font-medium text-ink-500">Projected monthly cost</p>
         <p className="mt-1 text-[32px] leading-none font-semibold tabular-nums text-ink-950">
           {formatMoney(monthlyCost, currency)}
-          <span className="ml-1 text-[14px] font-normal text-ink-500">/ month</span>
+          <span className="ml-1 text-[15px] font-normal text-ink-500">/ month</span>
         </p>
         <p className="mt-2 text-[13px] tabular-nums text-ink-500">
           {Math.round(monthlyMinutes).toLocaleString()} call minutes × {formatMoney(rate, currency, { cents: true })} per minute
           at your chosen AI providers
         </p>
         {currency !== "USD" && (
-          <p className="mt-1 text-[11.5px] text-ink-400">
+          <p className="mt-1 text-[12px] text-ink-500">
             Illustrative conversion at a fixed rate for display only — you’re billed in USD, and this is not a live or
             verified exchange rate.
           </p>
@@ -189,7 +189,7 @@ export function CostEstimateStep({
           </div>
         </div>
 
-        <dl className="mt-5 flex flex-col gap-1.5 border-t border-ink-950/10 pt-4 text-[12.5px]">
+        <dl className="mt-5 flex flex-col gap-1.5 border-t border-ink-950/10 pt-4 text-[12px]">
           {breakdown.map((b) => (
             <div key={b.label} className="flex items-center justify-between gap-3">
               <dt className="text-ink-500">{b.label}</dt>
@@ -197,7 +197,7 @@ export function CostEstimateStep({
             </div>
           ))}
         </dl>
-        <p className="mt-2 text-[11.5px] text-ink-400">
+        <p className="mt-2 text-[12px] text-ink-500">
           Modeled per-minute rates for illustration — not live prices from these vendors. No AI provider or telephony
           carrier is actually connected here, and real billing depends on the rates you contract with each one.
         </p>
@@ -229,25 +229,25 @@ export function CostEstimateStep({
             />
           </div>
           {currency !== "USD" && (
-            <p className="mt-1.5 text-[11.5px] text-ink-400">
+            <p className="mt-1.5 text-[12px] text-ink-500">
               Illustrative conversion — billing and the warning threshold are still tracked in USD.
             </p>
           )}
           {overBudget && (
             <>
-              <p className="mt-2 flex items-start gap-1.5 text-[12.5px] font-medium text-error-600">
+              <p className="mt-2 flex items-start gap-1.5 text-[12px] font-medium text-error-600">
                 <Icon name="alert" className="mt-0.5 size-3.5 shrink-0" />
                 Projected to run {formatMoney(monthlyCost - (budget ?? 0), currency)} over this budget at the volume set above.
               </p>
 
               {suggestion && (
                 <div className="mt-3 rounded-lg border border-ink-950/10 bg-paper-50 p-4">
-                  <p className="text-[12.5px] font-medium text-ink-800">
+                  <p className="text-[12px] font-medium text-ink-800">
                     Switch to lower-cost providers to save {formatMoney(suggestion.monthlySavings, currency)}/mo
                   </p>
                   <ul className="mt-2.5 flex flex-col gap-2">
                     {suggestion.swaps.map((swap) => (
-                      <li key={swap.field} className="text-[12.5px]">
+                      <li key={swap.field} className="text-[12px]">
                         <div className="flex items-center gap-1.5 text-ink-700">
                           <span className="text-ink-500">{swap.label}:</span>
                           <span className="text-ink-500 line-through">{swap.from}</span>
@@ -258,11 +258,11 @@ export function CostEstimateStep({
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-2.5 text-[12.5px] tabular-nums text-ink-600">
+                  <p className="mt-2.5 text-[12px] tabular-nums text-ink-600">
                     New projected cost: <span className="font-medium text-ink-900">{formatMoney(suggestion.newMonthlyCost, currency)}/mo</span>
                   </p>
                   {suggestion.stillOverBudget && (
-                    <p className="mt-1.5 text-[12.5px] text-ink-500">
+                    <p className="mt-1.5 text-[12px] text-ink-500">
                       Still over budget even with our lowest-cost providers — consider lowering expected call volume above.
                     </p>
                   )}
@@ -274,15 +274,15 @@ export function CostEstimateStep({
 
               {volumeSuggestion && (
                 <div className="mt-3 rounded-lg border border-ink-950/10 bg-paper-50 p-4">
-                  <p className="text-[12.5px] font-medium text-ink-800">
+                  <p className="text-[12px] font-medium text-ink-800">
                     Or lower expected volume to {volumeSuggestion.newCallsPerMonth.toLocaleString()} calls/month to fit your budget
                   </p>
-                  <p className="mt-2.5 text-[12.5px] tabular-nums text-ink-600">
+                  <p className="mt-2.5 text-[12px] tabular-nums text-ink-600">
                     New projected cost:{" "}
                     <span className="font-medium text-ink-900">{formatMoney(volumeSuggestion.newMonthlyCost, currency)}/mo</span>
                   </p>
                   {volumeSuggestion.stillOverBudget && (
-                    <p className="mt-1.5 text-[12.5px] text-ink-500">
+                    <p className="mt-1.5 text-[12px] text-ink-500">
                       Still over budget even at the lowest volume this estimate supports.
                     </p>
                   )}

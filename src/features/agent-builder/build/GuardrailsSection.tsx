@@ -51,7 +51,7 @@ function GuardrailChip({ rule, onEdit }: { rule: BusinessRule; onEdit: () => voi
       type="button"
       onClick={onEdit}
       title={`${limitTypeLabel[rule.limitType]}: ${ruleSentence(rule).action}${rule.enabled ? "" : " (off)"}`}
-      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12.5px] font-medium transition-colors hover:border-gray-300 ${
+      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px] font-medium transition-colors hover:border-gray-300 ${
         rule.enabled ? chipToneClasses[tone] : "border-dashed border-gray-200 bg-transparent text-gray-400"
       }`}
     >
@@ -157,7 +157,7 @@ function BusinessRuleRow({
     <div className="flex flex-col gap-2.5 px-6 py-3.5">
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
-          <p className={`text-[13.5px] leading-snug ${rule.enabled ? "text-ink-950" : "text-ink-500"}`}>
+          <p className={`text-[13px] leading-snug ${rule.enabled ? "text-ink-950" : "text-ink-500"}`}>
             <RuleSentence rule={rule} />
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -173,7 +173,7 @@ function BusinessRuleRow({
           aria-label="Delete this rule?"
           className="flex flex-col gap-2 rounded-md border border-error-200 bg-error-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
         >
-          <p className="text-[12.5px] text-ink-800">Delete this rule? The agent stops following it right away.</p>
+          <p className="text-[12px] text-ink-800">Delete this rule? The agent stops following it right away.</p>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(false)}>
               Keep it
@@ -368,7 +368,7 @@ function RuleForm({
         <FieldError id={`${id}-action-err`}>{actionErr}</FieldError>
       </div>
       {preview && (
-        <p className="rounded-md border border-ink-950/8 bg-paper-0 px-3 py-2 text-[12.5px] text-ink-700">
+        <p className="rounded-md border border-ink-950/8 bg-paper-0 px-3 py-2 text-[12px] text-ink-700">
           <span className="font-medium text-ink-500">Reads as: </span>
           <RuleSentence rule={preview} />
         </p>
@@ -519,11 +519,11 @@ export function GuardrailsSection({
               <div key={s.id} className="flex items-center justify-between gap-4 px-6 py-3">
                 <div className="min-w-0">
                   <p className="text-[13px] font-medium text-ink-950">{s.label}</p>
-                  <p className="text-[12.5px] text-ink-500">{s.description}</p>
+                  <p className="text-[12px] text-ink-500">{s.description}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2.5">
                   {s.locked && (
-                    <span className="flex items-center gap-1 text-[12px] font-medium text-ink-400">
+                    <span className="flex items-center gap-1 text-[12px] font-medium text-ink-500">
                       <Icon name="lock" className="size-3" />
                       Required
                     </span>

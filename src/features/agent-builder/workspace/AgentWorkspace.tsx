@@ -7,8 +7,7 @@ import type { DeployConfig } from "@/lib/deploy";
 import { statusLabel, statusTone } from "@/lib/status";
 import type { Agent, TranscriptTurn } from "@/lib/types";
 import type { AgentContext } from "@/lib/simulate";
-import { PreviewDialog } from "./AgentPreviewPanel";
-import { CallFlowPanel } from "./CallFlowPanel";
+import { AgentPreviewPanel } from "./AgentPreviewPanel";
 import { CostSummaryPanel } from "./CostSummaryPanel";
 
 export type WorkspaceSection = "persona" | "guardrails" | "knowledge" | "tools" | "outcomes" | "test" | "deploy";
@@ -60,7 +59,7 @@ function NavGroup({
 }) {
   return (
     <div>
-      <p className="px-3 pb-1.5 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-ink-400">{label}</p>
+      <p className="px-3 pb-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-500">{label}</p>
       <ul className="space-y-0.5">
         {items.map((item) => {
           const isActive = item.id === active;
@@ -127,7 +126,6 @@ export function AgentWorkspace({
 }) {
   // Below xl the rail doesn't fit beside the editor, so it opens over it on demand.
   const [railOpen, setRailOpen] = useState(false);
-  const [testing, setTesting] = useState(false);
   const inbound = agent.direction === "inbound";
   const doneCount = readiness?.filter((r) => r.done).length ?? 0;
 
@@ -144,7 +142,7 @@ export function AgentWorkspace({
       <div className="flex min-w-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-ink-950/10 bg-paper-0 px-4 sm:px-6">
-            <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[13.5px]">
+            <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[13px]">
               <button
                 type="button"
                 onClick={onBack}
@@ -177,15 +175,9 @@ export function AgentWorkspace({
                 <Icon name="play" className="size-3.5" />
                 Summary
               </Button>
-              {section !== "test" && (
-                <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => setTesting(true)}>
-                  <Icon name="play" className="size-3.5" />
-                  Test agent
-                </Button>
-              )}
               {readiness && (
                 <>
-                  <span className="hidden text-[12.5px] text-ink-500 tabular-nums sm:inline">
+                  <span className="hidden text-[12px] text-ink-500 tabular-nums sm:inline">
                     {doneCount} of {readiness.length} ready
                   </span>
                   <Button size="sm" onClick={() => onSelect("deploy")}>
@@ -196,7 +188,6 @@ export function AgentWorkspace({
             </div>
           </header>
           <div className="relative min-h-0 flex-1 overflow-hidden">{children}</div>
-          {testing && <PreviewDialog agent={agent} source={preview} onClose={() => setTesting(false)} />}
         </div>
 
         <aside
@@ -205,16 +196,8 @@ export function AgentWorkspace({
             railOpen ? "fixed inset-y-0 right-0 z-30 flex shadow-float" : "hidden"
           } xl:static xl:flex xl:shadow-none`}
         >
-          <button
-            type="button"
-            onClick={() => setRailOpen(false)}
-            aria-label="Hide summary"
-            className="flex size-7 shrink-0 items-center justify-center self-end rounded-md text-ink-400 outline-none hover:bg-paper-100 hover:text-ink-700 focus-visible:ring-2 focus-visible:ring-brand-200 xl:hidden"
-          >
-            <Icon name="x" className="size-4" />
-          </button>
+          <AgentPreviewPanel agent={agent} source={preview} onClose={() => setRailOpen(false)} />
           <CostSummaryPanel agent={agent} deploy={deploy} isDefault={deployIsDefault} onChange={onDeployChange} />
-          <CallFlowPanel agent={agent} />
         </aside>
       </div>
     </div>

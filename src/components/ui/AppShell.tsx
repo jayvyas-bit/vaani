@@ -8,7 +8,7 @@ export function BrandMark() {
       <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-paper-0 shadow-brand-sm">
         <Icon name="phone-inbound" className="size-4" strokeWidth={2.2} />
       </div>
-      <p className="min-w-0 truncate text-[14px] font-semibold tracking-[-0.01em] text-ink-950">
+      <p className="min-w-0 truncate text-[15px] font-semibold tracking-[-0.01em] text-ink-950">
         Voice Agent Builder
       </p>
     </div>

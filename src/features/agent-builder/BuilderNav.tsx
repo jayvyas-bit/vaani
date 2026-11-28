@@ -53,7 +53,7 @@ export function BuilderNav({
               <Icon name={agent.direction === "inbound" ? "phone-inbound" : "phone-outbound"} className="size-4" />
             </div>
             <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-              <p className="min-w-[90px] max-w-full truncate text-[14.5px] font-semibold tracking-[-0.01em] text-ink-950">
+              <p className="min-w-[90px] max-w-full truncate text-[15px] font-semibold tracking-[-0.01em] text-ink-950">
                 {agent.name.trim() || "Untitled agent"}
               </p>
               <div className="flex shrink-0 items-center gap-1.5">

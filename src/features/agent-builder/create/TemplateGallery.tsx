@@ -29,7 +29,7 @@ export function TemplateGallery({
         <div className="mx-auto w-full max-w-[640px] px-4 py-10 sm:px-0 sm:py-14 lg:max-w-[920px] xl:max-w-[1120px]">
           <div className="mb-8">
             <h1 className="text-[22px] font-semibold text-ink-950">Choose a template</h1>
-            <p className="mt-1.5 text-[14px] text-ink-600">
+            <p className="mt-1.5 text-[15px] text-ink-600">
               Starts you off with a name, purpose and call direction — all editable on the next step.
             </p>
           </div>

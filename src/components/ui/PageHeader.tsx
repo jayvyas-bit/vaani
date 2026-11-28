@@ -7,7 +7,7 @@ export function PageHeaderBackLink({ label, onClick }: { label: string; onClick?
     <button
       type="button"
       onClick={onClick}
-      className="flex shrink-0 items-center gap-1 text-[13px] font-medium text-ink-400 transition-colors hover:text-ink-700"
+      className="flex shrink-0 items-center gap-1 text-[13px] font-medium text-ink-500 transition-colors hover:text-ink-700"
     >
       <Icon name="chevron-right" className="size-3.5 rotate-180" />
       {label}

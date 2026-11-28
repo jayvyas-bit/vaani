@@ -43,7 +43,7 @@ function ScenarioRow({
             </Badge>
           )}
         </div>
-        <p className="mt-0.5 text-[12.5px] text-ink-500">{scenario.criteria}</p>
+        <p className="mt-0.5 text-[12px] text-ink-500">{scenario.criteria}</p>
         {scenario.reason && !running && scenario.verdict !== "pass" && (
           <p className="mt-1.5 text-[12px] leading-snug text-ink-700">
             <span className="font-medium">Why: </span>
@@ -211,7 +211,7 @@ export function ScenarioPool({
     <div className="flex min-h-[360px] flex-col rounded-lg border border-ink-950/10 bg-paper-0 lg:h-full lg:min-h-0">
       <div className="border-b border-ink-950/10 px-4 py-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-[14px] font-semibold text-ink-950">Test scenarios</h2>
+          <h2 className="text-[15px] font-semibold text-ink-950">Test scenarios</h2>
           <Button
             size="sm"
             variant="secondary"
@@ -223,7 +223,7 @@ export function ScenarioPool({
             {running ? "Running…" : "Run all"}
           </Button>
         </div>
-        <p className="mt-1 text-[12.5px] text-ink-500" aria-live="polite">
+        <p className="mt-1 text-[12px] text-ink-500" aria-live="polite">
           {list.length > 0 && (
             <span className="font-medium text-ink-700">
               {[

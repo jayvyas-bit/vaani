@@ -6,7 +6,7 @@ import { RadioCard } from "@/components/ui/RadioCard";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Switch } from "@/components/ui/Switch";
 import { newId } from "@/lib/useControllable";
-import type { KnowledgeSettings, KnowledgeSource } from "@/lib/types";
+import type { BusinessDetails, KnowledgeSettings, KnowledgeSource, Offering } from "@/lib/types";
 
 const kindIcon: Record<KnowledgeSource["kind"], IconName> = {
   pdf: "file",
@@ -68,11 +68,11 @@ function SourceRow({ source, onToggle }: { source: KnowledgeSource; onToggle: (a
         <Icon name={kindIcon[source.kind]} className="size-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="flex min-w-0 text-[13.5px] font-medium text-ink-950">
+        <p className="flex min-w-0 text-[13px] font-medium text-ink-950">
           <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{base}</span>
           {ext && <span className="shrink-0">{ext}</span>}
         </p>
-        <p className="text-[12.5px] text-ink-500">
+        <p className="text-[12px] text-ink-500">
           {source.kind === "url" ? "Web page" : `${source.kind.toUpperCase()} · ${source.sizeLabel}`}
           {!source.attached && " · not used on calls"}
         </p>
@@ -88,7 +88,11 @@ export function KnowledgeSection({
   settings = defaultKnowledgeSettings,
   onSettingsChange,
   defaultAdvanced = false,
+  details,
+  onDetailsChange,
 }: {
+  details?: BusinessDetails;
+  onDetailsChange?: (next: BusinessDetails) => void;
   sources: KnowledgeSource[];
   onSourcesChange: (next: KnowledgeSource[]) => void;
   settings?: KnowledgeSettings;
@@ -144,6 +148,7 @@ export function KnowledgeSection({
         kind: "text",
         sizeLabel: formatBytes(new Blob([textBody]).size),
         attached: true,
+        body: textBody.trim(),
       },
     ]);
     setTextTitle("");
@@ -171,6 +176,8 @@ export function KnowledgeSection({
   };
 
   return (
+    <div className="space-y-4">
+    {onDetailsChange && <BusinessDetailsCard details={details ?? { offerings: [] }} onChange={onDetailsChange} />}
     <SectionCard
       title="Knowledge"
       description="Your business info this agent can answer from, like hours, prices or an FAQ page."
@@ -315,6 +322,57 @@ export function KnowledgeSection({
             title="Thorough search"
             description="Reads more of your documents per question. Best for long manuals or detailed policies."
           />
+        </div>
+      }
+    />
+    </div>
+  );
+}
+
+/** The facts callers ask about most. The agent quotes only what is listed here. */
+function BusinessDetailsCard({ details, onChange }: { details: BusinessDetails; onChange: (next: BusinessDetails) => void }) {
+  const id = useId();
+  const rows = details.offerings.length ? details.offerings : [{ id: newId("off"), name: "", price: "" }];
+  const setRows = (offerings: Offering[]) => onChange({ ...details, offerings });
+  const patch = (offId: string, p: Partial<Offering>) => setRows(rows.map((r) => (r.id === offId ? { ...r, ...p } : r)));
+  return (
+    <SectionCard
+      title="Business details"
+      description="Products, prices and hours. The agent quotes only what is listed and hands off the rest."
+      guided={
+        <div className="flex flex-col gap-5 py-1">
+          <fieldset>
+            <legend className="mb-1.5 text-[13px] font-medium text-ink-900">Products or services</legend>
+            <ul className="flex flex-col gap-2">
+              {rows.map((o, i) => (
+                <li key={o.id} className="flex items-center gap-2">
+                  <Input aria-label={`Offering ${i + 1} name`} value={o.name} onChange={(e) => patch(o.id, { name: e.target.value })} placeholder="Teeth cleaning" className="min-w-0 flex-1" />
+                  <Input aria-label={`Offering ${i + 1} price`} value={o.price ?? ""} onChange={(e) => patch(o.id, { price: e.target.value })} placeholder="$90" className="w-28 shrink-0" />
+                  <button
+                    type="button"
+                    aria-label={`Remove offering ${i + 1}`}
+                    onClick={() => setRows(rows.filter((r) => r.id !== o.id))}
+                    className="flex size-8 shrink-0 items-center justify-center rounded-md text-ink-500 outline-none hover:bg-paper-100 hover:text-ink-900 focus-visible:ring-2 focus-visible:ring-brand-500/30"
+                  >
+                    <Icon name="x" className="size-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button type="button" onClick={() => setRows([...rows, { id: newId("off"), name: "", price: "" }])} className="mt-2 rounded-md px-1 py-1 text-[13px] font-medium text-ink-700 outline-none hover:text-ink-950 focus-visible:ring-2 focus-visible:ring-brand-500/30">
+              + Add another
+            </button>
+          </fieldset>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <FieldLabel htmlFor={`${id}-hours`}>Opening hours</FieldLabel>
+              <Input id={`${id}-hours`} value={details.hours ?? ""} onChange={(e) => onChange({ ...details, hours: e.target.value })} placeholder="Mon–Fri, 9am to 5pm" />
+            </div>
+            <div>
+              <FieldLabel htmlFor={`${id}-handoff`}>If it can’t help, who follows up?</FieldLabel>
+              <Input id={`${id}-handoff`} value={details.handoff ?? ""} onChange={(e) => onChange({ ...details, handoff: e.target.value })} placeholder="Front desk, 555-0100" />
+            </div>
+          </div>
         </div>
       }
     />

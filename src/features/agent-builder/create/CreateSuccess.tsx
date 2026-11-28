@@ -22,6 +22,23 @@ export function CreateSuccess({
   const dir = agent?.direction ?? direction;
   const outbound = dir === "outbound";
 
+  const offerings = agent?.details?.offerings.filter((o) => o.name.trim()) ?? [];
+  const known = [
+    {
+      label: "Products & prices",
+      value: offerings.length
+        ? offerings.map((o) => (o.price ? `${o.name} ${o.price}` : o.name)).join(" · ")
+        : null,
+      missing: "None yet. It will say a teammate confirms prices.",
+    },
+    { label: "Hours", value: agent?.details?.hours ?? null, missing: "Not set. It won’t state opening hours." },
+    {
+      label: "If it can’t help",
+      value: agent?.details?.handoff ?? null,
+      missing: "Not set. It takes a number for a callback.",
+    },
+  ];
+
   const defaults = [
     {
       label: "Business name",
@@ -44,11 +61,11 @@ export function CreateSuccess({
               <Icon name="check" className="size-5" strokeWidth={2.5} />
             </div>
             <div className="animate-step-in [animation-delay:90ms]">
-              <p className="text-[12.5px] font-medium text-success-700">Agent created</p>
+              <p className="text-[12px] font-medium text-success-700">Agent created</p>
               <h1 className="text-[22px] font-semibold text-ink-950">{agentName} is ready to test</h1>
             </div>
           </div>
-          <div className="animate-step-in mt-4 flex flex-wrap items-center gap-2 text-[14px] text-ink-600 [animation-delay:140ms]">
+          <div className="animate-step-in mt-4 flex flex-wrap items-center gap-2 text-[15px] text-ink-600 [animation-delay:140ms]">
             <Badge tone={dir}>{outbound ? "Outbound" : "Inbound"}</Badge>
             <Badge tone="neutral" dot>
               Draft
@@ -77,6 +94,27 @@ export function CreateSuccess({
             </dl>
           </div>
 
+          {agent && (
+            <div className="animate-step-in mt-4 rounded-lg border border-ink-950/10 bg-paper-0 [animation-delay:210ms]">
+              <h2 className="border-b border-ink-950/10 px-4 py-3 text-[13px] font-medium text-ink-700 sm:px-5">
+                What it knows about the business
+              </h2>
+              <dl className="divide-y divide-ink-950/8">
+                {known.map((k) => (
+                  <div key={k.label} className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-baseline sm:gap-6 sm:px-5">
+                    <dt className="shrink-0 text-[13px] text-ink-500 sm:w-[170px]">{k.label}</dt>
+                    <dd className={`text-[13px] ${k.value ? "font-medium text-ink-900" : "text-ink-500"}`}>
+                      {k.value ?? k.missing}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="border-t border-ink-950/10 px-4 py-3 text-[12px] text-ink-500 sm:px-5">
+                Add or change any of this in Build → Knowledge.
+              </p>
+            </div>
+          )}
+
           <div className="animate-step-in mt-6 flex flex-col gap-3 sm:flex-row sm:items-center [animation-delay:230ms]">
             <Button size="lg" className="gap-2" onClick={onTest}>
               <Icon name="play" className="size-4" />
@@ -86,7 +124,7 @@ export function CreateSuccess({
               Open Build editor
             </Button>
           </div>
-          <p className="mt-3 text-[12.5px] text-ink-400">
+          <p className="mt-3 text-[12px] text-ink-500">
             {outbound
               ? "Nothing is live yet — this agent won’t dial anyone until you finish Deploy."
               : "Nothing is live yet — calls won’t reach this agent until you finish Deploy."}

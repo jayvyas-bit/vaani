@@ -48,12 +48,12 @@ export function Stepper({
                       ? "bg-brand-600 text-white"
                       : done
                         ? "bg-brand-100 text-brand-700"
-                        : "border border-ink-950/15 text-ink-400"
+                        : "border border-ink-950/15 text-ink-500"
                   }`}
                 >
                   {done ? <Icon name="check" className="size-2.5" strokeWidth={3} /> : i + 1}
                 </span>
-                <span className={`font-medium ${active ? "text-ink-900" : done ? "text-ink-600" : "text-ink-400"}`}>
+                <span className={`font-medium ${active ? "text-ink-900" : done ? "text-ink-600" : "text-ink-500"}`}>
                   {step.label}
                 </span>
               </span>
@@ -100,7 +100,7 @@ export function Stepper({
             );
           })}
         </div>
-        <span className="min-w-0 truncate whitespace-nowrap text-[12.5px] text-ink-500">
+        <span className="min-w-0 truncate whitespace-nowrap text-[12px] text-ink-500">
           {showCount && (
             <>
               <span className="font-medium text-ink-900">

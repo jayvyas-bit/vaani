@@ -28,7 +28,7 @@ function OutcomeRow({
     <div className="flex flex-col gap-2.5 px-6 py-3.5">
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-[13.5px] font-medium text-ink-950">{field.label}</p>
+          <p className="text-[13px] font-medium text-ink-950">{field.label}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <Badge tone="neutral">{typeLabel[field.type]}</Badge>
             {field.type === "enum" && field.options && field.options.length > 0 && (
@@ -48,7 +48,7 @@ function OutcomeRow({
           aria-label="Delete this outcome field?"
           className="flex flex-col gap-2 rounded-md border border-error-200 bg-error-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
         >
-          <p className="text-[12.5px] text-ink-800">Delete this outcome field? It won’t be checked for anymore.</p>
+          <p className="text-[12px] text-ink-800">Delete this outcome field? It won’t be checked for anymore.</p>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(false)}>
               Keep it
@@ -161,7 +161,7 @@ function OutcomeForm({
       <div className="flex items-center gap-3 rounded-lg border border-ink-950/10 bg-paper-0 p-3">
         <Switch checked={required} onChange={setRequired} label="Required by end of call" />
         <div className="min-w-0 flex-1">
-          <p className="text-[12.5px] font-medium text-ink-800">Required by end of call</p>
+          <p className="text-[12px] font-medium text-ink-800">Required by end of call</p>
           <p className="mt-0.5 text-[12px] text-ink-500">
             Flag calls where this wasn’t captured, instead of treating it as optional.
           </p>

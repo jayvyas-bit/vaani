@@ -1,5 +1,5 @@
 import { enabledTransferTool } from "./tools";
-import type { Agent, AgentLanguage, CallDirection, ToolDef, TranscriptTurn } from "./types";
+import type { Agent, AgentLanguage, BusinessDetails, CallDirection, ToolDef, TranscriptTurn } from "./types";
 
 /**
  * Persona "compiler": the greeting and system prompt are written from the
@@ -178,6 +178,21 @@ const toneInstruction: Record<ToneBand, string> = {
  * actually enabled — otherwise the agent would promise something on a real
  * call that it can’t do. Without one it offers a callback instead.
  */
+/** What the agent may state as fact. Empty details add nothing, so older agents compile as before. */
+export function detailsInstruction(details: BusinessDetails | undefined): string {
+  if (!details) return "";
+  const offerings = details.offerings.filter((o) => o.name.trim());
+  const lines: string[] = [];
+  if (offerings.length > 0) {
+    const list = offerings.map((o) => (o.price?.trim() ? `${o.name.trim()} (${o.price.trim()})` : o.name.trim())).join("; ");
+    lines.push(`Offerings and prices: ${list}.`);
+  }
+  if (details.hours?.trim()) lines.push(`Hours: ${stripPeriod(details.hours.trim())}.`);
+  if (details.handoff?.trim()) lines.push(`When you can’t answer, hand off to: ${stripPeriod(details.handoff.trim())}.`);
+  if (lines.length === 0) return "";
+  return ` ${lines.join(" ")} Quote only these facts; if asked about anything else, say you’ll have a teammate confirm instead of guessing.`;
+}
+
 export function compileSystemPrompt(agent: Agent, tools: ToolDef[] = []): string {
   const name = displayName(agent);
   const who = voiceFirstName(agent.voice);
@@ -193,7 +208,7 @@ export function compileSystemPrompt(agent: Agent, tools: ToolDef[] = []): string
       : language === "en-hi"
         ? " Speak English by default, and switch fluently to Hindi whenever the other party uses Hindi."
         : "";
-  return `You are ${who}, the ${agent.direction} voice assistant for ${name}.${purpose} ${toneInstruction[toneBand(agent.tone)]}${languageInstruction} ${handoff}`;
+  return `You are ${who}, the ${agent.direction} voice assistant for ${name}.${purpose} ${toneInstruction[toneBand(agent.tone)]}${languageInstruction} ${handoff}${detailsInstruction(agent.details)}`;
 }
 
 /** Re-write a still-generated system prompt after the agent’s tools change. */
@@ -221,7 +236,7 @@ function swapIdentity(text: string, prev: Agent, next: Agent) {
   return out;
 }
 
-const identityKeys: (keyof Agent)[] = ["name", "businessName", "voice", "tone", "purpose", "direction", "language"];
+const identityKeys: (keyof Agent)[] = ["name", "businessName", "voice", "tone", "purpose", "direction", "language", "details"];
 
 /**
  * Apply an edit to an agent and keep the compiled greeting / system prompt in

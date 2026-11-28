@@ -29,7 +29,7 @@ export function CostSummaryPanel({
   const topSwap = suggestCheaperProviders(deploy, agent, 0)?.swaps[0];
 
   return (
-    <section className="rounded-xl border border-ink-950/10 bg-paper-0">
+    <section className="rounded-lg border border-ink-950/10 bg-paper-0">
       <div className="flex items-baseline justify-between gap-2 px-4 pt-3.5">
         <h2 className="text-[13px] font-semibold text-ink-950">Estimated cost</h2>
         <span className="text-[12px] text-ink-500 tabular-nums">{formatMoney(perMin, currency, { cents: true })}/min</span>
@@ -37,13 +37,13 @@ export function CostSummaryPanel({
       <div className="px-4 pb-3.5">
         <p className="mt-1 text-[26px] font-semibold leading-none tracking-[-0.02em] text-ink-950 tabular-nums">
           {formatMoney(total, currency)}
-          <span className="ml-1 text-[12.5px] font-normal tracking-normal text-ink-500">/ month</span>
+          <span className="ml-1 text-[12px] font-normal tracking-normal text-ink-500">/ month</span>
         </p>
         {isDefault && <p className="mt-1.5 text-[12px] text-ink-500">Starting estimate. Adjust to your volume.</p>}
 
         <div className="mt-2 space-y-1">
           <div>
-            <div className="flex justify-between text-[12.5px]">
+            <div className="flex justify-between text-[12px]">
               <label id="ws-calls" className="text-ink-600">
                 Calls per month
               </label>
@@ -60,7 +60,7 @@ export function CostSummaryPanel({
             />
           </div>
           <div>
-            <div className="flex justify-between text-[12.5px]">
+            <div className="flex justify-between text-[12px]">
               <label id="ws-minutes" className="text-ink-600">
                 Average call length
               </label>
@@ -80,7 +80,7 @@ export function CostSummaryPanel({
 
         <ul className="mt-2 space-y-1.5 border-t border-ink-950/10 pt-3">
           {rows.map((row) => (
-            <li key={row.label} className="flex items-center justify-between gap-3 text-[12.5px]">
+            <li key={row.label} className="flex items-center justify-between gap-3 text-[12px]">
               <span className="min-w-0 truncate text-ink-600">{row.label}</span>
               <span className="shrink-0 text-ink-900 tabular-nums">{formatMoney(row.amount, currency)}</span>
             </li>

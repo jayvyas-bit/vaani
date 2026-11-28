@@ -8,8 +8,9 @@ import { Stepper, type StepItem } from "@/components/ui/Stepper";
 import type { PrimarySection } from "@/features/agent-builder/BuilderNav";
 import { BuildEditorPage, type BuildTab } from "@/features/agent-builder/build/BuildEditorPage";
 import { AgentWorkspace, type WorkspaceSection } from "@/features/agent-builder/workspace/AgentWorkspace";
+import { CreateBrief, type BriefStep, type CreateBriefValues } from "@/features/agent-builder/create/CreateBrief";
 import { CreateSuccess } from "@/features/agent-builder/create/CreateSuccess";
-import { MethodChooser, type Method } from "@/features/agent-builder/create/MethodChooser";
+import { type Method } from "@/features/agent-builder/create/MethodChooser";
 import { MinimalCreateForm, type CreateFormValues } from "@/features/agent-builder/create/MinimalCreateForm";
 import { TemplateGallery } from "@/features/agent-builder/create/TemplateGallery";
 import { agentTemplates } from "@/lib/templates";
@@ -96,6 +97,13 @@ interface AgentRecord {
   deploy?: DeployConfig;
   /** Where to resume the Deploy wizard on re-entry, instead of always restarting at "channel". */
   lastDeployStep?: DeployStepId;
+  /**
+   * Set once the user has actually advanced past the "Phone number" step
+   * (not merely visited Deploy, which auto-reserves a default number so the
+   * step has something valid to show). Readiness should reflect a choice the
+   * user made, not a placeholder generated for them.
+   */
+  phoneNumberConfirmed?: boolean;
 }
 
 const cloneSafety = () => safetyToggles.map((t) => ({ ...t }));
@@ -151,6 +159,7 @@ function normalizeRecord(raw: unknown): AgentRecord | null {
     outcomes: asArray(r.outcomes, []),
     deploy: r.deploy ? normalizeDeployConfig(r.deploy, direction) : undefined,
     lastDeployStep: deployOrder.includes(r.lastDeployStep as DeployStepId) ? (r.lastDeployStep as DeployStepId) : undefined,
+    phoneNumberConfirmed: !!r.phoneNumberConfirmed,
   };
 }
 
@@ -201,7 +210,7 @@ function takenNumbers(records: AgentRecord[], exceptId: string): string[] {
 
 const blankValues: CreateFormValues = { name: "", purpose: "", direction: "inbound" };
 
-function buildRecord(values: CreateFormValues): AgentRecord {
+function buildRecord(values: CreateFormValues & Partial<CreateBriefValues>): AgentRecord {
   const { name, purpose, direction } = values;
   const inbound = direction === "inbound";
   const other = inbound ? "Caller" : "Recipient";
@@ -228,6 +237,7 @@ function buildRecord(values: CreateFormValues): AgentRecord {
     // Not hand-edited yet, so both stay compiled from name / voice / tone / purpose.
     greetingCustom: false,
     promptCustom: false,
+    details: values.details,
   };
   // No tools yet, so the prompt offers a teammate callback rather than promising a transfer.
   const agent: Agent = { ...base, greeting: compileGreeting(base), systemPrompt: compileSystemPrompt(base, []) };
@@ -269,6 +279,11 @@ function buildRecord(values: CreateFormValues): AgentRecord {
     scenarios,
     transcript: [],
     outcomes: [],
+    // A budget typed at creation seeds the cost model; otherwise Deploy builds its defaults later.
+    deploy:
+      values.monthlyBudget !== undefined
+        ? { ...defaultDeployConfig(direction), monthlyBudget: values.monthlyBudget, displayCurrency: values.displayCurrency ?? "USD" }
+        : undefined,
   };
 }
 
@@ -325,7 +340,7 @@ function AgentRowMenu({
         >
           {confirming ? (
             <div key="confirm" className="animate-fade-in px-3 py-2.5">
-              <p className="text-[12.5px] text-ink-700">Delete {agent.name.trim() || "this agent"}? This can’t be undone.</p>
+              <p className="text-[12px] text-ink-700">Delete {agent.name.trim() || "this agent"}? This can’t be undone.</p>
               <div className="mt-2 flex justify-end gap-1.5">
                 <button
                   type="button"
@@ -333,7 +348,7 @@ function AgentRowMenu({
                     setConfirming(false);
                     setOpen(false);
                   }}
-                  className="rounded px-2 py-1 text-[12.5px] font-medium text-ink-600 hover:bg-ink-950/5"
+                  className="rounded px-2 py-1 text-[12px] font-medium text-ink-600 hover:bg-ink-950/5"
                 >
                   Cancel
                 </button>
@@ -343,7 +358,7 @@ function AgentRowMenu({
                     setOpen(false);
                     onDelete();
                   }}
-                  className="rounded bg-error-600 px-2 py-1 text-[12.5px] font-medium text-paper-0 hover:bg-error-700"
+                  className="rounded bg-error-600 px-2 py-1 text-[12px] font-medium text-paper-0 hover:bg-error-700"
                 >
                   Delete
                 </button>
@@ -439,7 +454,7 @@ function AgentRow({
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="min-w-[120px] max-w-full truncate text-[14px] font-semibold text-ink-950">{agent.name.trim() || "Untitled agent"}</p>
+          <p className="min-w-[120px] max-w-full truncate text-[15px] font-semibold text-ink-950">{agent.name.trim() || "Untitled agent"}</p>
           <Badge tone={agent.direction === "inbound" ? "inbound" : "outbound"}>
             {agent.direction === "inbound" ? "Inbound" : "Outbound"}
           </Badge>
@@ -447,7 +462,7 @@ function AgentRow({
             {statusLabel[agent.status]}
           </Badge>
           {linkedAgentName && (
-            <span className="inline-flex items-center gap-1 text-[12px] text-ink-400">
+            <span className="inline-flex items-center gap-1 text-[12px] text-ink-500">
               <Icon name="link" className="size-3" />
               Paired with {linkedAgentName}
             </span>
@@ -455,16 +470,16 @@ function AgentRow({
         </div>
         <p className="mt-0.5 truncate text-[13px] text-ink-500">{agent.purpose}</p>
         {agent.phoneNumber && (
-          <p className="mt-0.5 text-[12.5px] tabular-nums text-ink-400">{agent.phoneNumber}</p>
+          <p className="mt-0.5 text-[12px] tabular-nums text-ink-500">{agent.phoneNumber}</p>
         )}
       </div>
       <div className="hidden shrink-0 gap-6 text-right lg:flex">
         <div className="w-[86px] shrink-0">
-          <p className="whitespace-nowrap text-[12px] text-ink-400">Calls this week</p>
+          <p className="whitespace-nowrap text-[12px] text-ink-500">Calls this week</p>
           <p className="whitespace-nowrap text-[13px] font-medium tabular-nums text-ink-900">{agent.callsThisWeek ?? 0}</p>
         </div>
         <div className="w-[88px] shrink-0">
-          <p className="whitespace-nowrap text-[12px] text-ink-400">Avg handle time</p>
+          <p className="whitespace-nowrap text-[12px] text-ink-500">Avg handle time</p>
           <p className="whitespace-nowrap text-[13px] font-medium tabular-nums text-ink-900">
             {agent.avgHandleTimeSec ? `${Math.round(agent.avgHandleTimeSec / 60)} min` : "No calls yet"}
           </p>
@@ -472,7 +487,7 @@ function AgentRow({
         <div className="w-[96px] shrink-0">
           {budget !== undefined ? (
             <>
-              <p className="whitespace-nowrap text-[12px] text-ink-400">Budget</p>
+              <p className="whitespace-nowrap text-[12px] text-ink-500">Budget</p>
               <p
                 className={`whitespace-nowrap text-[13px] font-medium tabular-nums ${overBudget ? "text-warning-700" : "text-ink-900"}`}
               >
@@ -580,7 +595,7 @@ function AgentsList({
             </div>
           ) : (
             <div className="rounded-lg border border-dashed border-ink-950/15 px-6 py-12 text-center">
-              <p className="text-[14px] font-semibold text-ink-950">No agents on this workspace yet</p>
+              <p className="text-[15px] font-semibold text-ink-950">No agents on this workspace yet</p>
               <p className="mx-auto mt-1 max-w-sm text-[13px] text-ink-500">
                 Start with a name and one line about the job: answer a front desk line, call back missed
                 appointments, chase past-due balances. You can start a test call a minute later.
@@ -602,8 +617,8 @@ function AgentsList({
 /* ------------------------------------------------------------------ */
 
 const createSteps: StepItem[] = [
-  { id: "method", label: "How to start" },
-  { id: "basics", label: "Name & purpose" },
+  { id: "job", label: "The job" },
+  { id: "business", label: "Your business" },
   { id: "done", label: "Ready to test" },
 ];
 
@@ -625,10 +640,10 @@ function CreateShell({
           <>
             <PageHeaderBackLink label="Agents" onClick={onExit} />
             <PageHeaderDivider />
-            <span className="truncate text-[14px] font-semibold text-ink-950">New agent</span>
+            <span className="truncate text-[15px] font-semibold text-ink-950">New agent</span>
           </>
         }
-        center={<Stepper steps={createSteps} activeId={activeId} completedIds={completedIds} compact />}
+        center={<Stepper steps={createSteps} activeId={activeId} completedIds={completedIds} />}
       />
       <div className="flex-1 overflow-hidden">{children}</div>
     </div>
@@ -683,6 +698,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>(() => screenFromHistory(window.history.state) ?? { name: "list" });
   const [justWentLive, setJustWentLive] = useState<string | null>(null);
   const [costAcknowledged, setCostAcknowledged] = useState(false);
+  const [briefStep, setBriefStep] = useState<BriefStep>("job");
   const [monthlyCost, setMonthlyCost] = useState<number | undefined>(undefined);
 
   const handleAcknowledged = useCallback((v: boolean) => setCostAcknowledged(v), []);
@@ -722,7 +738,7 @@ export default function App() {
 
   const findRecord = (id: string) => records.find((r) => r.agent.id === id);
 
-  const patchRecord = (id: string, patch: Partial<Omit<AgentRecord, "agent">>) =>
+  const patchRecord = (id: string, patch: Partial<AgentRecord>) =>
     setRecords((rs) => rs.map((r) => (r.agent.id === id ? { ...r, ...patch } : r)));
 
   // Remember where the wizard was so re-entering Deploy resumes there, not "channel".
@@ -814,6 +830,16 @@ export default function App() {
 
   const goList = () => navigate({ name: "list" });
 
+  /**
+   * Entry point for the create flow. Resets the stepper to "job" so a prior,
+   * abandoned attempt (left mid-way at "business") can't leave the header
+   * stepper out of sync with CreateBrief, which always remounts at "job".
+   */
+  const startCreate = () => {
+    setBriefStep("job");
+    navigate({ name: "create-method" });
+  };
+
   const navigateSection = (agentId: string) => (section: PrimarySection) => {
     if (section === "build") navigate({ name: "build", agentId });
     if (section === "test") {
@@ -846,7 +872,7 @@ export default function App() {
           justWentLive={liveAgent}
           onNew={() => {
             setJustWentLive(null);
-            navigate({ name: "create-method" });
+            startCreate();
           }}
           onOpen={(id) => {
             setJustWentLive(null);
@@ -865,11 +891,16 @@ export default function App() {
   if (screen.name === "create-method") {
     return (
       <AppShell onGoHome={goList}>
-        <CreateShell activeId="method" completedIds={[]} onExit={goList}>
-          <MethodChooser
-            onContinue={(method) =>
-              navigate(method === "template" ? { name: "template-gallery" } : { name: "create-form", method })
-            }
+        <CreateShell activeId={briefStep} completedIds={briefStep === "business" ? ["job"] : []} onExit={goList}>
+          <CreateBrief
+            onBack={goList}
+            onStepChange={setBriefStep}
+            onCreate={(values) => {
+              const rec = buildRecord(values);
+              setRecords((rs) => [rec, ...rs]);
+              setBriefStep("job");
+              navigate({ name: "create-success", agentId: rec.agent.id, method: "blank" }, { replace: true });
+            }}
           />
         </CreateShell>
       </AppShell>
@@ -879,7 +910,7 @@ export default function App() {
   if (screen.name === "template-gallery") {
     return (
       <AppShell onGoHome={goList}>
-        <CreateShell activeId="method" completedIds={[]} onExit={goList}>
+        <CreateShell activeId="job" completedIds={[]} onExit={goList}>
           <TemplateGallery
             onBack={() => navigate({ name: "create-method" })}
             onSelect={(template) => navigate({ name: "create-form", method: "template", templateId: template.id })}
@@ -893,7 +924,7 @@ export default function App() {
     const template = screen.templateId ? agentTemplates.find((t) => t.id === screen.templateId) : undefined;
     return (
       <AppShell onGoHome={goList}>
-        <CreateShell activeId="basics" completedIds={["method"]} onExit={goList}>
+        <CreateShell activeId="business" completedIds={["job"]} onExit={goList}>
           <MinimalCreateForm
             key={screen.templateId ?? screen.method}
             onBack={() =>
@@ -920,7 +951,7 @@ export default function App() {
         <AgentsList
           records={records}
           justWentLive={null}
-          onNew={() => navigate({ name: "create-method" })}
+          onNew={startCreate}
           onOpen={(id) => navigate({ name: "build", agentId: id })}
           onDismissBanner={() => undefined}
           onDuplicate={duplicateRecord}
@@ -951,7 +982,10 @@ export default function App() {
               { label: "Test scenarios run", done: record.scenarios.some((s) => s.verdict !== "not-run"), section: "test" },
               {
                 label: "Phone number chosen",
-                done: !!record.deploy && channelError(record.deploy, agent.phoneNumber) === null,
+                done:
+                  !!record.phoneNumberConfirmed &&
+                  !!record.deploy &&
+                  channelError(record.deploy, agent.phoneNumber) === null,
                 section: "deploy",
               },
             ]
@@ -975,7 +1009,7 @@ export default function App() {
   if (screen.name === "create-success") {
     return (
       <AppShell onGoHome={goList}>
-        <CreateShell activeId="done" completedIds={["method", "basics"]} onExit={goList}>
+        <CreateShell activeId="done" completedIds={["job", "business"]} onExit={goList}>
           <CreateSuccess
             agent={agent}
             name={agent.name}
@@ -1096,6 +1130,7 @@ export default function App() {
       goLive();
       return;
     }
+    if (screen.step === "channel") patchRecord(agent.id, { phoneNumberConfirmed: true });
     navigate({ ...screen, step: deployOrder[stepIndex + 1] });
   };
 

@@ -10,6 +10,25 @@ export type AgentStatus = "draft" | "testing" | "live" | "paused";
  */
 export type AgentLanguage = "en" | "hi" | "en-hi";
 
+/** One thing the business sells or offers, as the agent may quote it. */
+export interface Offering {
+  id: string;
+  name: string;
+  /** Free text exactly as it should be spoken, e.g. "$120" or "from ₹500". */
+  price?: string;
+}
+
+/**
+ * The facts a caller will ask about. Everything here is optional — the agent
+ * quotes only what is listed and hands off the rest.
+ */
+export interface BusinessDetails {
+  offerings: Offering[];
+  hours?: string;
+  /** Who follows up when the agent can’t answer, e.g. "Front desk, 555-0100". */
+  handoff?: string;
+}
+
 export interface Agent {
   id: string;
   /** Internal name — only people in the builder see it. */
@@ -48,6 +67,8 @@ export interface Agent {
    * list and menu — the two agents otherwise run as independent records.
    */
   linkedAgentId?: string;
+  /** Products, prices, hours and handoff captured at creation; edited in Build → Knowledge. */
+  details?: BusinessDetails;
 }
 
 export type LimitType =
@@ -82,6 +103,8 @@ export interface KnowledgeSource {
   kind: "pdf" | "url" | "text";
   sizeLabel: string;
   attached: boolean;
+  /** Pasted text sources keep their content so the agent can actually answer from it. */
+  body?: string;
 }
 
 export type CalendarProvider = "google" | "outlook" | "other";

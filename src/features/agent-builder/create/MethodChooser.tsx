@@ -26,7 +26,7 @@ export function MethodChooser({ onContinue }: { onContinue?: (method: Method) =>
         <div className="mx-auto flex min-h-full w-full max-w-[640px] flex-col justify-center px-4 py-10 sm:px-0 sm:py-14">
           <div className="mb-8">
             <h1 className="text-[22px] font-semibold text-ink-950">Create a new agent</h1>
-            <p className="mt-1.5 text-[14px] text-ink-600">
+            <p className="mt-1.5 text-[15px] text-ink-600">
               You’ll end up with a draft agent you can start a test call with.
             </p>
           </div>
@@ -45,7 +45,7 @@ export function MethodChooser({ onContinue }: { onContinue?: (method: Method) =>
           </div>
 
           <div className="mt-7">
-            <p className="mb-3 text-[12.5px] font-medium text-ink-500">Coming soon</p>
+            <p className="mb-3 text-[12px] font-medium text-ink-500">Coming soon</p>
             <div className="flex flex-col gap-3">
               {upcoming.map((m) => (
                 <RadioCard

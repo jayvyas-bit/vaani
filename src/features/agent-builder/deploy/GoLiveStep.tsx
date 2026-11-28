@@ -109,7 +109,7 @@ export function GoLiveStep({
         <h1 className="animate-step-in mt-4 text-[20px] font-semibold text-ink-950 [animation-delay:90ms]">
           {agent.name} is live
         </h1>
-        <p className="animate-step-in mt-1.5 max-w-sm text-[14px] text-ink-600 [animation-delay:140ms]">
+        <p className="animate-step-in mt-1.5 max-w-sm text-[15px] text-ink-600 [animation-delay:140ms]">
           {agent.direction === "inbound"
             ? `Calls to ${number ?? "its number"} now reach this agent.`
             : `From ${number ?? "its number"}, the agent now calls ${callsCopy}, recipient time.`}
@@ -208,7 +208,7 @@ export function GoLiveStep({
     <div className="flex flex-col gap-7">
       <div>
         <h1 className="text-[20px] font-semibold text-ink-950">Review & go live</h1>
-        <p className="mt-1 text-[14px] text-ink-600">{intro}</p>
+        <p className="mt-1 text-[15px] text-ink-600">{intro}</p>
       </div>
 
       <dl className="divide-y divide-ink-950/8 rounded-lg border border-ink-950/10 bg-paper-0">
@@ -227,7 +227,7 @@ export function GoLiveStep({
               <Icon name="alert" className="mt-0.5 size-4 shrink-0 text-warning-600" />
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-semibold text-ink-900">{issue.title}</p>
-                <p className="mt-0.5 text-[12.5px] text-ink-600">{issue.detail}</p>
+                <p className="mt-0.5 text-[12px] text-ink-600">{issue.detail}</p>
               </div>
               {issue.action && (
                 <Button size="sm" variant="secondary" className="shrink-0 self-start" onClick={issue.action.onClick}>
@@ -246,7 +246,7 @@ export function GoLiveStep({
           aria-describedby="golive-confirm-desc"
           className="flex flex-col gap-3 rounded-lg border border-error-200 bg-paper-0 p-4"
         >
-          <p id="golive-confirm-title" className="text-[14px] font-semibold text-ink-950">
+          <p id="golive-confirm-title" className="text-[15px] font-semibold text-ink-950">
             Go live with {issues.length} open item{issues.length === 1 ? "" : "s"} unresolved?
           </p>
           <ul id="golive-confirm-desc" className="list-disc pl-4 text-[13px] text-ink-600">

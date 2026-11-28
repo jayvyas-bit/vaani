@@ -65,12 +65,12 @@ export function ChannelNumberStep({
     <div className="flex flex-col gap-7">
       <div>
         <h1 className="text-[20px] font-semibold text-ink-950">Phone number</h1>
-        <p className="mt-1 text-[14px] text-ink-600">
+        <p className="mt-1 text-[15px] text-ink-600">
           {direction === "inbound"
             ? "Callers reach this agent by dialing the number you pick here."
             : "Recipients will see this number on caller ID."}
         </p>
-        <p className="mt-2 text-[12.5px] text-ink-400">
+        <p className="mt-2 text-[12px] text-ink-500">
           Voice calls only. Chat and SMS aren’t enabled on this workspace.
         </p>
       </div>
@@ -164,7 +164,7 @@ export function ChannelNumberStep({
               </p>
             )}
           </div>
-          <p className="text-[12.5px] text-ink-400">
+          <p className="text-[12px] text-ink-500">
             Illustrative provisioning only — no carrier is actually reserving a number here. Going live would require
             connecting a real telephony provider.
           </p>
@@ -210,7 +210,7 @@ export function ChannelNumberStep({
             />
             <FieldError id={`${id}-port-err`}>{portErr}</FieldError>
           </div>
-          <p className="text-[12.5px] text-ink-400">
+          <p className="text-[12px] text-ink-500">
             Illustrative only — no carrier porting request is actually filed here. A real port needs your current
             carrier account details and typically takes days to complete.
           </p>

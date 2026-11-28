@@ -1,7 +1,9 @@
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { withLiveGreeting } from "@/lib/persona";
 import type { Agent } from "@/lib/types";
+import { VoiceWaveform } from "@/components/ui/VoiceWaveform";
 import { TestPanel } from "@/features/agent-builder/test/TestPanel";
 import type { PreviewSource } from "./AgentWorkspace";
 
@@ -28,7 +30,7 @@ export function PreviewDialog({ agent, source, onClose }: { agent: Agent; source
         className="flex h-[min(640px,100%)] w-full max-w-[560px] flex-col overflow-hidden rounded-xl bg-paper-50 shadow-float"
       >
         <div className="flex items-center justify-between border-b border-ink-950/10 bg-paper-0 px-4 py-3">
-          <h2 id={titleId} className="text-[14px] font-semibold text-ink-950">
+          <h2 id={titleId} className="text-[15px] font-semibold text-ink-950">
             Preview {agent.name.trim() || "this agent"}
           </h2>
           <button
@@ -50,5 +52,49 @@ export function PreviewDialog({ agent, source, onClose }: { agent: Agent; source
         </div>
       </div>
     </div>
+  );
+}
+
+/** Sticky rail card: an orb and one button that opens a live test call from any section. */
+export function AgentPreviewPanel({
+  agent,
+  source,
+  onClose,
+}: {
+  agent: Agent;
+  source: PreviewSource;
+  /** Below xl the rail is a drawer; this closes it. */
+  onClose?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const voiceName = agent.voice.split(" — ")[0];
+
+  return (
+    <section className="relative rounded-lg border border-ink-950/10 bg-paper-0 px-4 pb-4 pt-5">
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Hide summary"
+          className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-md text-ink-400 outline-none hover:bg-paper-100 hover:text-ink-700 focus-visible:ring-2 focus-visible:ring-brand-200 xl:hidden"
+        >
+          <Icon name="x" className="size-4" />
+        </button>
+      )}
+      <div className="flex flex-col items-center text-center">
+        <span
+          className={`flex size-14 items-center justify-center rounded-full ring-1 ring-inset bg-paper-100 text-ink-900 ring-ink-950/10`}
+        >
+          <VoiceWaveform className="h-6" />
+        </span>
+        <h2 className="mt-3 text-[15px] font-semibold text-ink-950">Talk to your agent</h2>
+        <p className="mt-0.5 text-[12px] text-ink-500">{voiceName}'s voice · text test</p>
+      </div>
+      <Button variant="secondary" className="mt-4 w-full" onClick={() => setOpen(true)}>
+        <Icon name="play" className="size-3.5" />
+        Start test call
+      </Button>
+      {open && <PreviewDialog agent={agent} source={source} onClose={() => setOpen(false)} />}
+    </section>
   );
 }

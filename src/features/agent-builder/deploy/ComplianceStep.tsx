@@ -44,13 +44,13 @@ function SettingRow({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           {labelFor ? (
-            <label htmlFor={labelFor} className="block text-[13.5px] font-semibold text-ink-900">
+            <label htmlFor={labelFor} className="block text-[13px] font-semibold text-ink-900">
               {title}
             </label>
           ) : (
-            <p className="text-[13.5px] font-semibold text-ink-900">{title}</p>
+            <p className="text-[13px] font-semibold text-ink-900">{title}</p>
           )}
-          {hint && <div className="mt-0.5 text-[12.5px] text-ink-500">{hint}</div>}
+          {hint && <div className="mt-0.5 text-[12px] text-ink-500">{hint}</div>}
         </div>
         {control}
       </div>
@@ -133,7 +133,7 @@ function DayHoursRow({
         <span className="text-[13px] font-medium text-ink-800">{dayLabel[day]}</span>
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <label className="flex items-center gap-2 text-[12.5px] text-ink-600">
+        <label className="flex items-center gap-2 text-[12px] text-ink-600">
           <input
             type="checkbox"
             checked={hours.closed}
@@ -189,7 +189,7 @@ function InboundCompliance({
         hint={hoursSummary(config)}
         control={
           <div className="flex items-center gap-2">
-            <span className="text-[12.5px] text-ink-600">Different hours per day</span>
+            <span className="text-[12px] text-ink-600">Different hours per day</span>
             <Switch
               checked={!!config.customHoursByDay}
               onChange={(customHoursByDay) => update({ customHoursByDay })}
@@ -314,13 +314,13 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
           </Select>
           <FieldError id={`${id}-list-err`}>{listErrors.name}</FieldError>
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[12.5px] text-ink-500">
+            <p className="text-[12px] text-ink-500">
               {selectedList ? `${contactCountLabel(selectedList.count)} on this list.` : "Pick a list, or upload your own."}
             </p>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="shrink-0 text-[12.5px] font-semibold text-brand-700 underline-offset-[0.2em] hover:underline"
+              className="shrink-0 text-[12px] font-semibold text-brand-700 underline-offset-[0.2em] hover:underline"
             >
               Upload a CSV
             </button>
@@ -338,7 +338,7 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
           </div>
           {selectedList && (
             <p
-              className={`flex items-start gap-1.5 text-[12.5px] ${selectedList.consentTracked ? "text-success-700" : "text-amber-700"}`}
+              className={`flex items-start gap-1.5 text-[12px] ${selectedList.consentTracked ? "text-success-700" : "text-amber-700"}`}
             >
               <Icon
                 name={selectedList.consentTracked ? "check" : "alert"}
@@ -385,7 +385,7 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
           <option value="both">Both — workspace list and registries</option>
         </Select>
         {config.dncList !== "internal" && (
-          <p className="mt-2 text-[12.5px] text-ink-500">
+          <p className="mt-2 text-[12px] text-ink-500">
             This demo doesn’t connect to a live federal or state registry — there’s no real registry lookup here. Before going live, check numbers against the actual Do Not Call Registry and any state-specific lists.
           </p>
         )}
@@ -430,7 +430,7 @@ export function ComplianceStep({
         <h1 className="text-[20px] font-semibold text-ink-950">
           {direction === "inbound" ? "Hours" : "Calling rules"}
         </h1>
-        <p className="mt-1 text-[14px] text-ink-600">
+        <p className="mt-1 text-[15px] text-ink-600">
           {direction === "inbound"
             ? "When this agent answers, and what callers get outside those hours."
             : "Who this agent calls, when it may dial, and which numbers it must never call."}

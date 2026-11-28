@@ -3,6 +3,7 @@ import { businessNameOf, toneBand, voiceFirstName } from "./persona";
 import { bookingTool, enabledTransferTool, workingBookingTool, workingTransferTool } from "./tools";
 import type {
   Agent,
+  BusinessDetails,
   BusinessRule,
   KnowledgeSource,
   LimitType,
@@ -344,7 +345,7 @@ function findKnowledge(text: string, knowledge: KnowledgeSource[]) {
   let bestScore = 0;
   for (const k of knowledge) {
     if (!k.attached) continue;
-    const score = overlap(t, tokens(k.name));
+    const score = overlap(t, tokens(`${k.name} ${k.body ?? ""}`));
     if (score > bestScore) {
       best = k;
       bestScore = score;
@@ -711,6 +712,30 @@ function toned(ctx: AgentContext, formal: string, balanced: string, warm: string
   return band === "formal" ? formal : band === "warm" ? warm : balanced;
 }
 
+/** Quote a listed offering or the hours when the caller asks about them — never anything unlisted. */
+function answerFromDetails(text: string, details: BusinessDetails | undefined): string | undefined {
+  if (!details) return undefined;
+  if (details.hours?.trim() && /\b(hours?|open|close|closing|opening)\b/.test(text)) {
+    return `We’re open ${lowerFirst(stripPeriod(details.hours.trim()))}.`;
+  }
+  const t = tokens(text);
+  let best: { name: string; price?: string } | undefined;
+  let bestScore = 0;
+  for (const o of details.offerings) {
+    if (!o.name.trim()) continue;
+    const score = overlap(t, tokens(o.name));
+    if (score > bestScore) {
+      best = o;
+      bestScore = score;
+    }
+  }
+  if (!best) return undefined;
+  const price = best.price?.trim();
+  return price
+    ? `${best.name.trim()} is ${price}. Would you like to go ahead?`
+    : `Yes, we offer ${best.name.trim()}. I don’t have a price to quote, so I’ll have a teammate confirm it with you.`;
+}
+
 export function simulateReply(message: string, ctx: AgentContext): string {
   const text = message.toLowerCase();
   const name = businessNameOf(ctx.agent);
@@ -774,6 +799,9 @@ export function simulateReply(message: string, ctx: AgentContext): string {
   if (type === "forbidden_promise") {
     return `Let me make sure I give you accurate information on that — I’ll have someone from ${name} follow up with the specifics.`;
   }
+
+  const fact = answerFromDetails(text, ctx.agent.details);
+  if (fact) return fact;
 
   const source = findKnowledge(text, ctx.knowledge);
   if (source) return `Let me check “${source.name}” for that — that’s what I go by for questions like this.`;

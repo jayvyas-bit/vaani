@@ -67,7 +67,7 @@ export function MinimalCreateForm({
           <h1 id={`${id}-title`} className="text-[22px] font-semibold text-ink-950">
             Name it and tell us the job
           </h1>
-          <p className="mt-1.5 text-[14px] text-ink-600">
+          <p className="mt-1.5 text-[15px] text-ink-600">
             Your purpose line is used to write what the agent says.
           </p>
 
@@ -102,7 +102,7 @@ export function MinimalCreateForm({
             placeholder={suggestedBusinessName || "e.g. Riverside Dental"}
           />
           {!businessName.trim() && suggestedBusinessName && (
-            <p className="mt-1.5 text-[12.5px] text-ink-500">
+            <p className="mt-1.5 text-[12px] text-ink-500">
               Leave blank to use “{suggestedBusinessName}”.
             </p>
           )}
@@ -146,14 +146,14 @@ export function MinimalCreateForm({
               description="Places calls out"
             />
           </div>
-          <p className="mt-2 text-[12.5px] text-ink-400">
+          <p className="mt-2 text-[12px] text-ink-500">
             One agent only ever handles one direction. Need both? Create this one, then use "Add
             inbound/outbound counterpart" from its menu to link a second agent for the other direction.
           </p>
         </fieldset>
           </div>
 
-          <p className="mt-6 max-w-[420px] text-[13px] text-ink-400">
+          <p className="mt-6 max-w-[420px] text-[13px] text-ink-500">
             Voice, rules and AI settings start on sensible defaults. Change any of them in Build.
           </p>
         </form>

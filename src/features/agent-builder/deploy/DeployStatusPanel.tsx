@@ -60,7 +60,7 @@ export function DeployStatusPanel({
     <div className="flex flex-col gap-7">
       <div>
         <h1 className="text-[20px] font-semibold text-ink-950">Deployment</h1>
-        <p className="mt-1 text-[14px] text-ink-600">
+        <p className="mt-1 text-[15px] text-ink-600">
           {live ? "This agent is live." : "This agent is paused."} Pause or resume it here at any time.
         </p>
       </div>
@@ -76,7 +76,7 @@ export function DeployStatusPanel({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-[14px] font-semibold text-ink-950">Status</p>
+              <p className="text-[15px] font-semibold text-ink-950">Status</p>
               <Badge tone={statusTone[agent.status]} dot live={live}>
                 {statusLabel[agent.status]}
               </Badge>
@@ -116,7 +116,7 @@ export function DeployStatusPanel({
             <Icon name={overBudget ? "alert" : "flag"} className="size-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-[14px] font-semibold text-ink-950">Monthly budget</p>
+            <p className="text-[15px] font-semibold text-ink-950">Monthly budget</p>
             {budget !== undefined ? (
               <p className="mt-0.5 text-[13px] text-ink-600">
                 {monthlyCost !== undefined && (

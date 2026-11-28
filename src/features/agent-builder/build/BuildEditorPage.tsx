@@ -140,10 +140,10 @@ export function BuildEditorPage({
           onBack={onBack}
         />
       )}
-      {currentAgent.status === "live" && (
+      {!embedded && currentAgent.status === "live" && (
         <div role="status" className="flex items-center gap-2 border-b border-warning-200 bg-warning-50 px-4 py-2 sm:px-6">
           <Icon name="alert" className="size-3.5 shrink-0 text-warning-600" />
-          <p className="text-[12.5px] text-ink-800">
+          <p className="text-[12px] text-ink-800">
             <span className="font-semibold">This agent is live.</span> Changes here take effect immediately for real{" "}
             {currentAgent.direction === "inbound" ? "callers" : "calls"}.
           </p>
@@ -152,12 +152,12 @@ export function BuildEditorPage({
       {currentAgent.status === "paused" && (
         <div role="status" className="flex items-center gap-2 border-b border-ink-950/10 bg-paper-50 px-4 py-2 sm:px-6">
           <Icon name="clock" className="size-3.5 shrink-0 text-ink-400" />
-          <p className="text-[12.5px] text-ink-600">This agent is paused. Changes take effect once you resume it from Deploy.</p>
+          <p className="text-[12px] text-ink-600">This agent is paused. Changes take effect once you resume it from Deploy.</p>
         </div>
       )}
       {!embedded && (
         <div className="border-b border-ink-950/10 bg-paper-0 px-4 sm:px-6">
-          <div className="mx-auto w-full max-w-[720px] lg:max-w-[880px] xl:max-w-[1040px]">
+          <div className="mx-auto w-full max-w-[1200px]">
             <Tabs items={tabs} active={tab} onChange={(id) => setTab(id as BuildTab)} />
           </div>
         </div>
@@ -165,7 +165,7 @@ export function BuildEditorPage({
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
         <div
           key={tab}
-          className={`animate-step-in mx-auto flex w-full flex-col ${embedded ? "max-w-[760px]" : "max-w-[720px] lg:max-w-[880px] xl:max-w-[1040px]"}`}
+          className={`animate-step-in mx-auto flex w-full flex-col ${"max-w-[1200px]"}`}
           role="tabpanel"
           aria-label={tabs.find((t) => t.id === tab)?.label}
         >
@@ -196,6 +196,8 @@ export function BuildEditorPage({
               settings={kbSettings}
               onSettingsChange={setKbSettings}
               defaultAdvanced={defaultAdvanced}
+              details={currentAgent.details}
+              onDetailsChange={(details) => patchAgent({ details })}
             />
           )}
           {tab === "tools" && (
@@ -207,7 +209,7 @@ export function BuildEditorPage({
         </div>
       </div>
       {!embedded && (
-        <WizardFooter showBack={false} maxWidthClassName="max-w-[720px] lg:max-w-[880px] xl:max-w-[1040px]">
+        <WizardFooter showBack={false} maxWidthClassName="max-w-[1200px]">
           <Button className="gap-1.5" onClick={() => onNavigate?.("test")}>
             Continue to Test & Evaluate
             <Icon name="chevron-right" className="size-4" />

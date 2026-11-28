@@ -26,7 +26,7 @@ export function WizardFooter({
   children?: ReactNode;
 }) {
   return (
-    <div className="border-t border-ink-950/10 bg-paper-0 px-4 py-3.5 sm:px-6">
+    <div className="sticky bottom-0 z-10 border-t border-secondary bg-primary/90 px-4 py-4 shadow-[0_-8px_24px_-12px_rgba(16,24,40,0.12)] backdrop-blur sm:px-6">
       <div className={`mx-auto flex w-full items-center justify-between gap-3 ${maxWidthClassName}`}>
         {showBack ? (
           <Button variant="ghost" className="gap-1.5" onClick={onBack}>
@@ -37,7 +37,7 @@ export function WizardFooter({
           <span />
         )}
         <div className="flex items-center gap-3">
-          {hint && <span className="text-[12.5px] font-medium text-warning-700">{hint}</span>}
+          {hint && <span className="text-[12px] font-medium text-warning-700">{hint}</span>}
           {children ?? <span />}
         </div>
       </div>

@@ -23,7 +23,7 @@ export const displayCurrencyLabel: Record<DisplayCurrency, string> = {
 export function formatMoney(valueUsd: number, currency: DisplayCurrency, opts: { cents?: boolean } = {}): string {
   if (currency === "USD") return formatUsd(valueUsd, opts);
   const inr = valueUsd * ILLUSTRATIVE_USD_TO_INR_RATE;
-  if (opts.cents) return `≈₹${inr.toFixed(3)}`;
+  if (opts.cents) return `≈₹${inr.toFixed(2)}`;
   return `≈${inr.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}`;
 }
 
