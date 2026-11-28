@@ -72,6 +72,8 @@ export interface DeployConfig {
   windowStart: string;
   windowEnd: string;
   dncList: DncList;
+  /** Numbers the business never wants called, one per line. Stored only; this demo does not dial or enforce them. */
+  dncNumbers?: string;
   voicemailDetect: boolean;
   /** Outbound: which contact list the agent dials, and how many people are on it. */
   contactListName: string;
@@ -503,4 +505,9 @@ export function suggestLowerVolume(
 
   const newMonthlyCost = newCallsPerMonth * costPerCall;
   return { newCallsPerMonth, newMonthlyCost, stillOverBudget: newMonthlyCost > budget };
+}
+
+/** Distinct non-blank lines of a pasted do-not-call list. */
+export function dncNumberCount(text: string | undefined): number {
+  return new Set((text ?? "").split(/[\n,;]+/).map((l) => l.replace(/[^\d+]/g, "")).filter((d) => d.replace(/\D/g, "").length >= 7)).size;
 }

@@ -1,5 +1,5 @@
 import { useId, useRef, useState, type ReactNode } from "react";
-import { FieldError, FieldLabel, Input, Select } from "@/components/ui/Field";
+import { FieldError, FieldLabel, Input, Select, Textarea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { Switch } from "@/components/ui/Switch";
 import {
@@ -17,6 +17,7 @@ import {
   type DayKey,
   type DeployConfig,
   type DncList,
+  dncNumberCount,
 } from "@/lib/deploy";
 import type { CallDirection } from "@/lib/types";
 import { useControllable } from "@/lib/useControllable";
@@ -387,6 +388,21 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
           <option value="federal">National and regional registries</option>
           <option value="both">Both: workspace list and registries</option>
         </Select>
+        {config.dncList !== "federal" && (
+          <div className="mt-3">
+            <FieldLabel htmlFor={`${id}-dncnums`}>Numbers never to call</FieldLabel>
+            <Textarea
+              id={`${id}-dncnums`}
+              rows={3}
+              value={config.dncNumbers ?? ""}
+              onChange={(e) => update({ dncNumbers: e.target.value })}
+              placeholder={"One number per line, with country code"}
+            />
+            <p className="mt-1 text-[12px] tabular-nums text-ink-500">
+              {dncNumberCount(config.dncNumbers)} number{dncNumberCount(config.dncNumbers) === 1 ? "" : "s"} saved. Saved with this agent only; not checked against calls here.
+            </p>
+          </div>
+        )}
         {config.dncList !== "internal" && (
           <p className="mt-2 text-[12px] text-ink-500">
             This demo doesn’t connect to any live registry, so there’s no real lookup here. Before going live, check numbers against the registry that applies where you call (for example the US Do Not Call Registry, or India’s NDNC preference register) and any local rules.

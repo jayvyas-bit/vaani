@@ -389,7 +389,13 @@ export function contextSignature(ctx: AgentContext): string {
 export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluation {
   const result = evaluateCore(scenario, ctx);
   const hasSystemTool = ctx.tools.some((t) => t.enabled && !/transfer/i.test(`${t.name} ${t.description}`));
-  const ruleOnly = result.verdict === "pass" && !hasSystemTool && SYSTEM_WORDS.test(`${scenario.title} ${scenario.criteria}`.toLowerCase());
+  const scenarioText = `${scenario.title} ${scenario.criteria}`.toLowerCase();
+  // A rule the scenario leans on can name the system even when the scenario text does not.
+  const scenarioTokens = tokens(scenarioText);
+  const leansOnSystemRule = ctx.rules.some(
+    (r) => r.enabled && SYSTEM_WORDS.test(`${r.label} ${r.action}`.toLowerCase()) && [...tokens(r.label)].some((t) => scenarioTokens.has(t)),
+  );
+  const ruleOnly = result.verdict === "pass" && !hasSystemTool && (SYSTEM_WORDS.test(scenarioText) || leansOnSystemRule);
   return ruleOnly ? { ...result, ruleOnly: true } : result;
 }
 

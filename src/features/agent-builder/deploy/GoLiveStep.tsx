@@ -161,7 +161,7 @@ export function GoLiveStep({
       key: "optout",
       title: "Opt-outs are not enforced across campaigns.",
       detail:
-        "The agent can record a do-not-call request in its result fields, but this demo keeps no suppression list. Remove opted-out numbers from your own call list before dialing.",
+        "The agent can record a do-not-call request in its result fields. The numbers you list in Calling rules are saved with this agent, but this demo does not check them or share them with other campaigns. Remove opted-out numbers from your own call list before dialing.",
     });
   }
   if (ruleOnlyPasses > 0) {
