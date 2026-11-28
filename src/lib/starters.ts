@@ -575,6 +575,66 @@ export function serviceReminderStarter(): StarterContent {
 }
 
 /**
+ * Inbound event enquiries and registrations: state only listed event facts, and never confirm a seat, waitlist spot, transfer or payment unless the system returned it.
+ * Editable config only: no registration, ticketing or payment system is assumed.
+ */
+export function eventStarter(): StarterContent {
+  const rule = (label: string, action: string, limitType: BusinessRule["limitType"], threshold?: string): BusinessRule => ({
+    id: newId("rule"),
+    limitType,
+    label,
+    threshold,
+    action,
+    enabled: true,
+  });
+  const field = (label: string, type: OutcomeField["type"], options?: string[], requiredWhen?: string): OutcomeField => ({
+    id: newId("outcome"),
+    label,
+    type,
+    options,
+    required: true,
+    requiredWhen,
+  });
+  return {
+    rules: [
+      rule("Never state event dates, venues, prices or session details that are not in your event information", "Say a teammate will confirm, and do not guess", "forbidden_promise"),
+      rule("Never confirm a seat, registration or ticket unless the registration system returned it", "Say the request is noted but not confirmed, and give the next step with no promise of timing", "forbidden_promise"),
+      rule("Never promise a place on a full session or a position on the waitlist unless the system returned it", "Offer to note interest, and say how the organiser will follow up", "forbidden_promise"),
+      rule("Never register someone twice or change an existing registration without verifying the ticket reference", "Ask for the reference, check it, and if one already exists say so and make no second booking", "forbidden_promise"),
+      rule("Never transfer a ticket or change the name on it without the organiser's approval", "Record the request with both names as stated and hand to the organiser", "escalation_trigger", "Any request to transfer or rename a ticket"),
+      rule("Never say a payment has been received unless the payment system returned it", "Say it cannot be confirmed yet, never ask for card details on the call, and record it as pending", "forbidden_promise"),
+      rule("Event cancelled, postponed or changed", "Say only what the organiser's notice states, promise no refund or alternative, and hand refund questions to the organiser", "escalation_trigger", "Any mention of a cancelled, moved or changed event"),
+    ],
+    outcomes: [
+      field("Event or session of interest", "text"),
+      field("Registration status", "enum", ["Confirmed by registration system", "Requested, not confirmed", "Waitlist requested", "Already registered", "Not registered"]),
+      field("Ticket reference (verified)", "text", undefined, "registration status is confirmed or already registered"),
+      field("Waitlist position", "number", undefined, "registration status is waitlist requested and the system returned a position"),
+      field("Special request", "text"),
+      field("Payment status", "enum", ["Confirmed by payment system", "Pending", "Not applicable"]),
+      field("Follow-up required", "text"),
+    ],
+    scenarios: [
+      scenario("Caller wants a session that is full", "Says the session is full, promises no seat, offers to note a waitlist request, and records the registration as waitlist requested unless the system returned a position."),
+      scenario("Caller tries to register again with the same details", "Does not create a second registration, says one already exists once the reference is verified, and records it as already registered."),
+      scenario("Caller asks about an event that was cancelled", "Says only what the organiser's notice states, promises no refund or alternative, and hands refund questions to the organiser."),
+      scenario("Caller asks to transfer their ticket to a colleague", "Does not transfer it, records both names as stated, and hands the request to the organiser."),
+      scenario("Caller says they paid but have no confirmation", "Does not say the payment was received, never asks for card details, records the payment as pending, and hands to the organiser."),
+    ],
+    knowledge: [
+      {
+        id: newId("src"),
+        name: "Event information (edit me)",
+        kind: "text",
+        sizeLabel: "TEXT",
+        attached: true,
+        body: "Write here: event names, dates and venues, which sessions are paid or free, any capacity limits you want stated, ticket and transfer rules, accessibility options, and who handles refunds. The agent states only what is written here. A registration, waitlist spot or payment counts only when your systems confirm it.",
+      },
+    ],
+  };
+}
+
+/**
  * One entry per job type. Add a job type by adding an entry here; nothing else needs wiring.
  * `keywords` are matched against the job text, and the entry with the most distinct matches wins, so a job that
  * mentions two worlds is not decided by whichever detector happened to run first.
@@ -587,6 +647,7 @@ export const STARTERS: { id: string; direction: "inbound" | "outbound"; keywords
   { id: "claims", direction: "inbound", keywords: /\b(claims?|insurance|insurer|policyholders?|policy)\b/gi, build: claimsStarter },
   { id: "outage", direction: "inbound", keywords: /\b(outages?|power cuts?|electricity|utility|utilities|water supply|grid)\b/gi, build: outageStarter },
   { id: "retention", direction: "inbound", keywords: /\b(subscriptions?|cancellations?|retention|churn|renewals?|streaming)\b/gi, build: retentionStarter },
+  { id: "events", direction: "inbound", keywords: /\b(events?|conferences?|attendees?|registrations?|waitlist\w*|sessions?|summit|webinars?)\b/gi, build: eventStarter },
   { id: "travel", direction: "inbound", keywords: /\b(travel|flights?|itinerar\w*|airlines?|bookings?|rebooking|disruptions?|travell?ers?)\b/gi, build: travelStarter },
   { id: "maintenance", direction: "inbound", keywords: /\b(maintenance|repairs?|work orders?|tenants?|landlord|property management|apartments?)\b/gi, build: maintenanceStarter },
 ];

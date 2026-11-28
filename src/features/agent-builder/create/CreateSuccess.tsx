@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Badge, BadgeWithDot } from "@/components/base/badges/badges";
 import { Button } from "@/components/base/buttons/button";
 import { Check, Edit01, Play } from "@untitledui/icons";
@@ -14,6 +15,7 @@ export function CreateSuccess({
   onTest,
   onOpenBuild,
   onEdit,
+  onAddCounterpart,
 }: {
   name?: string;
   direction?: CallDirection;
@@ -25,7 +27,10 @@ export function CreateSuccess({
   onOpenBuild?: () => void;
   /** Opens the Build editor on the tab that holds the given details. */
   onEdit?: (tab: "persona" | "knowledge") => void;
+  /** Copies this agent into the opposite direction as a draft, with its rules, outcomes and knowledge. */
+  onAddCounterpart?: () => void;
 }) {
+  const [counterpartAdded, setCounterpartAdded] = useState(false);
   const agentName = agent?.name ?? name;
   const dir = agent?.direction ?? direction;
   const outbound = dir === "outbound";
@@ -135,6 +140,27 @@ export function CreateSuccess({
           <p className="mt-4 text-sm text-tertiary">
             {outbound ? "It won’t dial anyone until you finish Deploy." : "Calls won’t reach it until you finish Deploy."}
           </p>
+          {onAddCounterpart && (
+            <p className="mt-3 text-sm text-tertiary">
+              {counterpartAdded ? (
+                `An ${outbound ? "inbound" : "outbound"} draft was added to your agents. It starts with copies of this agent’s rules and knowledge; review its opening line, hours and tests before use.`
+              ) : (
+                <>
+                  Need {outbound ? "incoming calls" : "outgoing updates"} too?{" "}
+                  <button
+                    type="button"
+                    className="font-semibold text-brand-secondary underline underline-offset-2"
+                    onClick={() => {
+                      onAddCounterpart();
+                      setCounterpartAdded(true);
+                    }}
+                  >
+                    Add an {outbound ? "inbound" : "outbound"} draft
+                  </button>
+                </>
+              )}
+            </p>
+          )}
         </div>
 
         <div className="animate-step-in mt-12 space-y-10 [animation-delay:150ms]">

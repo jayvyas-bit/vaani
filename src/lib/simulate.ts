@@ -366,7 +366,7 @@ export interface Evaluation {
 }
 
 /** Words that mean the scenario needs a connected system to be real, not just a written rule. */
-const SYSTEM_WORDS = /\b(system|ticket|calendar|crm|ats|api|database|record|lookup|look up|dispatch|inventory)\b/;
+const SYSTEM_WORDS = /\b(system|ticket|calendar|crm|ats|api|database|record|lookup|look up|dispatch|inventory|registration|registered|payment|paid|booking|booked|slot|waitlist|seat|account|reservation)\b/;
 
 /**
  * A cheap fingerprint of everything a verdict is computed from. Compare it

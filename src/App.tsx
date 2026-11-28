@@ -56,6 +56,7 @@ import { currencySymbol, formatUsd, toDisplayAmount, type DisplayCurrency } from
 import { baseRules, pickStarter } from "@/lib/starters";
 import {
   applyPersonaPatch,
+  businessNameOf,
   cleanBusinessName,
   compileGreeting,
   compileSystemPrompt,
@@ -867,7 +868,10 @@ export default function App() {
         agent: {
           ...rec.agent,
           id: newId_,
+          name: rec.agent.name.replace(/\b(inbound|outbound)\b/i, direction),
           direction,
+          // The copied purpose is written for the other direction, so start from a neutral line the user edits.
+          purpose: direction === "outbound" ? `Share updates with customers about ${businessNameOf(rec.agent)}` : `Answer questions from customers about ${businessNameOf(rec.agent)}`,
           status: "draft",
           phoneNumber: undefined,
           callsThisWeek: undefined,
@@ -1090,6 +1094,7 @@ export default function App() {
             onTest={() => navigateSection(agent.id)("test")}
             onOpenBuild={() => navigate({ name: "build", agentId: agent.id })}
             onEdit={(tab) => navigate({ name: "build", agentId: agent.id, tab })}
+            onAddCounterpart={() => createCounterpart(agent.id)}
           />
         </CreateShell>
       </AppShell>
