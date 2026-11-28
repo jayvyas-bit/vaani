@@ -361,7 +361,12 @@ function findKnowledge(text: string, knowledge: KnowledgeSource[]) {
 export interface Evaluation {
   verdict: Exclude<Verdict, "not-run">;
   reason: string;
+  /** A pass that rests on a written guardrail alone: the scenario depends on a system no enabled tool provides. */
+  ruleOnly?: boolean;
 }
+
+/** Words that mean the scenario needs a connected system to be real, not just a written rule. */
+const SYSTEM_WORDS = /\b(system|ticket|calendar|crm|ats|api|database|record|lookup|look up|dispatch|inventory)\b/;
 
 /**
  * A cheap fingerprint of everything a verdict is computed from. Compare it
@@ -370,16 +375,25 @@ export interface Evaluation {
  */
 export function contextSignature(ctx: AgentContext): string {
   return JSON.stringify({
-    agent: ctx.agent,
+    // Lifecycle status changes when a run happens; it never changes a verdict.
+    agent: { ...ctx.agent, status: undefined },
     rules: ctx.rules,
     tools: ctx.tools,
     knowledge: ctx.knowledge,
     safety: ctx.safety,
-    deploy: ctx.deploy,
+    // Only the one deploy setting a verdict reads; opening Deploy must not mark results stale.
+    voicemailOff: ctx.deploy?.voicemailDetect === false,
   });
 }
 
 export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluation {
+  const result = evaluateCore(scenario, ctx);
+  const hasSystemTool = ctx.tools.some((t) => t.enabled && !/transfer/i.test(`${t.name} ${t.description}`));
+  const ruleOnly = result.verdict === "pass" && !hasSystemTool && SYSTEM_WORDS.test(`${scenario.title} ${scenario.criteria}`.toLowerCase());
+  return ruleOnly ? { ...result, ruleOnly: true } : result;
+}
+
+function evaluateCore(scenario: Scenario, ctx: AgentContext): Evaluation {
   const text = `${scenario.title} ${scenario.criteria}`.toLowerCase();
   const prompt = ctx.agent.systemPrompt.toLowerCase();
 
@@ -392,12 +406,87 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
     };
   }
 
+  // 0. Behaviour that only exists on a live call: barge-in and a transfer that
+  // fails to connect. A text simulator cannot observe either, so never pass them.
+  // Lookups and submissions need a connected system of record. Without a non-transfer tool, nothing here can find a
+  // policy or return a claim ID, so a text run must not pass them.
+  const hasSystemTool = ctx.tools.some((t) => t.enabled && !/transfer/i.test(`${t.name} ${t.description}`));
+  if (/(claims? system|claim id|not found|lookup|look up|submission|submit)/.test(text) && /(policy|claim|record|account)/.test(text) && !hasSystemTool) {
+    return {
+      verdict: "inconclusive",
+      reason: "No lookup or claims tool is connected, so this agent cannot find a record or return a claim ID. Connect a system tool and test it with real data. Until then it should only note the claim and hand off.",
+    };
+  }
+  // Spotting a repeat request needs a record to check against; with no system tool it can only be noted for a person.
+  if (/\b(already (open|reported|logged)|duplicate|repeat(ed)? (complaint|request|issue)|existing (ticket|request))\b/.test(text) && !hasSystemTool) {
+    return {
+      verdict: "inconclusive",
+      reason: "No ticketing or lookup tool is connected, so this agent cannot see whether a request is already open. Connect a system tool and test it with real data. Until then it can only record the details and flag a possible repeat for a person.",
+    };
+  }
+  // An emergency rule can say "hand to the duty manager", but without a live transfer destination nobody is reachable.
+  if (/\b(emergency|fire|smoke|unwell|medical|injur\w*|ambulance|live wire|fallen|hazard\w*|gas leak)\b/.test(text) && !ctx.tools.some((t) => t.enabled && /transfer/i.test(`${t.name} ${t.description}`))) {
+    return {
+      verdict: "inconclusive",
+      reason: "The rule says to hand off, but no Transfer tool is switched on, so no one can actually be reached. Add a transfer to the duty manager, then test with a real number.",
+    };
+  }
+  // Live data that changes mid-call can only be seen on a real call against a real feed; a written rule proves nothing here.
+  if (/\b(status|price|fare|availability|stock|queue)\b[^.]{0,40}\b(changes?|changed|updates?)\b[^.]{0,30}\b(during|mid-?call|while|in the middle)\b/.test(text)) {
+    return {
+      verdict: "inconclusive",
+      reason: "Data that changes during a call can only be seen on a live call against a real feed. This demo has no live data. Test it with your real status system and force a change mid-call.",
+    };
+  }
+  // A rule can say "only confirm a slot the calendar returned", but with no calendar tool nothing can ever be confirmed or tested.
+  if (/\bcalendar (returned|confirm\w*|shows?)\b/.test(text) && !ctx.tools.some((t) => t.enabled && /(calendar|book|schedul|appointment)/i.test(`${t.name} ${t.description}`))) {
+    return {
+      verdict: "inconclusive",
+      reason: "The guardrail is written, but no calendar or booking tool is connected, so no slot can be confirmed or checked. Until then the agent should only note preferred times for a person to confirm.",
+    };
+  }
+  // Volume cannot be exercised here: the demo never places or receives calls, and no concurrency limit is configured or measured.
+  if (/\b(simultaneous|concurrent|at once|at the same time|surge|spike)\b/.test(text) && /\b(calls?|callers?)\b/.test(text)) {
+    return {
+      verdict: "inconclusive",
+      reason: "Peak call volume cannot be tested here. This demo never places or receives calls, and no concurrent-call limit is set or measured. Ask your telephony and voice providers for their limits in writing, then load-test before relying on it. Until then, the agent should have a fallback for callers who cannot get through.",
+    };
+  }
+  // A language switch needs the language configured; the quality of the speech can only be heard on a live call.
+  if (/(switch|chang|speak|reply|respond)\w*[^.]{0,40}\b(hindi|english|language)\b|\b(hindi|english)\b[^.]{0,30}\b(mid-call|midway|switch)/.test(text) && /\b(hindi|language)\b/.test(text)) {
+    const lang = ctx.agent.language ?? "en";
+    if (lang !== "en-hi" && lang !== "hi") {
+      return { verdict: "fail", reason: "The agent is set to English only, so it has no configured Hindi to switch into. Set the language to English + Hindi (bilingual)." };
+    }
+    return { verdict: "inconclusive", reason: "Bilingual is configured, but whether the agent switches cleanly and keeps context can only be heard on a live call. Check that your voice provider supports Hindi, then test it." };
+  }
+  if (/(interrupt|talks? over|barge|mid-sentence)/.test(text)) {
+    return { verdict: "inconclusive", reason: "Interruption handling depends on live audio timing. Start a test call and talk over the agent to check it." };
+  }
+  if (/transfer/.test(text) && /(fail|not connect|didn.?t connect|busy|no answer|unreachable)/.test(text)) {
+    return { verdict: "inconclusive", reason: "A failed transfer can only be observed on a live call, because this demo never dials the destination. Test it with a real number." };
+  }
+
   // 1. Tool failure / missing-record scenarios. These need the specific tool’s
   // own fallback language, not a generic guardrail keyword match — without this,
   // "refund" alone would route a failed-lookup or not-found scenario into the
   // forbidden-promise rule below and give it the same reasoning as an unrelated case.
-  if (toolFailureFramed(text) || notFoundFramed(text)) {
+  // With no tools at all, a guardrail that already says what to do (e.g. "never give a restoration time") decides it instead.
+  const ruleCovers = !ctx.tools.length && !!matchRule(text, ctx.rules.filter((r) => r.enabled));
+  if ((toolFailureFramed(text) || notFoundFramed(text)) && !ruleCovers) {
     const tool = bestTool(text, ctx.tools);
+    if (!tool && ctx.tools.some((t) => t.enabled)) {
+      return {
+        verdict: "inconclusive",
+        reason: "Tool failures happen on live calls. Enabled tools exist, but none clearly matches this scenario; run a test call that forces the tool to fail.",
+      };
+    }
+    if (!tool && !ctx.tools.length) {
+      return {
+        verdict: "inconclusive",
+        reason: "This agent has no tools, so there is nothing that can fail. Add a tool (for example call transfer) to make this scenario meaningful.",
+      };
+    }
     if (!tool) {
       return {
         verdict: "fail",
@@ -743,7 +832,9 @@ function answerFromDetails(text: string, details: BusinessDetails | undefined): 
   if (!best) return undefined;
   const price = best.price?.trim();
   return price
-    ? `${best.name.trim()} is ${price}. Would you like to go ahead?`
+    ? /\d/.test(price)
+      ? `${best.name.trim()} is ${price}. Would you like to go ahead?`
+      : `Pricing for ${best.name.trim()}: ${price.charAt(0).toLowerCase()}${price.slice(1)}. Would you like a teammate to follow up?`
     : `Yes, we offer ${best.name.trim()}. I don’t have a price to quote, so I’ll have a teammate confirm it with you.`;
 }
 

@@ -78,6 +78,8 @@ export interface DeployConfig {
   contactCount: number;
   /** Whether that list has a consent/opt-in column — persisted so an uploaded list survives a remount. */
   contactListConsentTracked?: boolean;
+  /** Inbound: the busiest moment you expect, in calls at the same time. Your own figure; never measured or confirmed by a provider here. */
+  peakCalls?: number;
   // Cost
   callsPerMonth: number;
   avgMinutes: number;

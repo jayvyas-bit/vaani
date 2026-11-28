@@ -9,7 +9,7 @@ import { Input } from "@/components/base/input/input";
 import { Select } from "@/components/base/select/select";
 import { TextArea } from "@/components/base/textarea/textarea";
 import { VoiceWaveform } from "@/components/ui/VoiceWaveform";
-import type { DisplayCurrency } from "@/lib/format";
+import { fromDisplayAmount, type DisplayCurrency } from "@/lib/format";
 import { agentLanguageLabel, cleanBusinessName, compileGreeting, inferPersonaDefaults } from "@/lib/persona";
 import { agentTemplates } from "@/lib/templates";
 import type { Agent, AgentLanguage, BusinessDetails, CallDirection, Offering, Faq } from "@/lib/types";
@@ -22,6 +22,8 @@ export interface CreateBriefValues extends CreateFormValues {
   /** Stored in USD like every other cost figure; `displayCurrency` only controls how it’s shown. */
   monthlyBudget?: number;
   displayCurrency?: DisplayCurrency;
+  /** Inbound only: the busiest expected moment, in simultaneous calls. Never verified here. */
+  peakCalls?: number;
 }
 
 export type BriefStep = "job" | "business";
@@ -143,7 +145,12 @@ export function CreateBrief({
   const [faqs, setFaqs] = useState<Faq[]>([emptyFaq()]);
   const [handoffMode, setHandoffMode] = useState<"message" | "person">("message");
   const [handoff, setHandoff] = useState("");
+  const [emergency, setEmergency] = useState("");
   const [language, setLanguage] = useState<AgentLanguage>("en");
+  const [budget, setBudget] = useState("");
+  // The budget has its own currency so a business with no prices (an outage line, say) is not stuck on the price currency.
+  const [budgetCurrency, setBudgetCurrency] = useState<"INR" | "USD">(() => (defaultCurrency() === "INR" ? "INR" : "USD"));
+  const [peak, setPeak] = useState("");
   const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
   const [messageFields, setMessageFields] = useState<string[]>(["Name", "Phone number", "Reason for calling"]);
   const [tried, setTried] = useState(false);
@@ -153,6 +160,8 @@ export function CreateBrief({
   const autoName = businessName.trim() ? `${businessName.trim()} ${inbound ? "inbound" : "outbound"} agent` : "";
   const purposeErr = tried && step === "job" && !purpose.trim() ? "Say what the agent should do on a call." : null;
   const businessErr = tried && step === "business" && !businessName.trim() ? "Callers hear this, so it can’t be blank." : null;
+
+  const handoffErr = tried && step === "business" && handoffMode === "person" && !handoff.trim() ? "Say who follows up, or choose Take a message." : null;
 
   const nameRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -177,10 +186,16 @@ export function CreateBrief({
     timezone: hours.trim() ? timezone : undefined,
     messageFields: handoffMode === "message" && messageFields.length ? messageFields : undefined,
     handoff: handoffMode === "person" ? handoff.trim() || undefined : undefined,
+    emergency: inbound ? emergency.trim() || undefined : undefined,
   };
 
+  const budgetNum = Number(budget.replace(/[^\d.]/g, ""));
+  const peakNum = Math.floor(Number(peak.replace(/[^\d]/g, "")));
+  const peakCalls = inbound && peakNum > 0 ? peakNum : undefined;
+  const monthlyBudget = budget.trim() && budgetNum > 0 ? fromDisplayAmount(budgetNum, budgetCurrency) : undefined;
+
   const create = () => {
-    if (!businessName.trim()) {
+    if (!businessName.trim() || (handoffMode === "person" && !handoff.trim())) {
       setTried(true);
       return;
     }
@@ -191,6 +206,9 @@ export function CreateBrief({
       businessName: businessName.trim(),
       details,
       language,
+      displayCurrency: budgetCurrency,
+      monthlyBudget,
+      peakCalls,
     });
   };
 
@@ -261,6 +279,7 @@ export function CreateBrief({
                     <RadioItem value="inbound" label="Customers call you" leading={<Phone01 className="size-5 text-fg-quaternary" />} />
                     <RadioItem value="outbound" label="You call customers" leading={<PhoneOutgoing01 className="size-5 text-fg-quaternary" />} />
                   </RadioGroup>
+                  <p className="text-xs text-tertiary">One agent handles one direction. If you also need {inbound ? "outgoing calls, such as service updates" : "incoming calls"}, create a second agent after this one.</p>
                 </Row>
                 <Row title="The job">
                   <TextArea
@@ -384,6 +403,35 @@ export function CreateBrief({
                   </Row>
                 </div>
 
+                <Row title="Monthly budget" badge="Optional" tip="Sets the starting call volume so the cost estimate fits. Rates are modelled, not live quotes.">
+                  <div className="flex items-start gap-2">
+                    <Select aria-label="Budget currency" className="w-24 shrink-0" selectedKey={budgetCurrency} onSelectionChange={(k) => setBudgetCurrency(k as "INR" | "USD")} items={[{ id: "INR", label: "INR ₹" }, { id: "USD", label: "USD $" }]}>
+                      {(item) => <Select.Item id={item.id} label={item.label} />}
+                    </Select>
+                    <Input
+                      aria-label="Monthly budget"
+                      inputMode="decimal"
+                      value={budget}
+                      onChange={setBudget}
+                      placeholder={budgetCurrency === "INR" ? "e.g. 15000" : "e.g. 200"}
+                      className="max-w-[12rem]"
+                    />
+                  </div>
+                </Row>
+
+                {inbound && (
+                  <Row title="Busiest moment" badge="Optional" tip="Your own estimate of calls at the same time, such as during an outage. It is a planning note: nothing here measures or guarantees capacity.">
+                    <Input
+                      aria-label="Busiest moment, calls at the same time"
+                      inputMode="numeric"
+                      value={peak}
+                      onChange={setPeak}
+                      placeholder="Calls at the same time, e.g. 1000"
+                      className="max-w-[16rem]"
+                    />
+                  </Row>
+                )}
+
                 <Row title={inbound ? "Hours you answer" : "When it may call"} tip={inbound ? undefined : "The agent only dials inside these days and hours."}>
                   <TagGroup
                     label="Open days"
@@ -455,9 +503,14 @@ export function CreateBrief({
                     </div>
                   )}
                   {handoffMode === "person" && (
-                    <Input aria-label="Who follows up" className="mt-3" autoComplete="off" value={handoff} onChange={setHandoff} placeholder="Name, team or phone number" />
+                    <Input aria-label="Who follows up" className="mt-3" autoComplete="off" value={handoff} onChange={setHandoff} placeholder="Name, team or phone number" isInvalid={!!handoffErr} hint={handoffErr ?? undefined} />
                   )}
                 </Row>
+                {inbound && (
+                  <Row title="Emergency number" badge="Optional" tip="Where calls about danger go, such as an on-call phone. With a real number it becomes a Transfer tool, so hazard tests can be checked. This demo never dials it.">
+                    <Input aria-label="Emergency number" inputMode="tel" autoComplete="off" value={emergency} onChange={setEmergency} placeholder="On-call phone number" className="max-w-[16rem]" />
+                  </Row>
+                )}
               </Collapse>
 
               <div className="flex items-center justify-between gap-3 border-t border-gray-200 pt-6">
@@ -477,6 +530,10 @@ export function CreateBrief({
                           direction,
                           businessName: businessName.trim(),
                           details: { offerings: [] },
+                          language,
+                          displayCurrency: budgetCurrency,
+                          monthlyBudget,
+                          peakCalls,
                         });
                       }}
                     >

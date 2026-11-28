@@ -55,7 +55,7 @@ function CalendarConfigEditor({
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-medium text-ink-800">Simulate as connected (test only)</p>
           <p className="mt-0.5 text-[13px] text-ink-500">
-            This demo has no live calendar backend — there’s no real OAuth or account to link. This switch only
+            This demo has no live calendar backend: there’s no real OAuth or account to link. This switch only
             marks the tool as connected for test scenarios; it doesn’t read or write a real calendar.
           </p>
         </div>
@@ -174,7 +174,7 @@ function DestinationEditor({
             </p>
           )}
           <p className="mt-1.5 text-[13px] text-ink-500">
-            This demo never dials or verifies this destination — entering a number here doesn’t confirm it’s
+            This demo never dials or verifies this destination: entering a number here doesn’t confirm it’s
             reachable or that whoever answers has agreed to take transferred calls.
           </p>
         </div>
@@ -225,25 +225,25 @@ function ToolRow({
           {transfer ? (
             destination ? (
               <p className="text-[13px] text-ink-500">
-                Transfers to <span className="font-medium text-ink-800">{destination}</span> — unverified, never
+                Transfers to <span className="font-medium text-ink-800">{destination}</span>: unverified, never
                 dialed by this demo
               </p>
             ) : (
               <p className="flex items-center gap-1.5 text-[13px] font-medium text-warning-700">
                 <Icon name="alert" className="size-3.5 shrink-0" />
-                No destination set — calls can’t be transferred yet
+                No destination set: calls can’t be transferred yet
               </p>
             )
           ) : booking ? (
             tool.calendarConnected ? (
               <p className="flex items-center gap-1.5 text-[13px] font-medium text-success-700">
                 <Icon name="check" className="size-3.5 shrink-0" />
-                Connected (simulated — no live calendar backend)
+                Connected (simulated, no live calendar backend)
               </p>
             ) : (
               <p className="flex items-center gap-1.5 text-[13px] font-medium text-warning-700">
                 <Icon name="alert" className="size-3.5 shrink-0" />
-                Not connected — configure a calendar before relying on this
+                Not connected: configure a calendar before relying on this
               </p>
             )
           ) : (
@@ -515,6 +515,7 @@ export function ToolsSection({
   const [curl, setCurl] = useState("");
   const [curlError, setCurlError] = useState<string | null>(null);
   const [generated, setGenerated] = useState<ToolDef | null>(null);
+  const [droppedAuth, setDroppedAuth] = useState<string[]>([]);
 
   const generate = () => {
     const parsed = parseCurl(curl);
@@ -534,6 +535,7 @@ export function ToolsSection({
       timeoutSec: 6,
     };
     onToolsChange([...tools, tool]);
+    setDroppedAuth(parsed.headers.filter((h) => /^(authorization|proxy-authorization|x-api-key|api-key|x-auth-token|cookie)$/i.test(h)));
     setGenerated(tool);
     setCurl("");
     setCurlError(null);
@@ -614,6 +616,8 @@ export function ToolsSection({
       calendarConnected: !!t.calendarConnected,
     }),
     ...(t.method && t.url && { method: t.method, url: t.url }),
+    ...(t.params?.length && { parameters: Object.fromEntries(t.params.map((p) => [p, { type: "string" }])) }),
+    ...(t.timeoutSec && { timeoutSec: t.timeoutSec }),
   })),
   null,
   2,
@@ -649,6 +653,11 @@ export function ToolsSection({
                 <Icon name="check" className="size-3.5" />
                 Added “{live.name}” to this agent’s tools
               </p>
+              {droppedAuth.length > 0 && (
+                <p role="status" className="rounded-md bg-warning-50 px-3 py-2 text-sm text-warning-700">
+                  The {droppedAuth.join(", ")} header from your cURL was not saved. This tool will call the endpoint without credentials until a secure credential store is connected, so calls to a protected API will fail.
+                </p>
+              )}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <FieldLabel htmlFor={`${id}-gen-name`}>Tool name</FieldLabel>

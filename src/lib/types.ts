@@ -40,6 +40,8 @@ export interface BusinessDetails {
   messageFields?: string[];
   /** Who follows up when the agent can’t answer, e.g. "Front desk, 555-0100". */
   handoff?: string;
+  /** Where danger or emergencies go, e.g. an on-call number. Becomes a Transfer tool only if it has a real number. */
+  emergency?: string;
 }
 
 export interface Agent {
@@ -145,7 +147,7 @@ export interface ToolDef {
   timeoutSec?: number;
 }
 
-export type OutcomeFieldType = "text" | "boolean" | "enum";
+export type OutcomeFieldType = "text" | "number" | "boolean" | "enum";
 
 /** A required/expected result the agent should capture or report by end of call. */
 export interface OutcomeField {
@@ -155,6 +157,8 @@ export interface OutcomeField {
   /** enum type only. */
   options?: string[];
   required: boolean;
+  /** Plain-language condition that makes a required field apply, e.g. "Consent given is yes". Blank means always. */
+  requiredWhen?: string;
 }
 
 export interface KnowledgeSettings {
@@ -176,6 +180,8 @@ export interface Scenario {
   lastRunAt?: number;
   /** Why the evaluator reached its verdict. */
   reason?: string;
+  /** A pass that rests on a written guardrail alone, because the scenario needs a system no enabled tool provides. */
+  ruleOnly?: boolean;
   /**
    * A snapshot (from `contextSignature`) of the agent config this verdict was
    * run against. When it no longer matches the agent's current config, the

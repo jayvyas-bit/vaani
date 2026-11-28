@@ -59,6 +59,7 @@ export function GoLiveStep({
   const passing = scenarios?.filter((s) => s.verdict === "pass").length ?? 0;
   const failing = scenarios?.filter((s) => s.verdict === "fail").length ?? 0;
   const inconclusive = scenarios?.filter((s) => s.verdict === "inconclusive").length ?? 0;
+  const ruleOnlyPasses = scenarios?.filter((s) => s.verdict === "pass" && s.ruleOnly).length ?? 0;
   const notRun = scenarios?.filter((s) => s.verdict === "not-run").length ?? 0;
   const allPassing = total > 0 && passing === total;
   const attachedKnowledge = knowledge?.filter((k) => k.attached).length ?? 0;
@@ -139,6 +140,8 @@ export function GoLiveStep({
     title: string;
     detail: string;
     action?: { label: string; onClick: () => void };
+    /** A blocking issue can’t be overridden with “Go live anyway”. */
+    blocking?: boolean;
   }
 
   const issues: Issue[] = [];
@@ -150,6 +153,15 @@ export function GoLiveStep({
         failing > 0 || notRun > 0 ? "Run all test scenarios and fix what fails" : "Check the inconclusive ones with a test call"
       } before real ${agent.direction === "inbound" ? "callers" : "recipients"} reach this agent.`,
       action: onReviewTests ? { label: "Review tests", onClick: onReviewTests } : undefined,
+      blocking: failing > 0,
+    });
+  }
+  if (ruleOnlyPasses > 0) {
+    issues.push({
+      key: "rule-only",
+      title: `${ruleOnlyPasses} passing ${ruleOnlyPasses === 1 ? "test rests" : "tests rest"} on a written rule only.`,
+      detail: "These scenarios need a connected system (tickets, calendar, records) that this agent does not have yet, so they were not tested against real data.",
+      action: onReviewTools ? { label: "Connect a tool", onClick: onReviewTools } : undefined,
     });
   }
   if (knowledge !== undefined && attachedKnowledge === 0) {
@@ -175,6 +187,13 @@ export function GoLiveStep({
       detail: `At this volume, ${agent.name} is projected to cost ${formatMoney(cost, currency)}/month, ${formatMoney(cost - config.monthlyBudget, currency)} over.`,
     });
   }
+  if (config.peakCalls !== undefined) {
+    issues.push({
+      key: "peak",
+      title: `Expected peak of ${config.peakCalls.toLocaleString()} calls at once is not verified.`,
+      detail: "Nothing here measures capacity. Get concurrent-call limits from your phone and voice providers in writing and load-test before an outage or campaign. Callers who cannot get through need a fallback.",
+    });
+  }
   if (tools !== undefined) {
     const transfer = enabledTransferTool(tools);
     if (transfer && !workingTransferTool(tools)) {
@@ -183,6 +202,7 @@ export function GoLiveStep({
         title: `“${transfer.name}” is enabled but has no destination set.`,
         detail: "This agent will offer to transfer the call, then have nowhere to send it.",
         action: onReviewTools ? { label: "Set destination", onClick: onReviewTools } : undefined,
+        blocking: true,
       });
     }
     const booking = bookingTool(tools);
@@ -195,6 +215,7 @@ export function GoLiveStep({
       });
     }
   }
+  const blockers = issues.filter((i) => i.blocking);
   const needsConfirm = issues.length > 0;
 
   const intro =
@@ -254,6 +275,11 @@ export function GoLiveStep({
               <li key={issue.key}>{issue.title}</li>
             ))}
           </ul>
+          {blockers.length > 0 && (
+            <p role="alert" className="text-[13px] font-medium text-error-700">
+              Going live is blocked: fix the failing {blockers.some((b) => b.key === "tests") ? "test scenarios" : "items"} first. Inconclusive and not-run items can still be overridden.
+            </p>
+          )}
           <p className="text-[13px] text-ink-600">
             {agent.name} will {agent.direction === "inbound" ? "start answering real calls" : "start calling real recipients"} with
             these unresolved. You can pause it any time from its Deploy tab.
@@ -262,7 +288,7 @@ export function GoLiveStep({
             <Button variant="ghost" onClick={() => setConfirming(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={onGoLive} disabled={!number}>
+            <Button variant="destructive" onClick={onGoLive} disabled={!number || blockers.length > 0}>
               Go live anyway
             </Button>
           </div>

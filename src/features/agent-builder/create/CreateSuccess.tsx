@@ -4,12 +4,13 @@ import { Check, Edit01, Play } from "@untitledui/icons";
 import { VoiceWaveform } from "@/components/ui/VoiceWaveform";
 import { FeaturedIcon } from "@/components/foundations/featured-icon/featured-icon";
 import { agentLanguageLabel, businessNameOf, languageOf } from "@/lib/persona";
-import type { Agent, CallDirection } from "@/lib/types";
+import type { Agent, BusinessRule, CallDirection, OutcomeField, Scenario, ToolDef } from "@/lib/types";
 
 export function CreateSuccess({
   name = "Riverside Dental Front Desk",
   direction = "inbound",
   agent,
+  setup,
   onTest,
   onOpenBuild,
   onEdit,
@@ -18,6 +19,8 @@ export function CreateSuccess({
   direction?: CallDirection;
   /** The agent that was just created — when given, the defaults list shows its real values. */
   agent?: Agent;
+  /** What create seeded beyond the persona, so the page can say what is and is not configured. */
+  setup?: { rules: BusinessRule[]; outcomes: OutcomeField[]; scenarios: Scenario[]; tools: ToolDef[]; budget?: string; peakCalls?: number };
   onTest?: () => void;
   onOpenBuild?: () => void;
   /** Opens the Build editor on the tab that holds the given details. */
@@ -36,7 +39,7 @@ export function CreateSuccess({
         : null,
       missing: "None yet. It will say a teammate confirms prices.",
     },
-    { label: outbound ? "When it may call" : "Hours", value: agent?.details?.hours ? `${agent.details.hours}${agent.details.timezone ? ` (${agent.details.timezone.replace(/_/g, " ")})` : ""}` : null, missing: outbound ? "Not set. Choose calling hours in Deploy before it dials." : "Not set. It won’t state opening hours." },
+    { label: outbound ? "When it may call" : "Hours", value: agent?.details?.hours ? `${agent.details.hours}${agent.details.timezone ? ` (${agent.details.timezone.replace(/_/g, " ")})` : ""}` : null, missing: outbound ? "Not set. Deploy starts at 9:00am to 8:00pm as a placeholder; set hours that fit your region’s calling rules before it dials." : "Not set. It won’t state opening hours." },
     {
       label: outbound ? "If they want a person" : "If it can’t help",
       value:
@@ -55,6 +58,22 @@ export function CreateSuccess({
     { label: "Language", value: agent ? agentLanguageLabel[languageOf(agent)] : agentLanguageLabel.en },
     { label: "AI settings", value: "Standard (balanced cost and speed)" },
   ];
+
+  const enabledTools = setup?.tools.filter((t) => t.enabled) ?? [];
+  const safety = setup
+    ? [
+        { label: "Guardrails", value: setup.rules.length ? `${setup.rules.length} rules, e.g. ${setup.rules[0].label}` : null, missing: "None yet. Add rules for anything it must never promise." },
+        { label: "Required outcomes", value: setup.outcomes.length ? setup.outcomes.map((o) => o.label).join(" · ") : null, missing: `None yet. No ready-made checklist matched this job, so only ${setup.rules.length} general guardrail${setup.rules.length === 1 ? "" : "s"} were added. Add the rules and result fields this job needs.` },
+        { label: "Test scenarios", value: `${setup.scenarios.length} ready to run. Verdicts come from your settings, not a live call.`, missing: undefined },
+        {
+          label: "Actions",
+          value: enabledTools.length ? `${enabledTools.map((t) => (t.destination ? `${t.name} to ${t.destination}` : t.name)).join(", ")}. Not verified; this demo never dials or calls a system.` : null,
+          missing: "No tools connected. It can talk and take notes, but can’t look anything up, submit anything or confirm an ID.",
+        },
+        ...(setup.peakCalls ? [{ label: "Busiest moment", value: `${setup.peakCalls.toLocaleString()} calls at once is your estimate. Not verified: ask your phone and voice providers for their limits, then load-test.`, missing: undefined }] : []),
+        ...(setup.budget ? [{ label: "Monthly budget", value: `${setup.budget}. Cost is checked in Deploy.`, missing: undefined }] : []),
+      ]
+    : [];
 
   const greeting = agent?.greeting ?? "Auto-generated from the purpose you entered";
 
@@ -120,6 +139,7 @@ export function CreateSuccess({
 
         <div className="animate-step-in mt-12 space-y-10 [animation-delay:150ms]">
           {group("Defaults we set", "persona", defaults.map((d) => ({ label: d.label, value: d.value })))}
+          {setup && group("Safety and results", "persona", safety)}
           {agent && group("What it knows", "knowledge", known.map((k) => ({ label: k.label, value: k.value, missing: k.missing })))}
         </div>
       </div>

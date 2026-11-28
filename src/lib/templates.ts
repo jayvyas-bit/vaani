@@ -77,6 +77,17 @@ export const agentTemplates: AgentTemplate[] = [
     },
   },
   {
+    id: "customer-survey",
+    icon: "check",
+    title: "Customer feedback survey",
+    tagline: "Asks permission, collects a rating and comments, stops on request",
+    values: {
+      name: "Customer Feedback Survey",
+      purpose: "Run a short voice survey: ask permission first, collect a 1 to 5 rating and a comment, never pressure, and stop whenever the person asks",
+      direction: "outbound",
+    },
+  },
+  {
     id: "promo-sales-outreach",
     icon: "sparkles",
     title: "Sale & promo outreach",

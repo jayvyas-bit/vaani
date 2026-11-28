@@ -138,10 +138,17 @@ const LEADING_OBJECT_WORD = /^(?:you|customers?|clients?|recipients?|folks|peopl
  * already knows why they dialed, and will say so.
  */
 /** The job is written as instructions to the agent ("…, remind them and offer a plan"); only the first clause belongs in what it says aloud. */
-const FOLLOW_ON_INSTRUCTION = /,\s+|\s+and\s+(?=(?:offer|remind|ask|confirm|explain|collect|help|let|tell|make|try|send|log|take)\b)/i;
+const FOLLOW_ON_INSTRUCTION = /[,:;]\s+|\s+and\s+(?=(?:offer|remind|ask|confirm|explain|collect|help|let|tell|make|try|send|log|take)\b)/i;
+
+/** "remind eligible customers about X" is written about the recipient; spoken to them it is "remind you about X", with no internal qualifier like "eligible". */
+const ADDRESSED_VERB_OBJECT = /\b(remind|notify|inform|update|tell|invite|alert)\s+(?:(?:all|our|your|eligible|existing|selected|registered)\s+)*(?:customers?|clients?|members?|owners?|users?|patients?)\b/i;
+
+function addressRecipient(body: string): string {
+  return body.replace(ADDRESSED_VERB_OBJECT, "$1 you");
+}
 
 function outboundPurposeClause(purpose: string): string {
-  const body = lowerFirst(stripPeriod(purpose)).split(FOLLOW_ON_INSTRUCTION)[0].trim();
+  const body = addressRecipient(lowerFirst(stripPeriod(purpose)).split(FOLLOW_ON_INSTRUCTION)[0].trim());
   const verbMatch = body.match(LEADING_CALL_VERB);
   if (!verbMatch) return body ? ` I’m calling to ${body}.` : "";
   // Purpose already named who's being called ("call customers to run a

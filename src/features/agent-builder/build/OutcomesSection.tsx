@@ -10,6 +10,7 @@ import type { OutcomeField, OutcomeFieldType } from "@/lib/types";
 
 const typeLabel: Record<OutcomeFieldType, string> = {
   text: "Text",
+  number: "Number",
   boolean: "Yes / no",
   enum: "One of a list",
 };
@@ -35,7 +36,9 @@ function OutcomeRow({
               <span className="text-[13px] text-ink-500">{field.options.join(" · ")}</span>
             )}
             {field.required ? (
-              <span className="text-[13px] font-medium text-amber-700">Required by end of call</span>
+              <span className="text-[13px] font-medium text-amber-700">
+                {field.requiredWhen?.trim() ? `Required when ${field.requiredWhen.trim()}` : "Required by end of call"}
+              </span>
             ) : (
               <span className="text-[13px] text-ink-500">Optional</span>
             )}
@@ -86,6 +89,7 @@ function OutcomeForm({
   const [type, setType] = useState<OutcomeFieldType>(initial?.type ?? "text");
   const [options, setOptions] = useState((initial?.options ?? []).join(", "));
   const [required, setRequired] = useState(initial?.required ?? true);
+  const [requiredWhen, setRequiredWhen] = useState(initial?.requiredWhen ?? "");
   const [submitted, setSubmitted] = useState(false);
 
   const labelErr = submitted && !label.trim() ? "Say what this outcome captures." : null;
@@ -105,6 +109,7 @@ function OutcomeForm({
       type,
       options: type === "enum" ? parsedOptions : undefined,
       required,
+      requiredWhen: required && requiredWhen.trim() ? requiredWhen.trim() : undefined,
     });
   };
 
@@ -136,6 +141,7 @@ function OutcomeForm({
           <FieldLabel htmlFor={`${id}-type`}>Answer type</FieldLabel>
           <Select id={`${id}-type`} name="type" value={type} onChange={(e) => setType(e.target.value as OutcomeFieldType)}>
             <option value="text">Text</option>
+            <option value="number">Number</option>
             <option value="boolean">Yes / no</option>
             <option value="enum">One of a list</option>
           </Select>
@@ -167,6 +173,20 @@ function OutcomeForm({
           </p>
         </div>
       </div>
+      {required && (
+        <div>
+          <FieldLabel htmlFor={`${id}-when`} hint="Optional">
+            Only required when
+          </FieldLabel>
+          <Input
+            id={`${id}-when`}
+            name="requiredWhen"
+            value={requiredWhen}
+            onChange={(e) => setRequiredWhen(e.target.value)}
+            placeholder="e.g. consent given is yes"
+          />
+        </div>
+      )}
       <div className="flex justify-end gap-2">
         <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
           Cancel

@@ -43,6 +43,7 @@ import {
   contactCountLabel,
   contactListErrors,
   defaultDeployConfig,
+  effectivePerMinRate,
   ensureProvisioned,
   formatTime,
   hoursErrors,
@@ -51,7 +52,8 @@ import {
   resolvedNumber,
   type DeployConfig,
 } from "@/lib/deploy";
-import { formatUsd } from "@/lib/format";
+import { currencySymbol, formatUsd, toDisplayAmount, type DisplayCurrency } from "@/lib/format";
+import { baseRules, pickStarter } from "@/lib/starters";
 import {
   applyPersonaPatch,
   cleanBusinessName,
@@ -210,6 +212,23 @@ function takenNumbers(records: AgentRecord[], exceptId: string): string[] {
 
 const blankValues: CreateFormValues = { name: "", purpose: "", direction: "inbound" };
 
+/** Deploy defaults from what was entered at create. A budget caps the starting call volume so the estimate fits when the 100-call slider minimum allows. */
+function seedDeploy(direction: CallDirection, monthlyBudget: number | undefined, displayCurrency?: DisplayCurrency, peakCalls?: number): DeployConfig {
+  const base = defaultDeployConfig(direction);
+  const fitted =
+    monthlyBudget !== undefined
+      ? Math.max(100, Math.min(base.callsPerMonth, Math.floor(monthlyBudget / (base.avgMinutes * effectivePerMinRate()))))
+      : base.callsPerMonth;
+  return {
+    ...base,
+    callsPerMonth: fitted,
+    ...(monthlyBudget !== undefined ? { monthlyBudget } : {}),
+    country: displayCurrency === "INR" ? "IN" : "US",
+    displayCurrency: displayCurrency ?? "USD",
+    ...(peakCalls !== undefined ? { peakCalls } : {}),
+  };
+}
+
 function buildRecord(values: CreateFormValues & Partial<CreateBriefValues>): AgentRecord {
   const { name, purpose, direction } = values;
   const inbound = direction === "inbound";
@@ -240,7 +259,20 @@ function buildRecord(values: CreateFormValues & Partial<CreateBriefValues>): Age
     details: values.details,
   };
   // No tools yet, so the prompt offers a teammate callback rather than promising a transfer.
-  const agent: Agent = { ...base, greeting: compileGreeting(base), systemPrompt: compileSystemPrompt(base, []) };
+  // A handoff that names a number becomes a real Transfer call tool; a name alone stays a callback offer.
+  const handoffText = values.details?.handoff?.trim() ?? "";
+  const emergencyText = values.details?.emergency?.trim() ?? "";
+  const hasNumber = (t: string) => t.replace(/\D/g, "").length >= 5;
+  const tools: ToolDef[] = [
+    ...(hasNumber(handoffText)
+      ? [{ id: newId("tool"), name: "Transfer call", description: "Sends the live call to a teammate.", kind: "builtin" as const, enabled: true, destination: handoffText }]
+      : []),
+    ...(hasNumber(emergencyText) && emergencyText !== handoffText
+      ? [{ id: newId("tool"), name: "Transfer call (emergency)", description: "Sends the live call to the emergency or on-call contact when someone is in danger.", kind: "builtin" as const, enabled: true, destination: emergencyText }]
+      : []),
+  ];
+  const agent: Agent = { ...base, greeting: compileGreeting(base), systemPrompt: compileSystemPrompt(base, tools) };
+  const survey = pickStarter(purpose, direction)?.content;
 
   const scenarios: Scenario[] = [
     {
@@ -266,23 +298,44 @@ function buildRecord(values: CreateFormValues & Partial<CreateBriefValues>): Age
       source: "manual",
       verdict: "not-run",
     },
+    {
+      id: newId("sc"),
+      title: "A tool call fails or times out",
+      criteria: "Says it couldn’t complete the action, never claims it succeeded, and offers a callback or a person instead.",
+      source: "manual",
+      verdict: "not-run",
+    },
+    {
+      id: newId("sc"),
+      title: "Caller interrupts mid-sentence",
+      criteria: "Stops talking, answers the new question, and doesn’t repeat what was already said.",
+      source: "manual",
+      verdict: "not-run",
+    },
+    {
+      id: newId("sc"),
+      title: "A transfer to a person fails",
+      criteria: "Tells the caller the transfer didn’t connect and takes a message or callback number instead of looping.",
+      source: "manual",
+      verdict: "not-run",
+    },
   ];
 
   // Empty transcript: the Test panel renders a sample call that always opens
   // with the agent’s *current* greeting.
   return {
     agent,
-    businessRules: [],
-    knowledge: [],
-    tools: [],
+    businessRules: survey?.rules ?? baseRules(),
+    knowledge: survey?.knowledge ?? [],
+    tools,
     safety: cloneSafety(),
-    scenarios,
+    scenarios: survey ? [...scenarios, ...survey.scenarios] : scenarios,
     transcript: [],
-    outcomes: [],
+    outcomes: survey?.outcomes ?? [],
     // A budget typed at creation seeds the cost model; otherwise Deploy builds its defaults later.
     deploy:
-      values.monthlyBudget !== undefined
-        ? { ...defaultDeployConfig(direction), monthlyBudget: values.monthlyBudget, displayCurrency: values.displayCurrency ?? "USD" }
+      values.monthlyBudget !== undefined || values.displayCurrency === "INR" || values.peakCalls !== undefined
+        ? seedDeploy(direction, values.monthlyBudget, values.displayCurrency, values.peakCalls)
         : undefined,
   };
 }
@@ -852,8 +905,6 @@ export default function App() {
   const navigateSection = (agentId: string) => (section: PrimarySection) => {
     if (section === "build") navigate({ name: "build", agentId });
     if (section === "test") {
-      const rec = findRecord(agentId);
-      if (rec?.agent.status === "draft") updateAgent(agentId, { status: "testing" });
       navigate({ name: "test", agentId });
     }
     if (section === "deploy") {
@@ -989,7 +1040,11 @@ export default function App() {
               { label: "Name and greeting set", done: !!agent.name.trim() && !!agent.greeting.trim(), section: "persona" },
               { label: "At least one guardrail", done: record.businessRules.some((r) => r.enabled), section: "guardrails" },
               { label: "Knowledge added", done: record.knowledge.some((k) => k.attached !== false) || !!agent.details?.offerings?.length, section: "knowledge" },
-              { label: "Test scenarios run", done: record.scenarios.some((s) => s.verdict !== "not-run"), section: "test" },
+              {
+                label: "Test scenarios run, none failing",
+                done: record.scenarios.some((s) => s.verdict !== "not-run") && !record.scenarios.some((s) => s.verdict === "fail"),
+                section: "test",
+              },
               {
                 label: "Phone number chosen",
                 done:
@@ -1022,6 +1077,14 @@ export default function App() {
         <CreateShell activeId="done" completedIds={["job", "business"]} onExit={goList}>
           <CreateSuccess
             agent={agent}
+            setup={{
+              rules: record.businessRules,
+              outcomes: record.outcomes,
+              scenarios: record.scenarios,
+              tools: record.tools,
+              budget: record.deploy?.monthlyBudget !== undefined ? `${currencySymbol[record.deploy.displayCurrency ?? "USD"]}${toDisplayAmount(record.deploy.monthlyBudget, record.deploy.displayCurrency ?? "USD").toLocaleString(record.deploy.displayCurrency === "INR" ? "en-IN" : "en-US")}` : undefined,
+              peakCalls: record.deploy?.peakCalls,
+            }}
             name={agent.name}
             direction={agent.direction}
             onTest={() => navigateSection(agent.id)("test")}
@@ -1083,7 +1146,10 @@ export default function App() {
           knowledge={record.knowledge}
           safety={record.safety}
           deploy={record.deploy}
-          onScenariosChange={(scenarios) => patchRecord(agent.id, { scenarios })}
+          onScenariosChange={(scenarios) => {
+            patchRecord(agent.id, { scenarios });
+            if (agent.status === "draft" && scenarios.some((s) => s.verdict !== "not-run")) updateAgent(agent.id, { status: "testing" });
+          }}
           onNavigate={navigateSection(agent.id)}
           onBack={goList}
         />

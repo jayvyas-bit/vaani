@@ -44,6 +44,12 @@ function ScenarioRow({
           )}
         </div>
         <p className="mt-0.5 text-[12px] text-ink-500">{scenario.criteria}</p>
+        {scenario.verdict === "pass" && scenario.ruleOnly && !running && (
+          <p className="mt-1.5 text-[12px] leading-snug text-ink-700">
+            <span className="font-medium">Rule only: </span>
+            The guardrail is written, but no system tool is connected, so this was not tested against real data.
+          </p>
+        )}
         {scenario.reason && !running && scenario.verdict !== "pass" && (
           <p className="mt-1.5 text-[12px] leading-snug text-ink-700">
             <span className="font-medium">Why: </span>
@@ -59,7 +65,7 @@ function ScenarioRow({
           </Badge>
         ) : (
           <Badge tone={verdictTone[scenario.verdict]} dot={scenario.verdict !== "not-run"}>
-            {verdictLabel[scenario.verdict]}
+            {scenario.verdict === "pass" && scenario.ruleOnly ? "Pass (rule only)" : verdictLabel[scenario.verdict]}
           </Badge>
         )}
       </div>
@@ -185,8 +191,8 @@ export function ScenarioPool({
         const signature = contextSignature(ctx);
         set(
           current.map((s) => {
-            const { verdict, reason } = evaluateScenario(s, ctx);
-            return { ...s, verdict, reason, lastRunAt: at, lastRunSignature: signature };
+            const { verdict, reason, ruleOnly } = evaluateScenario(s, ctx);
+            return { ...s, verdict, reason, ruleOnly, lastRunAt: at, lastRunSignature: signature };
           }),
         );
       }

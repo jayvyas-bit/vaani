@@ -186,7 +186,7 @@ function InboundCompliance({
     <div className="divide-y divide-ink-950/8 rounded-lg border border-ink-950/10 bg-paper-0">
       <SettingRow
         title="Business hours"
-        hint={hoursSummary(config)}
+        hint={`${hoursSummary(config)}. Starting default; confirm or change.`}
         control={
           <div className="flex items-center gap-2">
             <span className="text-[12px] text-ink-600">Different hours per day</span>
@@ -309,13 +309,16 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
             {lists.map((l) => (
               <option key={l.name} value={l.name}>
                 {l.name}, {contactCountLabel(l.count)}
+                {WORKSPACE_CONTACT_LISTS.some((w) => w.name === l.name) ? " (sample)" : ""}
               </option>
             ))}
           </Select>
           <FieldError id={`${id}-list-err`}>{listErrors.name}</FieldError>
           <div className="flex items-center justify-between gap-3">
             <p className="text-[12px] text-ink-500">
-              {selectedList ? `${contactCountLabel(selectedList.count)} on this list.` : "Pick a list, or upload your own."}
+              {selectedList
+                ? `${contactCountLabel(selectedList.count)} on this list.${WORKSPACE_CONTACT_LISTS.some((w) => w.name === selectedList.name) ? " Sample data for this demo, not your real contacts." : ""}`
+                : "Required: pick a list, or upload your own to continue."}
             </p>
             <button
               type="button"
@@ -381,12 +384,12 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
           onChange={(e) => update({ dncList: e.target.value as DncList })}
         >
           <option value="internal">Workspace DNC list (214 numbers)</option>
-          <option value="federal">Federal + state registries</option>
+          <option value="federal">National and regional registries</option>
           <option value="both">Both: workspace list and registries</option>
         </Select>
         {config.dncList !== "internal" && (
           <p className="mt-2 text-[12px] text-ink-500">
-            This demo doesn’t connect to a live federal or state registry, so there’s no real registry lookup here. Before going live, check numbers against the actual Do Not Call Registry and any state-specific lists.
+            This demo doesn’t connect to any live registry, so there’s no real lookup here. Before going live, check numbers against the registry that applies where you call (for example the US Do Not Call Registry, or India’s NDNC preference register) and any local rules.
           </p>
         )}
       </SettingRow>
