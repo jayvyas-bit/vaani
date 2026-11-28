@@ -70,7 +70,7 @@ export function AgentPreviewPanel({
   const voiceName = agent.voice.split(" — ")[0];
 
   return (
-    <section className="relative rounded-xl bg-secondary px-6 pb-6 pt-7">
+    <section className="relative rounded-xl border border-ink-950/10 bg-paper-0 px-6 pb-6 pt-7">
       {onClose && (
         <button
           type="button"

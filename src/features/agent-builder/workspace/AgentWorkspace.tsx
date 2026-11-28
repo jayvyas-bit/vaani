@@ -216,7 +216,7 @@ export function AgentWorkspace({
 
         <aside
           aria-label="Agent summary"
-          className={`w-[360px] shrink-0 flex-col gap-5 overflow-y-auto border-l border-secondary bg-primary p-5 ${
+          className={`w-[360px] shrink-0 flex-col gap-5 overflow-y-auto border-l border-secondary bg-paper-50 p-5 ${
             railOpen ? "fixed inset-y-0 right-0 z-30 flex shadow-float" : "hidden"
           } xl:static xl:flex xl:shadow-none`}
         >

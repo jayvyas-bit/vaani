@@ -29,7 +29,7 @@ export function CostSummaryPanel({
   const topSwap = suggestCheaperProviders(deploy, agent, 0)?.swaps[0];
 
   return (
-    <section className="rounded-xl bg-secondary">
+    <section className="rounded-xl border border-ink-950/10 bg-paper-0">
       <div className="flex items-baseline justify-between gap-2 px-6 pt-6">
         <h2 className="text-sm font-semibold text-primary">Estimated cost</h2>
         <span className="text-sm text-tertiary tabular-nums">{formatMoney(perMin, currency, { cents: true })}/min</span>
@@ -94,7 +94,7 @@ export function CostSummaryPanel({
           </p>
         )}
         {topSwap && topSwap.monthlySavings >= 10 && (
-          <p className="mt-5 rounded-lg bg-primary px-3.5 py-3 text-sm text-secondary">
+          <p className="mt-5 rounded-lg bg-paper-50 px-3.5 py-3 text-sm text-secondary">
             Switch {topSwap.label.toLowerCase()} to {topSwap.to} to save{" "}
             <span className="font-medium text-primary">{formatMoney(topSwap.monthlySavings, currency)}</span>/month.
           </p>
