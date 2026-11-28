@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FieldError, FieldLabel, Input, Textarea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
-import { evaluateScenario, type AgentContext } from "@/lib/simulate";
+import { contextSignature, evaluateScenario, type AgentContext } from "@/lib/simulate";
 import type { Scenario, Verdict } from "@/lib/types";
 import { formatRelative, newId, useControllable } from "@/lib/useControllable";
 
@@ -24,14 +24,13 @@ const verdictLabel: Record<Verdict, string> = {
 function ScenarioRow({
   scenario,
   running,
-  now,
+  stale,
 }: {
   scenario: Scenario;
   running: boolean;
-  now: number;
+  /** True when the agent's config changed since this verdict last ran. */
+  stale: boolean;
 }) {
-  // The badge already says "Not run", so only show a timestamp once there is one.
-  const when = scenario.lastRunAt ? formatRelative(scenario.lastRunAt, now) : scenario.lastRun;
   return (
     <div className="flex items-start gap-3 px-4 py-3.5">
       <div className="min-w-0 flex-1">
@@ -45,14 +44,14 @@ function ScenarioRow({
           )}
         </div>
         <p className="mt-0.5 text-[12.5px] text-ink-500">{scenario.criteria}</p>
-        {scenario.reason && !running && (
+        {scenario.reason && !running && scenario.verdict !== "pass" && (
           <p className="mt-1.5 text-[12px] leading-snug text-ink-700">
             <span className="font-medium">Why: </span>
             {scenario.reason}
           </p>
         )}
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-1.5">
+      <div className={`flex shrink-0 flex-col items-end gap-1.5 ${stale && !running ? "opacity-50" : ""}`}>
         {running ? (
           <Badge tone="neutral" className="gap-1">
             <Icon name="loader" className="size-3 animate-spin" strokeWidth={2.5} />
@@ -63,7 +62,6 @@ function ScenarioRow({
             {verdictLabel[scenario.verdict]}
           </Badge>
         )}
-        {when && <span className="text-[11.5px] text-ink-400">{when}</span>}
       </div>
     </div>
   );
@@ -184,10 +182,11 @@ export function ScenarioPool({
       const { list: current, context: ctx, setList: set } = latest.current;
       const at = Date.now();
       if (ctx) {
+        const signature = contextSignature(ctx);
         set(
           current.map((s) => {
             const { verdict, reason } = evaluateScenario(s, ctx);
-            return { ...s, verdict, reason, lastRunAt: at };
+            return { ...s, verdict, reason, lastRunAt: at, lastRunSignature: signature };
           }),
         );
       }
@@ -201,6 +200,12 @@ export function ScenarioPool({
   const inconclusiveCount = list.filter((s) => s.verdict === "inconclusive").length;
   const notRunCount = list.filter((s) => s.verdict === "not-run").length;
   const other = context?.agent.direction === "outbound" ? "recipient" : "caller";
+
+  const currentSignature = context ? contextSignature(context) : undefined;
+  const isStale = (s: Scenario) =>
+    s.verdict !== "not-run" && !!s.lastRunSignature && s.lastRunSignature !== currentSignature;
+  const lastRunAt = list.reduce((m, s) => Math.max(m, s.lastRunAt ?? 0), 0);
+  const staleCount = list.filter(isStale).length;
 
   return (
     <div className="flex min-h-[360px] flex-col rounded-lg border border-ink-950/10 bg-paper-0 lg:h-full lg:min-h-0">
@@ -229,11 +234,17 @@ export function ScenarioPool({
               ]
                 .filter(Boolean)
                 .join(" · ")}
-              .{" "}
+              {lastRunAt ? " · " : ""}
             </span>
           )}
-          Calls you flag, in tests or from real calls, land here so you can re-check them after every change.
+          {list.length > 0 && lastRunAt ? `Last run ${formatRelative(lastRunAt, now)}` : null}
         </p>
+        {staleCount > 0 && (
+          <p className="mt-1.5 flex items-center gap-1 text-[12px] font-medium text-amber-700" aria-live="polite">
+            <Icon name="alert" className="size-3" />
+            {staleCount === 1 ? "1 result is" : `${staleCount} results are`} out of date. Run all to refresh.
+          </p>
+        )}
       </div>
       <div className="flex-1 divide-y divide-ink-950/8 overflow-y-auto">
         {list.length === 0 && !adding && (
@@ -242,7 +253,7 @@ export function ScenarioPool({
           </p>
         )}
         {list.map((s) => (
-          <ScenarioRow key={s.id} scenario={s} running={running} now={now} />
+          <ScenarioRow key={s.id} scenario={s} running={running} stale={isStale(s)} />
         ))}
       </div>
       <div className="border-t border-ink-950/10">

@@ -225,10 +225,7 @@ export function TestPanel({
               <Icon name="message" className="size-4.5" />
             </div>
           )}
-          <p className="max-w-[300px] text-[14px] font-medium text-ink-900">
-            Talk to your agent the way a customer would.
-          </p>
-          <p className="max-w-[320px] text-[12.5px] text-ink-500">
+          <p className="max-w-[320px] text-[13.5px] text-ink-700">
             {mode === "call"
               ? `You play the ${other} and type what you’d say; the agent’s replies are read aloud.`
               : `You play the ${other}; the agent replies in text.`}
@@ -366,9 +363,6 @@ export function TestPanel({
           )}
         </div>
       )}
-      <p className="border-t border-ink-950/8 px-4 py-2.5 text-[12px] text-ink-400">
-        Testing {agent.name.trim() || "this agent"} with its latest changes — nothing here touches real calls.
-      </p>
     </div>
   );
 }

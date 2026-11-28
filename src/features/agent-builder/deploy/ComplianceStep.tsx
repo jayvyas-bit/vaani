@@ -246,7 +246,21 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Lists uploaded this session, in addition to the workspace’s predefined ones.
   const [uploadedLists, setUploadedLists] = useState<ContactList[]>([]);
-  const lists = [...WORKSPACE_CONTACT_LISTS, ...uploadedLists];
+  const knownLists = [...WORKSPACE_CONTACT_LISTS, ...uploadedLists];
+  // A previously-uploaded list survives in `config` (localStorage) even after
+  // `uploadedLists` resets on remount — re-synthesize it from the persisted
+  // fields so the dropdown and consent message don’t silently go blank.
+  const lists =
+    config.contactListName && !knownLists.some((l) => l.name === config.contactListName)
+      ? [
+          ...knownLists,
+          {
+            name: config.contactListName,
+            count: config.contactCount,
+            consentTracked: config.contactListConsentTracked ?? false,
+          },
+        ]
+      : knownLists;
   const selectedList = lists.find((l) => l.name === config.contactListName);
   // Only show the error once someone has interacted with the picker, not on first view.
   const [touched, setTouched] = useState(false);
@@ -262,7 +276,7 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
       const consentTracked = csvHasConsentColumn(rows[0] ?? "");
       const name = file.name.replace(/\.csv$/i, "");
       setUploadedLists((ls) => [...ls, { name, count, consentTracked }]);
-      update({ contactListName: name, contactCount: count });
+      update({ contactListName: name, contactCount: count, contactListConsentTracked: consentTracked });
       setTouched(true);
     };
     reader.readAsText(file);
@@ -281,7 +295,11 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
             value={config.contactListName}
             onChange={(e) => {
               const list = lists.find((l) => l.name === e.target.value);
-              update({ contactListName: e.target.value, contactCount: list?.count ?? 0 });
+              update({
+                contactListName: e.target.value,
+                contactCount: list?.count ?? 0,
+                contactListConsentTracked: list?.consentTracked ?? false,
+              });
             }}
             onBlur={() => setTouched(true)}
             aria-invalid={!!listErrors.name || undefined}

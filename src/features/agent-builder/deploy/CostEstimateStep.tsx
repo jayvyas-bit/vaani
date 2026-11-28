@@ -159,6 +159,13 @@ export function CostEstimateStep({
               leftLabel="100"
               rightLabel="5,000"
             />
+            {direction === "outbound" && config.contactListName && config.contactCount > 0 && (
+              <p className="mt-2 text-[12px] text-ink-500">
+                {callsPerMonth > config.contactCount
+                  ? `“${config.contactListName}” has ${config.contactCount.toLocaleString()} contacts — at this volume, each one gets called about ${(callsPerMonth / config.contactCount).toFixed(1)}× a month.`
+                  : `“${config.contactListName}” has ${config.contactCount.toLocaleString()} contacts — at this volume, you’d reach about ${Math.round((callsPerMonth / config.contactCount) * 100)}% of the list each month.`}
+              </p>
+            )}
           </div>
           <div>
             <div className="mb-1.5 flex items-center justify-between text-[13px]">

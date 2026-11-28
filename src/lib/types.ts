@@ -140,6 +140,12 @@ export interface Scenario {
   lastRunAt?: number;
   /** Why the evaluator reached its verdict. */
   reason?: string;
+  /**
+   * A snapshot (from `contextSignature`) of the agent config this verdict was
+   * run against. When it no longer matches the agent's current config, the
+   * verdict is stale — shown as-is, never silently cleared, until "Run all".
+   */
+  lastRunSignature?: string;
 }
 
 export interface TranscriptTurn {

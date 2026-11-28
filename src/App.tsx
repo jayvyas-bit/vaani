@@ -7,6 +7,7 @@ import { PageHeader, PageHeaderBackLink, PageHeaderDivider } from "@/components/
 import { Stepper, type StepItem } from "@/components/ui/Stepper";
 import type { PrimarySection } from "@/features/agent-builder/BuilderNav";
 import { BuildEditorPage, type BuildTab } from "@/features/agent-builder/build/BuildEditorPage";
+import { AgentWorkspace, type WorkspaceSection } from "@/features/agent-builder/workspace/AgentWorkspace";
 import { CreateSuccess } from "@/features/agent-builder/create/CreateSuccess";
 import { MethodChooser, type Method } from "@/features/agent-builder/create/MethodChooser";
 import { MinimalCreateForm, type CreateFormValues } from "@/features/agent-builder/create/MinimalCreateForm";
@@ -93,6 +94,8 @@ interface AgentRecord {
   outcomes: OutcomeField[];
   /** What the Deploy wizard collected; created on first visit to Deploy. */
   deploy?: DeployConfig;
+  /** Where to resume the Deploy wizard on re-entry, instead of always restarting at "channel". */
+  lastDeployStep?: DeployStepId;
 }
 
 const cloneSafety = () => safetyToggles.map((t) => ({ ...t }));
@@ -147,6 +150,7 @@ function normalizeRecord(raw: unknown): AgentRecord | null {
     transcript: asArray(r.transcript, []),
     outcomes: asArray(r.outcomes, []),
     deploy: r.deploy ? normalizeDeployConfig(r.deploy, direction) : undefined,
+    lastDeployStep: deployOrder.includes(r.lastDeployStep as DeployStepId) ? (r.lastDeployStep as DeployStepId) : undefined,
   };
 }
 
@@ -721,6 +725,13 @@ export default function App() {
   const patchRecord = (id: string, patch: Partial<Omit<AgentRecord, "agent">>) =>
     setRecords((rs) => rs.map((r) => (r.agent.id === id ? { ...r, ...patch } : r)));
 
+  // Remember where the wizard was so re-entering Deploy resumes there, not "channel".
+  useEffect(() => {
+    if (screen.name !== "deploy" || screen.live) return;
+    patchRecord(screen.agentId, { lastDeployStep: screen.step });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- patchRecord is stable per render; keying on screen is enough
+  }, [screen]);
+
   /** Agent edits go through the persona compiler so greeting + prompt never go stale. */
   const updateAgent = (id: string, patch: Partial<Agent>) =>
     setRecords((rs) =>
@@ -750,6 +761,7 @@ export default function App() {
         scenarios: rec.scenarios.map((s) => ({ ...s, verdict: "not-run" })),
         transcript: [],
         deploy: undefined,
+        lastDeployStep: undefined,
       };
       const idx = rs.findIndex((r) => r.agent.id === id);
       return [...rs.slice(0, idx + 1), copy, ...rs.slice(idx + 1)];
@@ -787,6 +799,7 @@ export default function App() {
         scenarios: rec.scenarios.map((s) => ({ ...s, verdict: "not-run" as const })),
         transcript: [],
         deploy: undefined,
+        lastDeployStep: undefined,
       };
       counterpart.agent.greeting = compileGreeting(counterpart.agent);
       counterpart.agent.systemPrompt = compileSystemPrompt(counterpart.agent, counterpart.tools);
@@ -811,8 +824,15 @@ export default function App() {
     if (section === "deploy") {
       setCostAcknowledged(false);
       setMonthlyCost(undefined);
-      navigate({ name: "deploy", agentId, step: "channel", live: false });
+      const rec = findRecord(agentId);
+      navigate({ name: "deploy", agentId, step: rec?.lastDeployStep ?? "channel", live: false });
     }
+  };
+
+  /** Sidebar clicks: Build sections stay on the Build screen; Test and Deploy go through the usual gates. */
+  const selectSection = (agentId: string) => (next: WorkspaceSection) => {
+    if (next === "test" || next === "deploy") navigateSection(agentId)(next);
+    else navigate({ name: "build", agentId, tab: next }, { replace: screen.name === "build" });
   };
 
   /* ---------- List ---------- */
@@ -912,6 +932,46 @@ export default function App() {
   }
   const { agent } = record;
 
+  /** Build, Test and Deploy share one frame: agent sidebar, header, and the preview rail. */
+  const workspace = (section: WorkspaceSection, children: ReactNode) => (
+    <AgentWorkspace
+      agent={agent}
+      section={section}
+      onSelect={selectSection(agent.id)}
+      onBack={goList}
+      deploy={record.deploy ?? defaultDeployConfig(agent.direction, agent.phoneNumber)}
+      deployIsDefault={!record.deploy}
+      onDeployChange={(deploy) => patchRecord(agent.id, { deploy })}
+      readiness={
+        agent.status === "live"
+          ? undefined
+          : [
+              { label: "Name and greeting set", done: !!agent.name.trim() && !!agent.greeting.trim(), section: "persona" },
+              { label: "At least one guardrail", done: record.businessRules.some((r) => r.enabled), section: "guardrails" },
+              { label: "Test scenarios run", done: record.scenarios.some((s) => s.verdict !== "not-run"), section: "test" },
+              {
+                label: "Phone number chosen",
+                done: !!record.deploy && channelError(record.deploy, agent.phoneNumber) === null,
+                section: "deploy",
+              },
+            ]
+      }
+      preview={{
+        transcript: record.transcript,
+        context: {
+          agent,
+          rules: record.businessRules,
+          tools: record.tools,
+          knowledge: record.knowledge,
+          safety: record.safety,
+          deploy: record.deploy,
+        },
+      }}
+    >
+      {children}
+    </AgentWorkspace>
+  );
+
   if (screen.name === "create-success") {
     return (
       <AppShell onGoHome={goList}>
@@ -930,10 +990,12 @@ export default function App() {
 
   /* ---------- Build ---------- */
   if (screen.name === "build") {
-    return (
-      <AppShell onGoHome={goList}>
+    return workspace(
+      screen.tab ?? "persona",
+      <>
         <BuildEditorPage
           key={agent.id}
+          embedded
           agent={agent}
           safety={record.safety}
           businessRules={record.businessRules}
@@ -941,7 +1003,8 @@ export default function App() {
           knowledgeSettings={record.knowledgeSettings}
           tools={record.tools}
           outcomes={record.outcomes}
-          initialTab={screen.tab}
+          tab={screen.tab ?? "persona"}
+          onTabChange={(tab) => navigate({ name: "build", agentId: agent.id, tab }, { replace: true })}
           onAgentChange={(patch) => updateAgent(agent.id, patch)}
           onSafetyChange={(safety) => patchRecord(agent.id, { safety })}
           onBusinessRulesChange={(businessRules) => patchRecord(agent.id, { businessRules })}
@@ -952,7 +1015,7 @@ export default function App() {
           onNavigate={navigateSection(agent.id)}
           onBack={goList}
         />
-      </AppShell>
+      </>,
     );
   }
 
@@ -961,10 +1024,12 @@ export default function App() {
 
   /* ---------- Test ---------- */
   if (screen.name === "test") {
-    return (
-      <AppShell onGoHome={goList}>
+    return workspace(
+      "test",
+      <>
         <TestEvaluateScreen
           key={agent.id}
+          embedded
           agent={agent}
           transcript={record.transcript}
           scenarios={record.scenarios}
@@ -977,15 +1042,17 @@ export default function App() {
           onNavigate={navigateSection(agent.id)}
           onBack={goList}
         />
-      </AppShell>
+      </>,
     );
   }
 
   /* ---------- Deploy ---------- */
   if ((agent.status === "live" || agent.status === "paused") && !screen.live && !screen.edit) {
-    return (
-      <AppShell onGoHome={goList}>
+    return workspace(
+      "deploy",
+      <>
         <DeployWizardLayout
+          embedded
           agent={agent}
           activeId="golive"
           completedIds={[]}
@@ -1004,7 +1071,7 @@ export default function App() {
             onEditBudget={() => navigate({ ...screen, step: "cost", edit: true })}
           />
         </DeployWizardLayout>
-      </AppShell>
+      </>,
     );
   }
 
@@ -1047,9 +1114,11 @@ export default function App() {
       Object.keys(contactListErrors(deployConfig)).length > 0) ||
     (screen.step === "cost" && !costAcknowledged);
 
-  return (
-    <AppShell onGoHome={goList}>
+  return workspace(
+    "deploy",
+    <>
       <DeployWizardLayout
+        embedded
         agent={agent}
         activeId={screen.live ? "golive" : screen.step}
         completedIds={completedIds}
@@ -1110,6 +1179,6 @@ export default function App() {
           />
         )}
       </DeployWizardLayout>
-    </AppShell>
+    </>,
   );
 }

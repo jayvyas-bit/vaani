@@ -21,11 +21,42 @@ export function FieldLabel({
 }) {
   return (
     <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-      <label htmlFor={htmlFor} id={id} className="text-sm font-medium text-ink-700">
+      <label htmlFor={htmlFor} id={id} className="text-[13px] font-medium text-ink-900">
         {children}
         {required && <span className="ml-0.5 text-brand-600">*</span>}
       </label>
       {hint && <span className="text-xs text-ink-500">{hint}</span>}
+    </div>
+  );
+}
+
+/**
+ * Settings row: label and help on the left, control on the right, hairline
+ * between rows. The standard layout for configuration screens.
+ */
+export function SettingRow({
+  label,
+  help,
+  htmlFor,
+  required,
+  children,
+}: {
+  label: ReactNode;
+  help?: ReactNode;
+  htmlFor?: string;
+  required?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-x-8 gap-y-2 border-t border-ink-950/8 py-4 first:border-t-0 md:grid-cols-[200px_minmax(0,1fr)]">
+      <div className="min-w-0">
+        <label htmlFor={htmlFor} className="text-[13px] font-medium text-ink-900">
+          {label}
+          {required && <span className="ml-0.5 text-brand-600">*</span>}
+        </label>
+        {help && <p className="mt-0.5 text-[12px] leading-snug text-ink-500">{help}</p>}
+      </div>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }
@@ -41,7 +72,7 @@ export function FieldError({ id, children }: { id: string; children?: ReactNode 
 }
 
 const fieldClasses =
-  "w-full rounded-lg border border-ink-300 bg-paper-0 px-3.5 py-2.5 text-sm text-ink-950 shadow-xs placeholder:text-ink-500 outline-none transition-[border-color,box-shadow] hover:border-ink-400 focus:border-brand-300 focus:ring-4 focus:ring-brand-500/25 disabled:cursor-not-allowed disabled:border-paper-200 disabled:bg-paper-50 disabled:text-ink-500 aria-invalid:border-error-300 aria-invalid:focus:ring-error-500/25";
+  "w-full rounded-md border border-ink-950/15 bg-paper-0 px-3 py-2 text-[13px] text-ink-950 placeholder:text-ink-400 outline-none transition-[border-color,box-shadow] hover:border-ink-950/30 focus:border-ink-950/50 focus:ring-2 focus:ring-ink-950/10 disabled:cursor-not-allowed disabled:border-paper-200 disabled:bg-paper-50 disabled:text-ink-500 aria-invalid:border-error-300 aria-invalid:focus:ring-error-500/25";
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${fieldClasses} ${props.className ?? ""}`} />;

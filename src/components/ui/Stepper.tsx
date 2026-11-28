@@ -69,18 +69,16 @@ export function Stepper({
       <div className="flex min-w-0 items-center gap-3">
         <div className="flex shrink-0 items-center gap-1">
           {steps.map((step, i) => {
-            const done = completedIds.includes(step.id);
+            const reached = completedIds.includes(step.id) || i <= activeIndex;
             const active = step.id === activeId;
             const dot = (
               <span
                 className={`inline-block h-[5px] rounded-full transition-[width,background-color,box-shadow] duration-200 ease-[var(--ease-out-quart)] ${
                   active
-                    ? "w-8 bg-brand-600 shadow-[0_0_6px_rgba(127,86,217,0.5)]"
-                    : done
+                    ? "w-8 bg-brand-600 ring-2 ring-brand-500/30"
+                    : reached
                       ? "w-5 bg-brand-600"
-                      : i < activeIndex
-                        ? "w-5 bg-brand-200"
-                        : "w-5 bg-gray-200"
+                      : "w-5 bg-gray-200"
                 } ${onStepClick ? "hover:bg-brand-400" : ""}`}
               />
             );

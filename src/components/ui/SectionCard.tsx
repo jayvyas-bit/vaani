@@ -36,23 +36,21 @@ export function SectionCard({
 
   return (
     <section
-      className={`overflow-hidden rounded-lg border ${
-        quiet ? "border-ink-950/10 bg-paper-50" : "border-ink-950/10 bg-paper-0 shadow-sm"
-      }`}
+      className="border-b border-ink-950/10 last:border-b-0"
     >
-      <header className={`flex items-start justify-between gap-4 px-6 ${quiet ? "py-4" : "pt-5 pb-4"}`}>
+      <header className={`flex items-start justify-between gap-4 px-6 ${quiet ? "py-4" : "pt-6 pb-2"}`}>
         <div className="min-w-0">
-          <h3 className={`font-semibold tracking-[-0.01em] text-ink-950 ${quiet ? "text-sm" : "text-lg"}`}>
+          <h3 className={`font-semibold tracking-[-0.01em] text-ink-950 ${quiet ? "text-[13px]" : "text-[15px]"}`}>
             {title}
           </h3>
-          {description && <p className="mt-1 text-sm text-ink-600">{description}</p>}
+          {description && <p className="mt-0.5 text-[13px] text-ink-500">{description}</p>}
         </div>
         {advanced && (
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
-            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold outline-none transition-colors focus-visible:ring-4 focus-visible:ring-ink-400/20 ${
+            className={`flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ink-400/30 ${
               open ? "bg-paper-100 text-ink-900" : "text-ink-600 hover:bg-paper-50 hover:text-ink-900"
             }`}
           >
@@ -65,7 +63,7 @@ export function SectionCard({
         )}
       </header>
 
-      {guided != null && <div className={`px-6 ${quiet ? "pb-4" : "pb-6"}`}>{guided}</div>}
+      {guided != null && <div className={`px-6 ${quiet ? "pb-4" : "pb-2"}`}>{guided}</div>}
 
       {advanced && (
         <div
@@ -74,7 +72,7 @@ export function SectionCard({
           }`}
         >
           <div className="min-h-0 overflow-hidden">
-            <div className="border-t border-paper-200 bg-paper-50 px-6 py-5">
+            <div className="mx-6 mb-4 rounded-md border border-ink-950/10 bg-paper-50 px-4 py-4">
               <div className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-ink-500">
                 <Icon name="wrench" className="size-3.5" />
                 Advanced settings

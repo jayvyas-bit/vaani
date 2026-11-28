@@ -70,6 +70,9 @@ export function BuildEditorPage({
   outcomes = [],
   knowledgeSettings = defaultKnowledgeSettings,
   initialTab = "persona",
+  tab: controlledTab,
+  onTabChange,
+  embedded = false,
   defaultAdvanced = false,
   onAgentChange,
   onSafetyChange,
@@ -89,6 +92,11 @@ export function BuildEditorPage({
   outcomes?: OutcomeField[];
   knowledgeSettings?: KnowledgeSettings;
   initialTab?: BuildTab;
+  /** When set, the parent owns which section is showing (the workspace sidebar). */
+  tab?: BuildTab;
+  onTabChange?: (tab: BuildTab) => void;
+  /** Inside the agent workspace: its sidebar and header replace this page's own nav and tabs. */
+  embedded?: boolean;
   defaultAdvanced?: boolean;
   onAgentChange?: (patch: Partial<Agent>) => void;
   onSafetyChange?: (next: SafetyToggle[]) => void;
@@ -100,7 +108,9 @@ export function BuildEditorPage({
   onNavigate?: (section: PrimarySection) => void;
   onBack?: () => void;
 }) {
-  const [tab, setTab] = useState<BuildTab>(initialTab);
+  const [localTab, setLocalTab] = useState<BuildTab>(initialTab);
+  const tab = controlledTab ?? localTab;
+  const setTab = (next: BuildTab) => (onTabChange ? onTabChange(next) : setLocalTab(next));
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -121,13 +131,15 @@ export function BuildEditorPage({
   const humor = safetyState.find((s) => s.id === HUMOR_TOGGLE_ID);
 
   return (
-    <div className="flex h-full flex-col bg-paper-50">
-      <BuilderNav
-        agent={currentAgent}
-        active="build"
-        onNavigate={onNavigate}
-        onBack={onBack}
-      />
+    <div className="flex h-full flex-col bg-paper-0">
+      {!embedded && (
+        <BuilderNav
+          agent={currentAgent}
+          active="build"
+          onNavigate={onNavigate}
+          onBack={onBack}
+        />
+      )}
       {currentAgent.status === "live" && (
         <div role="status" className="flex items-center gap-2 border-b border-warning-200 bg-warning-50 px-4 py-2 sm:px-6">
           <Icon name="alert" className="size-3.5 shrink-0 text-warning-600" />
@@ -143,15 +155,17 @@ export function BuildEditorPage({
           <p className="text-[12.5px] text-ink-600">This agent is paused. Changes take effect once you resume it from Deploy.</p>
         </div>
       )}
-      <div className="border-b border-ink-950/10 bg-paper-0 px-4 sm:px-6">
-        <div className="mx-auto w-full max-w-[720px] lg:max-w-[880px] xl:max-w-[1040px]">
-          <Tabs items={tabs} active={tab} onChange={(id) => setTab(id as BuildTab)} />
+      {!embedded && (
+        <div className="border-b border-ink-950/10 bg-paper-0 px-4 sm:px-6">
+          <div className="mx-auto w-full max-w-[720px] lg:max-w-[880px] xl:max-w-[1040px]">
+            <Tabs items={tabs} active={tab} onChange={(id) => setTab(id as BuildTab)} />
+          </div>
         </div>
-      </div>
+      )}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
         <div
           key={tab}
-          className="animate-step-in mx-auto flex w-full max-w-[720px] flex-col lg:max-w-[880px] xl:max-w-[1040px]"
+          className={`animate-step-in mx-auto flex w-full flex-col ${embedded ? "max-w-[760px]" : "max-w-[720px] lg:max-w-[880px] xl:max-w-[1040px]"}`}
           role="tabpanel"
           aria-label={tabs.find((t) => t.id === tab)?.label}
         >
@@ -192,12 +206,14 @@ export function BuildEditorPage({
           )}
         </div>
       </div>
-      <WizardFooter showBack={false} maxWidthClassName="max-w-[720px] lg:max-w-[880px] xl:max-w-[1040px]">
-        <Button className="gap-1.5" onClick={() => onNavigate?.("test")}>
-          Continue to Test & Evaluate
-          <Icon name="chevron-right" className="size-4" />
-        </Button>
-      </WizardFooter>
+      {!embedded && (
+        <WizardFooter showBack={false} maxWidthClassName="max-w-[720px] lg:max-w-[880px] xl:max-w-[1040px]">
+          <Button className="gap-1.5" onClick={() => onNavigate?.("test")}>
+            Continue to Test & Evaluate
+            <Icon name="chevron-right" className="size-4" />
+          </Button>
+        </WizardFooter>
+      )}
     </div>
   );
 }

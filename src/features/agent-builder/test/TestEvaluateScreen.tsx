@@ -39,6 +39,7 @@ export function TestEvaluateScreen({
   onScenariosChange,
   onNavigate,
   onBack,
+  embedded = false,
 }: {
   agent: Agent;
   transcript: TranscriptTurn[];
@@ -52,6 +53,8 @@ export function TestEvaluateScreen({
   onScenariosChange?: (next: Scenario[]) => void;
   onNavigate?: (section: PrimarySection) => void;
   onBack?: () => void;
+  /** Inside the agent workspace, whose sidebar and header replace this screen's own nav. */
+  embedded?: boolean;
 }) {
   const [list, setList] = useControllable(scenarios, onScenariosChange);
   const context: AgentContext = { agent, rules: businessRules, tools, knowledge, safety, deploy };
@@ -92,7 +95,7 @@ export function TestEvaluateScreen({
 
   return (
     <div className="flex h-full flex-col bg-paper-50">
-      <BuilderNav agent={agent} active="test" onNavigate={onNavigate} onBack={onBack} />
+      {!embedded && <BuilderNav agent={agent} active="test" onNavigate={onNavigate} onBack={onBack} />}
       <div className="grid flex-1 grid-cols-1 gap-4 overflow-y-auto p-4 sm:p-6 lg:grid-cols-2 lg:overflow-hidden">
         <TestPanel
           agent={agent}
@@ -102,16 +105,18 @@ export function TestEvaluateScreen({
         />
         <ScenarioPool scenarios={list} onScenariosChange={setList} context={context} />
       </div>
-      <WizardFooter
-        backLabel="Back to Build"
-        onBack={() => onNavigate?.("build")}
-        maxWidthClassName="max-w-none"
-      >
-        <Button className="gap-1.5" onClick={() => onNavigate?.("deploy")}>
-          Continue to Deploy
-          <Icon name="chevron-right" className="size-4" />
-        </Button>
-      </WizardFooter>
+      {!embedded && (
+        <WizardFooter
+          backLabel="Back to Build"
+          onBack={() => onNavigate?.("build")}
+          maxWidthClassName="max-w-none"
+        >
+          <Button className="gap-1.5" onClick={() => onNavigate?.("deploy")}>
+            Continue to Deploy
+            <Icon name="chevron-right" className="size-4" />
+          </Button>
+        </WizardFooter>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react";
-import { Button } from "@/components/ui/Button";
-import { FieldError, FieldLabel, Input, Select, Textarea } from "@/components/ui/Field";
+import { Badge } from "@/components/ui/Badge";
+import { FieldError, FieldLabel, Input, SettingRow, Select, Textarea } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Slider } from "@/components/ui/Slider";
@@ -100,61 +100,39 @@ export function PersonaSection({
         description="How it introduces itself and sounds on the call."
         defaultAdvancedOpen={defaultAdvanced}
         guided={
-          <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <FieldLabel htmlFor={`${id}-name`} required>
-                  Agent name
-                </FieldLabel>
-                <Input
-                  id={`${id}-name`}
-                  name="agentName"
-                  value={agent.name}
-                  aria-invalid={agent.name.trim() === "" || undefined}
-                  aria-describedby={agent.name.trim() === "" ? `${id}-name-err` : undefined}
-                  onChange={(e) => onChange({ name: e.target.value })}
-                />
-                <FieldError id={`${id}-name-err`}>{agent.name.trim() === "" ? "Give the agent a name." : null}</FieldError>
-              </div>
-              <div>
-                <FieldLabel htmlFor={`${id}-voice`} hint={canSpeak ? "▶ plays the greeting" : undefined}>
-                  Voice
-                </FieldLabel>
-                <div className="flex gap-2">
-                  <Select
-                    id={`${id}-voice`}
-                    name="voice"
-                    value={agent.voice}
-                    className="min-w-0 flex-1"
-                    onChange={(e) => onChange({ voice: e.target.value })}
-                  >
-                    {withCurrent(voiceOptions, agent.voice).map((v) => (
-                      <option key={v}>{v}</option>
-                    ))}
-                  </Select>
-                  {canSpeak && (
-                    <Button
-                      variant="secondary"
-                      size="md"
-                      className="px-3"
-                      aria-label={speaking ? "Stop the sample" : "Play the greeting as a sample"}
-                      aria-pressed={speaking}
-                      onClick={playSample}
-                    >
-                      <Icon name={speaking ? "x" : "play"} className="size-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
+          <div>
+            <SettingRow label="Agent name" htmlFor={`${id}-name`} required help="Only you see this.">
+              <Input
+                id={`${id}-name`}
+                name="agentName"
+                value={agent.name}
+                aria-invalid={agent.name.trim() === "" || undefined}
+                aria-describedby={agent.name.trim() === "" ? `${id}-name-err` : undefined}
+                onChange={(e) => onChange({ name: e.target.value })}
+              />
+              <FieldError id={`${id}-name-err`}>{agent.name.trim() === "" ? "Give the agent a name." : null}</FieldError>
+            </SettingRow>
 
-            <div>
-              <FieldLabel
-                htmlFor={`${id}-language`}
-                hint="Changes this agent’s instructions — doesn’t verify that its voice, speech-to-text or text-to-speech provider actually supports Hindi"
-              >
-                Language
-              </FieldLabel>
+            <SettingRow
+              label="Business name"
+              htmlFor={`${id}-business`}
+              help={`What ${outbound ? "recipients" : "callers"} hear.`}
+            >
+              <Input
+                id={`${id}-business`}
+                name="businessName"
+                autoComplete="organization"
+                value={agent.businessName ?? businessNameOf(agent)}
+                placeholder={suggestedBusinessName}
+                onChange={(e) => onChange({ businessName: e.target.value })}
+              />
+            </SettingRow>
+
+            <SettingRow
+              label="Language"
+              htmlFor={`${id}-language`}
+              help="Sets the agent's instructions. Voice and speech providers aren't checked for support."
+            >
               <Select
                 id={`${id}-language`}
                 name="language"
@@ -167,36 +145,74 @@ export function PersonaSection({
                   </option>
                 ))}
               </Select>
-            </div>
+            </SettingRow>
 
-            <div>
-              <FieldLabel
-                htmlFor={`${id}-business`}
-                hint="Only you see the agent name"
-              >
-                Business name (what {outbound ? "recipients" : "callers"} hear)
-              </FieldLabel>
-              <Input
-                id={`${id}-business`}
-                name="businessName"
-                autoComplete="organization"
-                value={agent.businessName ?? businessNameOf(agent)}
-                placeholder={suggestedBusinessName}
-                onChange={(e) => onChange({ businessName: e.target.value })}
-              />
-            </div>
+            <SettingRow label="Voice" help={canSpeak ? "Play reads the greeting in your browser's voice." : undefined}>
+              <div role="radiogroup" aria-label="Voice" className="overflow-hidden rounded-md border border-ink-950/10">
+                {withCurrent(voiceOptions, agent.voice).map((v) => {
+                  const [voiceName, ...rest] = v.split(" — ");
+                  const selected = v === agent.voice;
+                  return (
+                    <div
+                      key={v}
+                      className="flex items-center gap-3 border-t border-ink-950/8 px-3 py-2 first:border-t-0"
+                    >
+                      <span
+                        role="radio"
+                        aria-checked={selected}
+                        aria-label={voiceName}
+                        tabIndex={0}
+                        onClick={() => onChange({ voice: v })}
+                        onKeyDown={(e) => {
+                          if (e.key === " " || e.key === "Enter") {
+                            e.preventDefault();
+                            onChange({ voice: v });
+                          }
+                        }}
+                        className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded outline-none focus-visible:ring-2 focus-visible:ring-brand-200"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`flex size-4 shrink-0 items-center justify-center rounded-full border ${
+                            selected ? "border-ink-950 bg-ink-950" : "border-ink-950/25"
+                          }`}
+                        >
+                          {selected && <span className="size-1.5 rounded-full bg-white" />}
+                        </span>
+                        <span className="w-16 shrink-0 text-[13px] font-medium text-ink-950">{voiceName}</span>
+                        <span className="truncate text-[12.5px] text-ink-500">{rest.join(" — ")}</span>
+                      </span>
+                      {selected ? (
+                        <>
+                          <Badge tone="neutral">Selected</Badge>
+                          {canSpeak && (
+                            <button
+                              type="button"
+                              aria-pressed={speaking}
+                              aria-label={speaking ? "Stop the sample" : "Play the greeting as a sample"}
+                              onClick={playSample}
+                              className="flex size-7 items-center justify-center rounded-md border border-ink-950/10 text-ink-700 outline-none hover:bg-paper-50 focus-visible:ring-2 focus-visible:ring-brand-200"
+                            >
+                              <Icon name={speaking ? "x" : "play"} className="size-3.5" />
+                            </button>
+                          )}
+                        </>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </SettingRow>
 
-            <div>
-              <FieldLabel
-                htmlFor={`${id}-greeting`}
-                hint={agent.direction === "outbound" ? "What recipients hear when they pick up" : "What callers hear first"}
-              >
-                {agent.direction === "outbound" ? "Opening line" : "Greeting"}
-              </FieldLabel>
+            <SettingRow
+              label={outbound ? "Opening line" : "Greeting"}
+              htmlFor={`${id}-greeting`}
+              help={outbound ? "What recipients hear when they pick up." : "What callers hear first."}
+            >
               <Textarea
                 id={`${id}-greeting`}
                 name="greeting"
-                rows={2}
+                rows={3}
                 value={agent.greeting}
                 onChange={(e) => onChange({ greeting: e.target.value })}
               />
@@ -206,12 +222,9 @@ export function PersonaSection({
                 fromPurpose={outbound}
                 onRegenerate={() => onChange({ greetingCustom: false })}
               />
-            </div>
+            </SettingRow>
 
-            <div>
-              <FieldLabel id={`${id}-tone-label`} htmlFor={`${id}-tone`} hint={`${agent.tone} · ${toneBandLabel[band]}`}>
-                Tone
-              </FieldLabel>
+            <SettingRow label="Tone" htmlFor={`${id}-tone`} help={`${agent.tone} · ${toneBandLabel[band]}`}>
               <Slider
                 id={`${id}-tone`}
                 name="tone"
@@ -221,12 +234,11 @@ export function PersonaSection({
                 leftLabel="Formal & brief"
                 rightLabel="Warm & chatty"
               />
-              {humor && (
-                <div className="mt-4 flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-medium text-ink-950">{humor.label}</p>
-                    <p className="text-[12.5px] text-ink-500">{humor.description}</p>
-                  </div>
+            </SettingRow>
+
+            {humor && (
+              <SettingRow label={humor.label} help={humor.description}>
+                <div className="flex justify-end">
                   <Switch
                     checked={humor.enabled}
                     disabled={humor.locked || !onHumorChange}
@@ -234,8 +246,8 @@ export function PersonaSection({
                     onChange={onHumorChange}
                   />
                 </div>
-              )}
-            </div>
+              </SettingRow>
+            )}
           </div>
         }
         advanced={

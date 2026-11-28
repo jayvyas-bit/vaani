@@ -5,9 +5,9 @@ type Size = "sm" | "md" | "lg";
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    "border border-brand-600 bg-brand-600 text-white shadow-[var(--shadow-brand-sm)] hover:-translate-y-px hover:border-brand-700 hover:bg-brand-700 hover:shadow-[var(--shadow-brand-md)] active:translate-y-0 active:border-brand-800 active:bg-brand-800 active:shadow-[var(--shadow-brand-sm)] focus-visible:ring-brand-500/25 disabled:translate-y-0 disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none",
+    "border border-gray-900 bg-gray-900 text-white hover:border-gray-800 hover:bg-gray-800 active:bg-gray-950 focus-visible:ring-gray-400/30 disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400",
   secondary:
-    "border border-gray-300 bg-white text-gray-700 shadow-xs hover:bg-gray-50 hover:text-gray-800 active:bg-gray-100 active:text-gray-900 focus-visible:ring-gray-400/20 disabled:border-gray-200 disabled:bg-white disabled:text-gray-400",
+    "border border-gray-200 bg-white text-gray-800 hover:bg-gray-50 hover:text-gray-800 active:bg-gray-100 active:text-gray-900 focus-visible:ring-gray-400/20 disabled:border-gray-200 disabled:bg-white disabled:text-gray-400",
   ghost:
     "border border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-700 active:bg-gray-100 active:text-gray-800 focus-visible:ring-gray-400/20 disabled:bg-transparent disabled:text-gray-400",
   destructive:
@@ -15,8 +15,8 @@ const variantClasses: Record<Variant, string> = {
 };
 
 const sizeClasses: Record<Size, string> = {
-  sm: "h-9 px-3 text-sm gap-1.5",
-  md: "h-10 px-3.5 text-sm gap-2",
+  sm: "h-8 px-3 text-[13px] gap-1.5",
+  md: "h-9 px-3.5 text-[13px] gap-2",
   lg: "h-11 px-4 text-md gap-2",
 };
 
@@ -36,7 +36,7 @@ export function Button({
   return (
     <button
       type={type}
-      className={`inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-lg font-semibold outline-none transition-[color,background-color,border-color,box-shadow,transform] duration-150 ease-[var(--ease-out-quart)] focus-visible:ring-4 disabled:cursor-not-allowed disabled:active:scale-100 active:scale-[0.98] ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-md font-medium outline-none transition-[color,background-color,border-color,box-shadow,transform] duration-150 ease-[var(--ease-out-quart)] focus-visible:ring-2 disabled:cursor-not-allowed disabled:active:scale-100 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...rest}
     >
       {children}

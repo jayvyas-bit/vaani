@@ -34,6 +34,7 @@ export function DeployWizardLayout({
   onExit,
   hideStepper = false,
   hideFooter = false,
+  embedded = false,
 }: {
   agent: Agent;
   activeId: string;
@@ -42,6 +43,8 @@ export function DeployWizardLayout({
   /** The live/paused status panel isn’t a wizard step, so it has no stepper or footer. */
   hideStepper?: boolean;
   hideFooter?: boolean;
+  /** Inside the agent workspace, whose sidebar and header replace this layout's own nav. */
+  embedded?: boolean;
   continueLabel?: string;
   continueDisabled?: boolean;
   /** Shown beside Continue while it’s disabled — explain why, since the field that caused it may be scrolled out of view. */
@@ -75,7 +78,7 @@ export function DeployWizardLayout({
 
   return (
     <div className="flex h-full flex-col bg-paper-50">
-      <BuilderNav agent={agent} active="deploy" onNavigate={onNavigate} onBack={onExit} />
+      {!embedded && <BuilderNav agent={agent} active="deploy" onNavigate={onNavigate} onBack={onExit} />}
       {!hideStepper && (
         <div className="border-b border-ink-950/10 bg-paper-50 px-4 py-2.5 sm:px-6">
           <div className="mx-auto flex w-full max-w-[640px] lg:max-w-[760px] xl:max-w-[880px] justify-center">

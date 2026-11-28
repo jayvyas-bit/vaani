@@ -124,6 +124,14 @@ function displayName(agent: Pick<Agent, "name" | "businessName">) {
 }
 
 /**
+ * Purpose text is naturally written as "Call customers to…" / "Ring leads
+ * about…" — but that phrasing is already implied by "I'm calling", so
+ * splicing it in verbatim would read "I'm calling to call customers to…".
+ */
+const LEADING_CALL_VERB = /^(?:i'?m\s+)?(?:call(?:ing)?|ring(?:ing)?|phon(?:e|ing)|contact(?:ing)?|reach(?:ing)?\s+out\s+to)\b\s*/i;
+const LEADING_OBJECT_WORD = /^(?:you|customers?|clients?|recipients?|folks|people|them|leads|contacts)\s*/i;
+
+/**
  * Outbound calls are unsolicited, so the recipient needs a reason before
  * they’re asked for a minute of their time — without it they’re as likely to
  * hang up as to hear the agent out. Inbound doesn’t get this: the caller
@@ -131,7 +139,15 @@ function displayName(agent: Pick<Agent, "name" | "businessName">) {
  */
 function outboundPurposeClause(purpose: string): string {
   const body = lowerFirst(stripPeriod(purpose));
-  return body ? ` I’m calling to ${body}.` : "";
+  const verbMatch = body.match(LEADING_CALL_VERB);
+  if (!verbMatch) return body ? ` I’m calling to ${body}.` : "";
+  // Purpose already named who's being called ("call customers to run a
+  // survey") — keep whatever follows its own "to" rather than adding another.
+  const rest = body.slice(verbMatch[0].length);
+  const toClause = rest.match(/^(?:\S+\s+){0,2}?to\s+(.+)$/i);
+  if (toClause) return ` I’m calling to ${toClause[1]}.`;
+  const withoutObject = rest.replace(LEADING_OBJECT_WORD, "");
+  return withoutObject ? ` I’m calling ${withoutObject}.` : "";
 }
 
 export function compileGreeting(agent: Agent): string {

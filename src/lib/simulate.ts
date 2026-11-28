@@ -29,7 +29,7 @@ export interface AgentContext {
 }
 
 const STOPWORDS = new Set(
-  "the and for with that this from your you are was were will what when then than they them their there have has had not but can could would should into about after before over under just like only also once each more most other some such very caller recipient agent call calls asks says said offers offer without instead still does doesn".split(
+  "the and for with that this from your you are was were will what when then than they them their there have has had not but can could would should into about after before over under just like only also once each more most other some such very caller recipient agent call calls asks says said offers offer gives give without instead still does doesn".split(
     " ",
   ),
 );
@@ -360,6 +360,22 @@ function findKnowledge(text: string, knowledge: KnowledgeSource[]) {
 export interface Evaluation {
   verdict: Exclude<Verdict, "not-run">;
   reason: string;
+}
+
+/**
+ * A cheap fingerprint of everything a verdict is computed from. Compare it
+ * against a scenario's `lastRunSignature` to tell whether a passed/failed
+ * verdict still reflects the agent's current config.
+ */
+export function contextSignature(ctx: AgentContext): string {
+  return JSON.stringify({
+    agent: ctx.agent,
+    rules: ctx.rules,
+    tools: ctx.tools,
+    knowledge: ctx.knowledge,
+    safety: ctx.safety,
+    deploy: ctx.deploy,
+  });
 }
 
 export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluation {

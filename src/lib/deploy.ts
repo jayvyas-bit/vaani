@@ -76,6 +76,8 @@ export interface DeployConfig {
   /** Outbound: which contact list the agent dials, and how many people are on it. */
   contactListName: string;
   contactCount: number;
+  /** Whether that list has a consent/opt-in column — persisted so an uploaded list survives a remount. */
+  contactListConsentTracked?: boolean;
   // Cost
   callsPerMonth: number;
   avgMinutes: number;
