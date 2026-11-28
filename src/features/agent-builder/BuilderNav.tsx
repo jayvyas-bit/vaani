@@ -29,14 +29,14 @@ export function BuilderNav({
   active: PrimarySection;
   onNavigate?: (section: PrimarySection) => void;
   onBack?: () => void;
-  /** Lets a wrapping layout (e.g. the Deploy wizard) line this row's content up with a narrower body below it. */
+  /** Lets a wrapping layout (e.g. the Deploy wizard) line this row’s content up with a narrower body below it. */
   contentClassName?: string;
 }) {
   const completedIds = sectionOrder.slice(0, stageIndexForStatus[agent.status] ?? 0);
 
   return (
     <PageHeader
-      stackAt="md"
+      stackAt="lg"
       contentClassName={contentClassName}
       left={
         <>
@@ -53,14 +53,14 @@ export function BuilderNav({
               <Icon name={agent.direction === "inbound" ? "phone-inbound" : "phone-outbound"} className="size-4" />
             </div>
             <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-              <p className="min-w-0 max-w-full truncate text-[14.5px] font-semibold tracking-[-0.01em] text-ink-950">
+              <p className="min-w-[90px] max-w-full truncate text-[14.5px] font-semibold tracking-[-0.01em] text-ink-950">
                 {agent.name.trim() || "Untitled agent"}
               </p>
               <div className="flex shrink-0 items-center gap-1.5">
                 <Badge tone={agent.direction === "inbound" ? "inbound" : "outbound"}>
                   {agent.direction === "inbound" ? "Inbound" : "Outbound"}
                 </Badge>
-                <Badge tone={statusTone[agent.status] ?? "neutral"} dot>
+                <Badge tone={statusTone[agent.status] ?? "neutral"} dot live={agent.status === "live"}>
                   {statusLabel[agent.status] ?? "Draft"}
                 </Badge>
               </div>

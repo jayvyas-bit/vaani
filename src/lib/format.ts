@@ -10,7 +10,7 @@ export type DisplayCurrency = "USD" | "INR";
 /**
  * Illustrative only, not a live or verified exchange rate. Every provider in
  * this app bills in USD — picking INR here only changes how the figure is
- * displayed, never what's actually charged.
+ * displayed, never what’s actually charged.
  */
 export const ILLUSTRATIVE_USD_TO_INR_RATE = 83;
 
@@ -19,7 +19,7 @@ export const displayCurrencyLabel: Record<DisplayCurrency, string> = {
   INR: "Indian rupees (INR, illustrative)",
 };
 
-/** Same cost figure formatUsd would show, converted for on-screen display only when `currency` isn't USD. */
+/** Same cost figure formatUsd would show, converted for on-screen display only when `currency` isn’t USD. */
 export function formatMoney(valueUsd: number, currency: DisplayCurrency, opts: { cents?: boolean } = {}): string {
   if (currency === "USD") return formatUsd(valueUsd, opts);
   const inr = valueUsd * ILLUSTRATIVE_USD_TO_INR_RATE;
@@ -32,7 +32,7 @@ export const currencySymbol: Record<DisplayCurrency, string> = {
   INR: "₹",
 };
 
-/** A USD amount (as stored) converted into the units the display currency's input should show. */
+/** A USD amount (as stored) converted into the units the display currency’s input should show. */
 export function toDisplayAmount(valueUsd: number, currency: DisplayCurrency): number {
   return currency === "USD" ? valueUsd : Math.round(valueUsd * ILLUSTRATIVE_USD_TO_INR_RATE);
 }

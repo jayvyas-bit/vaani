@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Icon } from "./Icon";
 
-/** The "< Agents" back-link that starts every page header's left cluster. */
+/** The "< Agents" back-link that starts every page header’s left cluster. */
 export function PageHeaderBackLink({ label, onClick }: { label: string; onClick?: () => void }) {
   return (
     <button
@@ -35,18 +35,20 @@ export function PageHeader({
   /** Centered content (e.g. a Stepper) shared between the left cluster and right actions. */
   center?: ReactNode;
   right?: ReactNode;
-  /** Breakpoint at which left/center/right go from stacked to one row — "md" for the wider agent-identity header. */
-  stackAt?: "sm" | "md";
+  /** Breakpoint at which left/center/right go from stacked to one row — "lg" for the wider agent-identity header (long name + badges + stepper need the extra room). */
+  stackAt?: "sm" | "md" | "lg";
   /** Lets a wrapping layout line this row up with a narrower body below it, without changing the header itself. */
   contentClassName?: string;
 }) {
   // A 3-column grid (not absolute centering) so the center slot reserves real
   // track width — left/right content truncates inside its own column instead
-  // of overlapping the center when it's long (e.g. a busy agent-identity header).
+  // of overlapping the center when it’s long (e.g. a busy agent-identity header).
   const row =
-    stackAt === "md"
-      ? "flex-col gap-3.5 md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center md:gap-6"
-      : "flex-col gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-6";
+    stackAt === "lg"
+      ? "flex-col gap-3.5 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center lg:gap-6"
+      : stackAt === "md"
+        ? "flex-col gap-3.5 md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center md:gap-6"
+        : "flex-col gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-6";
 
   return (
     <header className="border-b border-ink-950/10 bg-paper-0">

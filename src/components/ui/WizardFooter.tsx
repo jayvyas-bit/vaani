@@ -5,7 +5,7 @@ import { Icon } from "./Icon";
 /**
  * The one footer bar every multi-step wizard (Create, Deploy) renders instead
  * of placing its primary action inline in the scrolling content — Back on
- * the left, the step's primary action(s) on the right, both reachable
+ * the left, the step’s primary action(s) on the right, both reachable
  * without scrolling.
  */
 export function WizardFooter({
@@ -19,9 +19,9 @@ export function WizardFooter({
   onBack?: () => void;
   showBack?: boolean;
   backLabel?: string;
-  /** Matches the footer's inner width to the step content above it. */
+  /** Matches the footer’s inner width to the step content above it. */
   maxWidthClassName?: string;
-  /** Shown beside the primary action — use to explain why it's disabled. */
+  /** Shown beside the primary action — use to explain why it’s disabled. */
   hint?: ReactNode;
   children?: ReactNode;
 }) {

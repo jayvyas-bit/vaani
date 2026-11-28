@@ -21,7 +21,15 @@ const verdictLabel: Record<Verdict, string> = {
   "not-run": "Not run",
 };
 
-function ScenarioRow({ scenario, running, now }: { scenario: Scenario; running: boolean; now: number }) {
+function ScenarioRow({
+  scenario,
+  running,
+  now,
+}: {
+  scenario: Scenario;
+  running: boolean;
+  now: number;
+}) {
   // The badge already says "Not run", so only show a timestamp once there is one.
   const when = scenario.lastRunAt ? formatRelative(scenario.lastRunAt, now) : scenario.lastRun;
   return (
@@ -46,7 +54,10 @@ function ScenarioRow({ scenario, running, now }: { scenario: Scenario; running: 
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1.5">
         {running ? (
-          <Badge tone="neutral">Running…</Badge>
+          <Badge tone="neutral" className="gap-1">
+            <Icon name="loader" className="size-3 animate-spin" strokeWidth={2.5} />
+            Running…
+          </Badge>
         ) : (
           <Badge tone={verdictTone[scenario.verdict]} dot={scenario.verdict !== "not-run"}>
             {verdictLabel[scenario.verdict]}
@@ -227,7 +238,7 @@ export function ScenarioPool({
       <div className="flex-1 divide-y divide-ink-950/8 overflow-y-auto">
         {list.length === 0 && !adding && (
           <p className="px-4 py-5 text-[13px] text-ink-500">
-            No test scenarios yet. Add the calls you're most worried about, then run them after every change.
+            No test scenarios yet. Add the calls you’re most worried about, then run them after every change.
           </p>
         )}
         {list.map((s) => (

@@ -83,54 +83,40 @@ export function GoLiveStep({
     ...(agent.direction === "outbound" ? [{ label: "Who to call", value: listSummary ?? "Not set yet" }] : []),
     { label: agent.direction === "inbound" ? "Hours" : "Calling rules", value: hoursValue },
     {
-      label: "Est. monthly cost",
+      label: "Projected monthly cost",
       value: `${currency === "USD" ? "≈ " : ""}${formatMoney(cost, currency)} / month (${config.callsPerMonth.toLocaleString()} calls × ${config.avgMinutes.toFixed(1)} min at ${formatMoney(rate, currency, { cents: true })}/min)`,
     },
     ...(config.monthlyBudget !== undefined
       ? [{ label: "Monthly budget", value: formatMoney(config.monthlyBudget, currency) }]
       : []),
-    ...(scenarios
-      ? [
-          {
-            label: "Test scenarios",
-            value: total === 0 ? "No test scenarios yet" : `${passing} of ${total} passing`,
-          },
-        ]
+    // Only shown once it's actually good news — an unresolved gap here is covered
+    // more usefully, with an action button, by the issue banner below.
+    ...(total > 0 && allPassing ? [{ label: "Test scenarios", value: `${passing} of ${total} passing` }] : []),
+    ...(attachedKnowledge > 0
+      ? [{ label: "Knowledge", value: `${attachedKnowledge} source${attachedKnowledge === 1 ? "" : "s"} attached` }]
       : []),
-    ...(knowledge !== undefined
-      ? [
-          {
-            label: "Knowledge",
-            value: attachedKnowledge === 0 ? "No sources attached" : `${attachedKnowledge} source${attachedKnowledge === 1 ? "" : "s"} attached`,
-          },
-        ]
-      : []),
-    ...(businessRules !== undefined
-      ? [
-          {
-            label: "Business rules",
-            value:
-              businessRules.length === 0
-                ? "None set"
-                : `${businessRules.length} rule${businessRules.length === 1 ? "" : "s"} set`,
-          },
-        ]
+    ...(businessRules !== undefined && businessRules.length > 0
+      ? [{ label: "Guardrails", value: `${businessRules.length} rule${businessRules.length === 1 ? "" : "s"} set` }]
       : []),
   ];
 
   if (live) {
     return (
       <div className="flex flex-col items-center py-10 text-center">
-        <div className="flex size-12 items-center justify-center rounded-full bg-success-100 text-success-700">
+        <div className="animate-success-pop flex size-12 items-center justify-center rounded-full bg-success-100 text-success-700">
           <Icon name="check" className="size-6" strokeWidth={2.2} />
         </div>
-        <h1 className="mt-4 text-[20px] font-semibold text-ink-950">{agent.name} is live</h1>
-        <p className="mt-1.5 max-w-sm text-[14px] text-ink-600">
+        <h1 className="animate-step-in mt-4 text-[20px] font-semibold text-ink-950 [animation-delay:90ms]">
+          {agent.name} is live
+        </h1>
+        <p className="animate-step-in mt-1.5 max-w-sm text-[14px] text-ink-600 [animation-delay:140ms]">
           {agent.direction === "inbound"
             ? `Calls to ${number ?? "its number"} now reach this agent.`
             : `From ${number ?? "its number"}, the agent now calls ${callsCopy}, recipient time.`}
         </p>
-        <p className="mt-1 max-w-sm text-[13px] text-ink-500">You can pause it any time from its Deploy tab.</p>
+        <p className="animate-step-in mt-1 max-w-sm text-[13px] text-ink-500 [animation-delay:180ms]">
+          You can pause it any time from its Deploy tab.
+        </p>
       </div>
     );
   }
@@ -177,7 +163,7 @@ export function GoLiveStep({
   if (businessRules !== undefined && businessRules.length === 0) {
     issues.push({
       key: "rules",
-      title: "No business rules are set.",
+      title: "No guardrails are set.",
       detail: "This agent only follows its persona, with nothing stopping it from promising a discount, refund, or anything else on a call.",
       action: onReviewGuardrails ? { label: "Add a rule", onClick: onReviewGuardrails } : undefined,
     });
@@ -194,7 +180,7 @@ export function GoLiveStep({
     if (transfer && !workingTransferTool(tools)) {
       issues.push({
         key: "transfer",
-        title: `"${transfer.name}" is enabled but has no destination set.`,
+        title: `“${transfer.name}” is enabled but has no destination set.`,
         detail: "This agent will offer to transfer the call, then have nowhere to send it.",
         action: onReviewTools ? { label: "Set destination", onClick: onReviewTools } : undefined,
       });
@@ -203,8 +189,8 @@ export function GoLiveStep({
     if (booking && !workingBookingTool(tools)) {
       issues.push({
         key: "booking",
-        title: `"${booking.name}" is enabled but no calendar is connected.`,
-        detail: "A provider is configured, but without a connected calendar this agent can't actually book or move appointments.",
+        title: `“${booking.name}” is enabled but no calendar is connected.`,
+        detail: "A provider is configured, but without a connected calendar this agent can’t actually book or move appointments.",
         action: onReviewTools ? { label: "Connect calendar", onClick: onReviewTools } : undefined,
       });
     }

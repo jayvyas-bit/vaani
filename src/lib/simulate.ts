@@ -106,8 +106,8 @@ function ruleTokens(r: BusinessRule) {
 /**
  * Best rule for a piece of text. With a detected limit type, the rule must be
  * of that type and share at least one word; without one, it must share at
- * least two words with the rule's own label (so a stray word like "slot"
- * doesn't credit an unrelated rule).
+ * least two words with the rule’s own label (so a stray word like "slot"
+ * doesn’t credit an unrelated rule).
  */
 function matchRule(text: string, rules: BusinessRule[], type?: LimitType): BusinessRule | undefined {
   const t = tokens(text);
@@ -126,8 +126,29 @@ function matchRule(text: string, rules: BusinessRule[], type?: LimitType): Busin
   return best;
 }
 
-function detectType(text: string): LimitType | undefined {
-  return typeKeywords.find((k) => k.re.test(text))?.type;
+function detectTypes(text: string): LimitType[] {
+  return typeKeywords.filter((k) => k.re.test(text)).map((k) => k.type);
+}
+
+/**
+ * More than one keyword type can match the same text (e.g. "financing,
+ * interest rate, or discounts" matches both forbidden_promise and
+ * discount_limit). Try each matched type in declared order and use
+ * whichever one actually resolves to a rule, instead of locking in on
+ * the first keyword match even when a later-matched type is the one the
+ * agent actually has a rule for.
+ */
+function matchTypedRule(
+  text: string,
+  rules: BusinessRule[],
+): { rule: BusinessRule | undefined; type: LimitType | undefined } {
+  const types = detectTypes(text);
+  for (const t of types) {
+    const rule = matchRule(text, rules, t);
+    if (rule) return { rule, type: t };
+  }
+  if (types.length === 0) return { rule: matchRule(text, rules), type: undefined };
+  return { rule: undefined, type: types[0] };
 }
 
 /* ------------------------------------------------------------------ */
@@ -206,13 +227,13 @@ export function parseLimits(threshold: string | undefined): NumericLimit[] {
   return out;
 }
 
-function describeAmount(a: Amount, perMonth: boolean) {
+export function describeAmount(a: Amount, perMonth: boolean) {
   if (a.unit === "usd") return `$${a.value}${perMonth ? "/month" : ""}`;
   if (a.unit === "percent") return `${a.value}%`;
   return `${a.value} month${a.value === 1 ? "" : "s"}`;
 }
 
-function describeBreach(l: NumericLimit, perMonth: boolean) {
+export function describeBreach(l: NumericLimit, perMonth: boolean) {
   const v = l.unit === "months" ? `${l.value}-month` : describeAmount(l, perMonth);
   return l.bound === "max" ? `over the ${v} cap` : `under the ${v} minimum`;
 }
@@ -222,8 +243,8 @@ interface LimitCheck {
   breaches: NumericLimit[];
 }
 
-/** Compare the numbers a scenario asks for against a rule's limits. */
-function checkLimits(rule: BusinessRule, request: string): LimitCheck | undefined {
+/** Compare the numbers a scenario asks for against a rule’s limits. */
+export function checkLimits(rule: BusinessRule, request: string): LimitCheck | undefined {
   if (rule.limitType !== "payment_plan_limit" && rule.limitType !== "discount_limit") return undefined;
   const limits = parseLimits(rule.threshold);
   if (rule.limitType === "discount_limit" && rule.priceFloor) {
@@ -240,7 +261,7 @@ function checkLimits(rule: BusinessRule, request: string): LimitCheck | undefine
   return { requested, breaches };
 }
 
-/** Does the rule's action say what happens when a request falls outside its limits? */
+/** Does the rule’s action say what happens when a request falls outside its limits? */
 function handlesOutOfLimit(action: string) {
   return /(beyond|over the|above|exceed|outside|otherwise|longer|more than|review|escalat|transfer|teammate|person|declin|refus|deny|counter)/i.test(
     action,
@@ -248,10 +269,10 @@ function handlesOutOfLimit(action: string) {
 }
 
 /**
- * A breach isn't only handled by the rule that defines the limit — a separate
+ * A breach isn’t only handled by the rule that defines the limit — a separate
  * "Never do" or "Hand to a person" rule can cover the same scenario. Search
  * every other enabled rule (any type) for one whose action actually handles
- * an out-of-limit request and that's clearly about the same thing.
+ * an out-of-limit request and that’s clearly about the same thing.
  */
 function coveringRule(rules: BusinessRule[], primary: BusinessRule, text: string): BusinessRule | undefined {
   const textTokens = tokens(text);
@@ -282,19 +303,19 @@ const requestsHandoff = (text: string) =>
 const promisesTransfer = (text: string) =>
   /(transfer|connect (you|them|the caller|the person) (to|with)|hand (it|the call|them) (off|over)|put (you|them) through)/i.test(text);
 
-/** A tool/API/system that's down, erroring, or not responding — distinct from a request simply being denied. */
+/** A tool/API/system that’s down, erroring, or not responding — distinct from a request simply being denied. */
 const toolFailureFramed = (text: string) =>
   /(api (fail|failure|down|error|outage)|system (is )?down|service (is )?(down|unavailable)|can'?t reach|not responding|500 error|times? ?out|timeout|outage|offline|unreachable)/i.test(
     text,
   );
 
-/** The record being asked about doesn't exist, rather than a tool being broken. */
+/** The record being asked about doesn’t exist, rather than a tool being broken. */
 const notFoundFramed = (text: string) =>
   /(doesn'?t exist|does not exist|no such (order|account|record|customer)|no record|not found|can'?t find|couldn'?t find|missing order|no matching)/i.test(
     text,
   );
 
-/** Does the tool's own description say what to do when it fails or comes up empty? */
+/** Does the tool’s own description say what to do when it fails or comes up empty? */
 function handlesToolFailure(description: string) {
   return /(apologi|do not guess|don'?t guess|transfer|escalat|log a case|case id|honest|instead of inventing|can'?t be logged automatically|without guessing)/i.test(
     description,
@@ -350,11 +371,11 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
   if (scenario.title.startsWith("Flagged reply")) {
     return {
       verdict: "inconclusive",
-      reason: "Flagged in a test session. A reworded reply can't be judged from settings alone — start a test call to check it.",
+      reason: "Flagged in a test session. A reworded reply can’t be judged from settings alone — start a test call to check it.",
     };
   }
 
-  // 1. Tool failure / missing-record scenarios. These need the specific tool's
+  // 1. Tool failure / missing-record scenarios. These need the specific tool’s
   // own fallback language, not a generic guardrail keyword match — without this,
   // "refund" alone would route a failed-lookup or not-found scenario into the
   // forbidden-promise rule below and give it the same reasoning as an unrelated case.
@@ -363,7 +384,7 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
     if (!tool) {
       return {
         verdict: "fail",
-        reason: "No enabled tool matches this request, so there's nothing configured here to fail over or fall back on.",
+        reason: "No enabled tool matches this request, so there’s nothing configured here to fail over or fall back on.",
       };
     }
     const sentences = tool.description.split(/(?<=[.!?])\s+/);
@@ -376,12 +397,12 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
     }
     return {
       verdict: "fail",
-      reason: `“${tool.name}” is enabled, but its description doesn't say what the agent should do if it fails or comes up empty. Add that fallback in Build → Tools.`,
+      reason: `“${tool.name}” is enabled, but its description doesn’t say what the agent should do if it fails or comes up empty. Add that fallback in Build → Tools.`,
     };
   }
 
   // 2. Return/cancellation window and similar eligibility windows — a numeric
-  // business-rule type doesn't exist for these, so check rules and knowledge
+  // business-rule type doesn’t exist for these, so check rules and knowledge
   // directly instead of falling through to an unrelated keyword match.
   if (has(text, /(return window|return period|exchange window|outside .*(day|window)|expired return|return eligib|cancellation window)/)) {
     const ruleHit = ctx.rules.find((r) => r.enabled && /(return|exchange|eligib)/i.test(`${r.label} ${r.action}`));
@@ -424,7 +445,7 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
           verdict: "fail",
           reason: half
             ? `“${sizeRule.label}” says to ${action}, but “${half.name}” has no destination set. Add one in Build → Tools.`
-            : `“${sizeRule.label}” says to ${action}, but call transfer isn't set up. Add it in Build → Tools.`,
+            : `“${sizeRule.label}” says to ${action}, but call transfer isn’t set up. Add it in Build → Tools.`,
         };
       }
       return {
@@ -436,12 +457,11 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
 
   // 3b. Business rules — typed keywords first, then plain-word overlap. Rules
   // with a parseable party-size threshold are matched only by 3a above, never
-  // by word overlap, since their label's vocabulary ("party", "reservation")
+  // by word overlap, since their label’s vocabulary ("party", "reservation")
   // is too generic in this domain to trust as a coincidental match.
   const sizeRuleIds = new Set(ctx.rules.filter((r) => partySizeThreshold(r) !== undefined).map((r) => r.id));
   const matchableRules = ctx.rules.filter((r) => !sizeRuleIds.has(r.id));
-  const type = detectType(text);
-  const rule = type ? matchRule(text, matchableRules, type) : matchRule(text, matchableRules);
+  const { rule, type } = matchTypedRule(text, matchableRules);
   if (rule) {
     if (!rule.enabled) {
       return { verdict: "fail", reason: `Rule “${rule.label}” exists but is turned off, so nothing enforces it on the call.` };
@@ -464,12 +484,12 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
               verdict: "fail",
               reason: half
                 ? `“${backup.label}” says to ${backupAction}, but “${half.name}” has no destination set. Add one in Build → Tools.`
-                : `“${backup.label}” says to ${backupAction}, but call transfer isn't set up. Add it in Build → Tools.`,
+                : `“${backup.label}” says to ${backupAction}, but call transfer isn’t set up. Add it in Build → Tools.`,
             };
           }
           return {
             verdict: "pass",
-            reason: `${who} asks for ${asked}, which is ${breach} in “${rule.label}”. That rule alone doesn't say what happens next, but “${backup.label}” covers it: ${backupAction}.`,
+            reason: `${who} asks for ${asked}, which is ${breach} in “${rule.label}”. That rule alone doesn’t say what happens next, but “${backup.label}” covers it: ${backupAction}.`,
           };
         }
         return {
@@ -490,7 +510,7 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
         verdict: "fail",
         reason: half
           ? `“${rule.label}” says to ${action}, but “${half.name}” has no destination set. Add one in Build → Tools.`
-          : `“${rule.label}” says to ${action}, but call transfer isn't set up. Add it in Build → Tools.`,
+          : `“${rule.label}” says to ${action}, but call transfer isn’t set up. Add it in Build → Tools.`,
       };
     }
 
@@ -507,7 +527,7 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
     return {
       verdict: "fail",
       reason: sameType
-        ? `None of this agent's ${typeLabel[type]} rules cover this, so nothing enforces “${stripPeriod(scenario.criteria)}”.`
+        ? `None of this agent’s ${typeLabel[type]} rules cover this, so nothing enforces “${stripPeriod(scenario.criteria)}”.`
         : `No ${typeLabel[type]} rule on this agent, so nothing enforces “${stripPeriod(scenario.criteria)}”. Add one in Build → Guardrails.`,
     };
   }
@@ -517,7 +537,7 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
     const tool = findTool(ctx.tools, /(do-not-call|do not call|dnc|suppress)/);
     return tool
       ? { verdict: "pass", reason: `“${tool.name}” is enabled, so the request is honored immediately.` }
-      : { verdict: "fail", reason: "No do-not-call tool is enabled, so the agent can't actually suppress the number." };
+      : { verdict: "fail", reason: "No do-not-call tool is enabled, so the agent can’t actually suppress the number." };
   }
 
   // 5. Booking / rescheduling.
@@ -531,17 +551,17 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
       if (!tool) {
         return {
           verdict: "fail",
-          reason: "No booking or calendar tool is enabled, so there's no integration here to fail over in the first place.",
+          reason: "No booking or calendar tool is enabled, so there’s no integration here to fail over in the first place.",
         };
       }
       const connected = workingBookingTool(ctx.tools);
       return {
         verdict: "inconclusive",
-        reason: `“${tool.name}” is enabled, but ${connected ? "its calendar connection is simulated for testing" : "it isn't connected to a real calendar"} — this prototype has no live backend to actually fail, so a real API-failure path can't be verified from config alone. Test this with a real calendar integration before relying on it.`,
+        reason: `“${tool.name}” is enabled, but ${connected ? "its calendar connection is simulated for testing" : "it isn’t connected to a real calendar"} — this prototype has no live backend to actually fail, so a real API-failure path can’t be verified from config alone. Test this with a real calendar integration before relying on it.`,
       };
     }
     if (!tool) {
-      return { verdict: "fail", reason: "No booking or calendar tool is enabled, so the agent can't find or move appointments." };
+      return { verdict: "fail", reason: "No booking or calendar tool is enabled, so the agent can’t find or move appointments." };
     }
 
     // Prefer a specific guardrail rule or knowledge source over a generic
@@ -591,7 +611,7 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
     if (half) {
       return {
         verdict: "fail",
-        reason: `“${half.name}” is on but has no “Transfer to” destination, so the handoff can't complete. Add one in Build → Tools.`,
+        reason: `“${half.name}” is on but has no “Transfer to” destination, so the handoff can’t complete. Add one in Build → Tools.`,
       };
     }
     if (promises) {
@@ -599,7 +619,7 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
         verdict: "fail",
         reason: `The agent promises to transfer ${
           ctx.agent.direction === "outbound" ? "recipients" : "callers"
-        }, but call transfer isn't set up. Add it in Build → Tools.`,
+        }, but call transfer isn’t set up. Add it in Build → Tools.`,
       };
     }
     const callback = /(call (them|you) back|callback|take (their|a) (name|message))/.test(prompt);
@@ -608,13 +628,13 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
       return {
         verdict: "pass",
         reason:
-          "No call transfer is set up, so the agent takes their name and number for a teammate to call back — and doesn't promise more. Add a Transfer call tool in Build → Tools to hand calls over live.",
+          "No call transfer is set up, so the agent takes their name and number for a teammate to call back — and doesn’t promise more. Add a Transfer call tool in Build → Tools to hand calls over live.",
       };
     }
     return {
       verdict: "fail",
       reason: callback
-        ? "The agent can only offer a callback — call transfer isn't set up. Add it in Build → Tools."
+        ? "The agent can only offer a callback — call transfer isn’t set up. Add it in Build → Tools."
         : "Nothing lets the agent hand the call to a teammate. Add a Transfer call tool in Build → Tools.",
     };
   }
@@ -633,7 +653,7 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
       : { verdict: "pass", reason: "Voicemail detection is on — the agent leaves your name and callback number only, no account details." };
   }
 
-  // 9. Audio-dependent behavior can't be judged from config alone.
+  // 9. Audio-dependent behavior can’t be judged from config alone.
   if (has(text, /(silent|silence|no response)/)) {
     return { verdict: "inconclusive", reason: "Silence handling depends on live call timing — start a test call to check it." };
   }
@@ -646,7 +666,7 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
   // 10. "What is this call about" — purpose.
   if (has(text, /(what this line|who is calling|what can you|purpose|what.*help with|why)/)) {
     return ctx.agent.purpose.trim().length > 10
-      ? { verdict: "pass", reason: "The agent's purpose is in its prompt, so it can explain the call accurately." }
+      ? { verdict: "pass", reason: "The agent’s purpose is in its prompt, so it can explain the call accurately." }
       : { verdict: "fail", reason: "The agent has no purpose line to explain the call from." };
   }
 
@@ -662,7 +682,7 @@ export function evaluateScenario(scenario: Scenario, ctx: AgentContext): Evaluat
   if (hits >= 2) return { verdict: "pass", reason: "The prompt and enabled tools address this directly." };
   return {
     verdict: "inconclusive",
-    reason: "Nothing in this agent's prompt, rules, tools or knowledge addresses this yet.",
+    reason: "Nothing in this agent’s prompt, rules, tools or knowledge addresses this yet.",
   };
 }
 
@@ -684,15 +704,15 @@ export function simulateReply(message: string, ctx: AgentContext): string {
   if (requestsHandoff(text) || /\boperator\b/.test(text)) {
     const tool = workingTransferTool(ctx.tools);
     return tool
-      ? toned(ctx, "Certainly. I will transfer you to a member of our team now.", "Of course — I'll transfer you to a teammate now. One moment.", "Absolutely, no problem at all! I'm connecting you with one of my teammates right now — hang tight.")
-      : `I understand. I'll have a teammate from ${name} call you back. What's the best number to reach you?`;
+      ? toned(ctx, "Certainly. I will transfer you to a member of our team now.", "Of course — I’ll transfer you to a teammate now. One moment.", "Absolutely, no problem at all! I’m connecting you with one of my teammates right now — hang tight.")
+      : `I understand. I’ll have a teammate from ${name} call you back. What’s the best number to reach you?`;
   }
 
   if (/(stop calling|don'?t call|do not call|remove me)/.test(text)) {
     const tool = findTool(ctx.tools, /(do-not-call|do not call|dnc|suppress)/);
     return tool
-      ? "Understood — I've added your number to our do-not-call list. You won't hear from us again. Sorry for the interruption."
-      : "Understood. I'll pass your request along so a teammate can remove your number.";
+      ? "Understood — I’ve added your number to our do-not-call list. You won’t hear from us again. Sorry for the interruption."
+      : "Understood. I’ll pass your request along so a teammate can remove your number.";
   }
 
   const requestedSize = partySizeIn(text);
@@ -706,68 +726,119 @@ export function simulateReply(message: string, ctx: AgentContext): string {
       return toned(
         ctx,
         `Thank you for letting me know. For a party of ${requestedSize}, I am not able to confirm that directly — ${action}.`,
-        `Got it — for a party of ${requestedSize} I can't book that directly, so here's what I'll do: ${action}.`,
-        `Thanks for sharing that! For a party of ${requestedSize} I can't lock that in myself, so ${action}.`,
+        `Got it — for a party of ${requestedSize} I can’t book that directly, so here’s what I’ll do: ${action}.`,
+        `Thanks for sharing that! For a party of ${requestedSize} I can’t lock that in myself, so ${action}.`,
       );
     }
   }
 
   const sizeRuleIds = new Set(ctx.rules.filter((r) => partySizeThreshold(r) !== undefined).map((r) => r.id));
   const matchableRules = ctx.rules.filter((r) => !sizeRuleIds.has(r.id));
-  const type = detectType(text);
-  const rule = (type ? matchRule(text, matchableRules, type) : matchRule(text, matchableRules)) ?? undefined;
+  const { rule, type } = matchTypedRule(text, matchableRules);
   if (rule && rule.enabled) {
     const action = lowerFirst(stripPeriod(rule.action));
     const check = checkLimits(rule, message);
     if (check && check.breaches.length > 0) {
       const limits = rule.threshold ? ` (${rule.threshold})` : "";
       return handlesOutOfLimit(rule.action)
-        ? `That's outside what I can offer on this call${limits}, so I'll ${action}.`
-        : `${rule.threshold ? `Our limits are: ${lowerFirst(rule.threshold)}` : "That's outside our limits"}, so I can't set that up — and I don't have instructions for requests beyond that.`;
+        ? `That’s outside what I can offer on this call${limits}, so I’ll ${action}.`
+        : `${rule.threshold ? `Our limits are: ${lowerFirst(rule.threshold)}` : "That’s outside our limits"}, so I can’t set that up — and I don’t have instructions for requests beyond that.`;
     }
     switch (rule.limitType) {
       case "forbidden_promise":
-        return `That's not something I'm able to commit to on this call. What I can do: ${action}.`;
+        return `That’s not something I’m able to commit to on this call. What I can do: ${action}.`;
       case "escalation_trigger":
-        return toned(ctx, `Thank you for telling me. I am escalating this now — ${action}.`, `Thanks for letting me know — that's important. I'm escalating it now: ${action}.`, `Oh no, I'm sorry you're dealing with that. Let's get you taken care of right away — ${action}.`);
+        return toned(ctx, `Thank you for telling me. I am escalating this now — ${action}.`, `Thanks for letting me know — that’s important. I’m escalating it now: ${action}.`, `Oh no, I’m sorry you’re dealing with that. Let’s get you taken care of right away — ${action}.`);
       case "discount_limit":
-        return `Good news — ${lowerFirst(rule.label)}${rule.threshold ? ` (${rule.threshold})` : ""}. I'll ${action}.`;
+        return `Good news — ${lowerFirst(rule.label)}${rule.threshold ? ` (${rule.threshold})` : ""}. I’ll ${action}.`;
       case "payment_plan_limit":
-        return `I can set that up within our limits${rule.threshold ? ` (${rule.threshold})` : ""} — I'll ${action}.`;
+        return `I can set that up within our limits${rule.threshold ? ` (${rule.threshold})` : ""} — I’ll ${action}.`;
     }
   }
   if (type === "forbidden_promise") {
-    return `Let me make sure I give you accurate information on that — I'll have someone from ${name} follow up with the specifics.`;
+    return `Let me make sure I give you accurate information on that — I’ll have someone from ${name} follow up with the specifics.`;
   }
 
   const source = findKnowledge(text, ctx.knowledge);
-  if (source) return `Let me check “${source.name}” for that — that's what I go by for questions like this.`;
+  if (source) return `Let me check “${source.name}” for that — that’s what I go by for questions like this.`;
 
   if (/(book|appointment|reschedul|schedule)/.test(text)) {
     const tool = bookingTool(ctx.tools);
     return tool
       ? "I can take care of that. Can I get your full name and date of birth to pull up your record?"
-      : `I can't book directly yet, but I'll take your details and someone from ${name} will confirm a time with you.`;
+      : `I can’t book directly yet, but I’ll take your details and someone from ${name} will confirm a time with you.`;
   }
 
-  if (/(what can you|what do you do|who (is|are) (this|you)|what is this|what's this)/.test(text)) {
-    return `I'm ${who}, the automated assistant for ${name}. I'm here to ${purpose}. What can I do for you?`;
+  if (/(what can you|what do you do|who (is|are) (this|you)|what is this|what’s this)/.test(text)) {
+    return `I’m ${who}, the automated assistant for ${name}. I’m here to ${purpose}. What can I do for you?`;
   }
 
   if (/^(hi|hello|hey|good (morning|afternoon|evening))\b/.test(text)) {
-    return toned(ctx, `Hello. You've reached ${name}. How may I assist you?`, `Hi there! You've reached ${name}. How can I help?`, `Hey, hi! Great to hear from you — you've reached ${name}. What can I do for you today?`);
+    return toned(ctx, `Hello. You’ve reached ${name}. How may I assist you?`, `Hi there! You’ve reached ${name}. How can I help?`, `Hey, hi! Great to hear from you — you’ve reached ${name}. What can I do for you today?`);
   }
 
-  if (/(thank|bye|that's all|that is all)/.test(text)) {
-    return toned(ctx, `You're welcome. Thank you for contacting ${name}. Goodbye.`, `You're welcome! Thanks for calling ${name} — have a good one.`, `Anytime! It was really nice talking with you — take care, and thanks for calling ${name}!`);
+  if (/(thank|bye|that’s all|that is all)/.test(text)) {
+    return toned(ctx, `You’re welcome. Thank you for contacting ${name}. Goodbye.`, `You’re welcome! Thanks for calling ${name} — have a good one.`, `Anytime! It was really nice talking with you — take care, and thanks for calling ${name}!`);
   }
 
   return toned(
     ctx,
-    `Understood. I'm here to ${purpose}. Could you give me a few more details?`,
-    `Got it. I'm here to ${purpose} — can you tell me a bit more so I can help?`,
-    `Totally hear you! I'm here to ${purpose}, so let's sort it out together — tell me a little more?`,
+    `Understood. I’m here to ${purpose}. Could you give me a few more details?`,
+    `Got it. I’m here to ${purpose} — can you tell me a bit more so I can help?`,
+    `Totally hear you! I’m here to ${purpose}, so let’s sort it out together — tell me a little more?`,
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* Live guardrail enforcement                                          */
+/* ------------------------------------------------------------------ */
+
+const FORBIDDEN_PROMISE_PHRASES =
+  /\b(i guarantee|guaranteed|i promise|you have my word|i can promise|definitely will|100%\s?(sure|certain)|no question it will)\b/i;
+
+export interface GuardrailBreach {
+  rule: BusinessRule;
+  reason: string;
+}
+
+/**
+ * Independently checks what the agent actually said against configured
+ * guardrails. `evaluateScenario` only scores written scenario descriptions
+ * (title/criteria text) against the config — it never looks at a real
+ * generated reply. This runs on every live reply instead, so a rule still
+ * gets enforced even when the text that produced the reply didn’t avoid
+ * breaking it.
+ */
+export function auditReply(reply: string, ctx: AgentContext): GuardrailBreach[] {
+  const breaches: GuardrailBreach[] = [];
+
+  for (const rule of ctx.rules) {
+    if (!rule.enabled) continue;
+
+    if (rule.limitType === "discount_limit" || rule.limitType === "payment_plan_limit") {
+      const check = checkLimits(rule, reply);
+      if (check && check.breaches.length > 0) {
+        const perMonth = rule.limitType === "payment_plan_limit";
+        const asked = check.requested.map((a) => describeAmount(a, perMonth)).join(" at ");
+        const breach = check.breaches.map((l) => describeBreach(l, perMonth)).join(" and ");
+        breaches.push({
+          rule,
+          reason: `The reply itself states ${asked}, which is ${breach} set by “${rule.label}”${rule.threshold ? ` (${rule.threshold})` : ""}.`,
+        });
+      }
+    }
+
+    if (rule.limitType === "forbidden_promise" && FORBIDDEN_PROMISE_PHRASES.test(reply)) {
+      if (overlap(tokens(reply), ruleTokens(rule)) > 0) {
+        breaches.push({
+          rule,
+          reason: `The reply uses an absolute commitment (“guarantee”, “promise”, or similar), which “${rule.label}” says not to do.`,
+        });
+      }
+    }
+  }
+
+  return breaches;
 }
 
 /* ------------------------------------------------------------------ */
@@ -816,7 +887,7 @@ function titleCase(s: string) {
 
 export function parseCurl(input: string): ParsedCurl | { error: string } {
   const words = shellWords(input.trim());
-  if (words[0]?.toLowerCase() !== "curl") return { error: "That doesn't look like a cURL command — it should start with “curl”." };
+  if (words[0]?.toLowerCase() !== "curl") return { error: "That doesn’t look like a cURL command — it should start with “curl”." };
   let method: string | undefined;
   let url: string | undefined;
   let body: string | undefined;
@@ -832,12 +903,12 @@ export function parseCurl(input: string): ParsedCurl | { error: string } {
     else if (w === "--url") url = words[++i];
     else if (/^https?:\/\//i.test(w)) url = w;
   }
-  if (!url) return { error: "Couldn't find an http(s) URL in that command." };
+  if (!url) return { error: "Couldn’t find an http(s) URL in that command." };
   let parsed: URL;
   try {
     parsed = new URL(url);
   } catch {
-    return { error: `“${url}” isn't a valid URL.` };
+    return { error: `“${url}” isn’t a valid URL.` };
   }
   method = method ?? (body ? "POST" : "GET");
 

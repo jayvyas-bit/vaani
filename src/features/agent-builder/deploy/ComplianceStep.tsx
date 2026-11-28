@@ -5,6 +5,7 @@ import { Switch } from "@/components/ui/Switch";
 import {
   contactCountLabel,
   contactListErrors,
+  csvHasConsentColumn,
   DAY_KEYS,
   dayHoursFor,
   dayLabel,
@@ -125,7 +126,6 @@ function DayHoursRow({
   error?: string;
   onChange: (patch: { closed?: boolean; open?: string; close?: string }) => void;
 }) {
-  const id = useId();
   const hours = dayHoursFor(config, day);
   return (
     <div className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 min-[480px]:flex-row min-[480px]:items-start min-[480px]:gap-4">
@@ -244,7 +244,7 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
   const id = useId();
   const errors = hoursErrors(config, "outbound");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Lists uploaded this session, in addition to the workspace's predefined ones.
+  // Lists uploaded this session, in addition to the workspace’s predefined ones.
   const [uploadedLists, setUploadedLists] = useState<ContactList[]>([]);
   const lists = [...WORKSPACE_CONTACT_LISTS, ...uploadedLists];
   const selectedList = lists.find((l) => l.name === config.contactListName);
@@ -259,8 +259,9 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
       const rows = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
       // First row is assumed to be a header.
       const count = Math.max(0, rows.length - 1);
+      const consentTracked = csvHasConsentColumn(rows[0] ?? "");
       const name = file.name.replace(/\.csv$/i, "");
-      setUploadedLists((ls) => [...ls, { name, count }]);
+      setUploadedLists((ls) => [...ls, { name, count, consentTracked }]);
       update({ contactListName: name, contactCount: count });
       setTouched(true);
     };
@@ -269,7 +270,7 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
 
   return (
     <div className="divide-y divide-ink-950/8 rounded-lg border border-ink-950/10 bg-paper-0">
-      <SettingRow title="Who to call" hint="The contact list this agent works through once it's live.">
+      <SettingRow title="Who to call" hint="The contact list this agent works through once it’s live.">
         <div className="flex flex-col gap-2">
           <FieldLabel htmlFor={`${id}-list`} required>
             Contact list
@@ -301,7 +302,7 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="shrink-0 text-[12.5px] font-semibold text-brand-700 underline-offset-2 hover:underline"
+              className="shrink-0 text-[12.5px] font-semibold text-brand-700 underline-offset-[0.2em] hover:underline"
             >
               Upload a CSV
             </button>
@@ -317,6 +318,19 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
               }}
             />
           </div>
+          {selectedList && (
+            <p
+              className={`flex items-start gap-1.5 text-[12.5px] ${selectedList.consentTracked ? "text-success-700" : "text-amber-700"}`}
+            >
+              <Icon
+                name={selectedList.consentTracked ? "check" : "alert"}
+                className="mt-0.5 size-3.5 shrink-0"
+              />
+              {selectedList.consentTracked
+                ? "This list has a consent/opt-in column — this only checks that the column exists, not that each record is current or legally sufficient to call on."
+                : "No consent/opt-in column found on this list. Confirm you have a legal basis to call these numbers before going live."}
+            </p>
+          )}
         </div>
       </SettingRow>
       <SettingRow
@@ -324,7 +338,7 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
         hint={
           <span className="flex items-center gap-1.5">
             <Icon name="shield" className="size-3.5 shrink-0 text-ink-400" />
-            Applied in each recipient's local time. Many regions restrict unsolicited calls outside 8:00 AM – 9:00 PM — check the rules where you're calling.
+            Applied in each recipient’s local time. Many regions restrict unsolicited calls outside 8:00 AM – 9:00 PM — check the rules where you’re calling.
           </span>
         }
       >
@@ -341,7 +355,7 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
           }
         />
       </SettingRow>
-      <SettingRow title="Do-not-call list" labelFor={`${id}-dnc`} hint="Every number is checked before it's dialed.">
+      <SettingRow title="Do-not-call list" labelFor={`${id}-dnc`} hint="Every number is checked against the selected list before it’s dialed.">
         <Select
           id={`${id}-dnc`}
           name="dncList"
@@ -352,6 +366,11 @@ function OutboundCompliance({ config, update }: { config: DeployConfig; update: 
           <option value="federal">Federal + state registries</option>
           <option value="both">Both — workspace list and registries</option>
         </Select>
+        {config.dncList !== "internal" && (
+          <p className="mt-2 text-[12.5px] text-ink-500">
+            This demo doesn’t connect to a live federal or state registry — there’s no real registry lookup here. Before going live, check numbers against the actual Do Not Call Registry and any state-specific lists.
+          </p>
+        )}
       </SettingRow>
       <SettingRow
         title="Voicemail detection"

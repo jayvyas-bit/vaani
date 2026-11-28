@@ -13,6 +13,10 @@ function withCurrent(options: string[], current: string) {
   return options.includes(current) ? options : [current, ...options];
 }
 
+function capitalizeFirst(text: string) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 function CompiledNote({
   custom,
   what,
@@ -21,7 +25,7 @@ function CompiledNote({
 }: {
   custom?: boolean;
   what: string;
-  /** False where the compiled text genuinely doesn't draw on the purpose field. */
+  /** False where the compiled text genuinely doesn’t draw on the purpose field. */
   fromPurpose?: boolean;
   onRegenerate: () => void;
 }) {
@@ -29,14 +33,14 @@ function CompiledNote({
     <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-gray-500">
       <span>
         {custom
-          ? `Edited by hand — business name and voice changes are swapped in, tone won't rewrite it.`
-          : `Written from the business name, voice, tone${fromPurpose ? " and purpose" : ""}. Edit to customize.`}
+          ? `Edited by hand — business name and voice changes are swapped in, tone won’t rewrite it.`
+          : `${capitalizeFirst(what)} written from the business name, voice, tone${fromPurpose ? " and purpose" : ""}. Edit to customize.`}
       </span>
       {custom && (
         <button
           type="button"
           onClick={onRegenerate}
-          className="font-semibold text-brand-700 underline-offset-2 hover:underline"
+          className="font-semibold text-brand-700 underline-offset-[0.2em] hover:underline"
         >
           Regenerate {what} from fields
         </button>
@@ -147,7 +151,7 @@ export function PersonaSection({
             <div>
               <FieldLabel
                 htmlFor={`${id}-language`}
-                hint="Changes this agent's instructions — doesn't verify that its voice, speech-to-text or text-to-speech provider actually supports Hindi"
+                hint="Changes this agent’s instructions — doesn’t verify that its voice, speech-to-text or text-to-speech provider actually supports Hindi"
               >
                 Language
               </FieldLabel>
@@ -277,7 +281,7 @@ export function PersonaSection({
 
       <SectionCard
         title="AI settings"
-        description="Standard (balanced cost and speed). Open Advanced to choose specific speech and language providers — each option's cost shows on Deploy → Cost estimate."
+        description="Standard (balanced cost and speed). Open Advanced to choose specific speech and language providers — each option’s cost shows on Deploy → Cost estimate."
         defaultAdvancedOpen={defaultAdvanced}
         quiet
         guided={null}

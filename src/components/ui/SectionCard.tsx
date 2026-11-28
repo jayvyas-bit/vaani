@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
 
 /**
- * The product's core progressive-disclosure primitive: every build-editor
+ * The product’s core progressive-disclosure primitive: every build-editor
  * section (persona, guardrails, knowledge, tools) is guided by default, with
  * an inline "Advanced" toggle that reveals the raw config underneath —
  * never a separate mode or page. One component, reused everywhere that
@@ -36,11 +36,15 @@ export function SectionCard({
 
   return (
     <section
-      className={`overflow-hidden rounded-lg border border-ink-950/10 ${quiet ? "bg-paper-50" : "bg-paper-0"}`}
+      className={`overflow-hidden rounded-lg border ${
+        quiet ? "border-ink-950/10 bg-paper-50" : "border-ink-950/10 bg-paper-0 shadow-sm"
+      }`}
     >
       <header className={`flex items-start justify-between gap-4 px-6 ${quiet ? "py-4" : "pt-5 pb-4"}`}>
         <div className="min-w-0">
-          <h3 className={`font-semibold text-ink-950 ${quiet ? "text-sm" : "text-md"}`}>{title}</h3>
+          <h3 className={`font-semibold tracking-[-0.01em] text-ink-950 ${quiet ? "text-sm" : "text-lg"}`}>
+            {title}
+          </h3>
           {description && <p className="mt-1 text-sm text-ink-600">{description}</p>}
         </div>
         {advanced && (

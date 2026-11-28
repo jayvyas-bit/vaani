@@ -8,7 +8,7 @@ import type { Agent } from "@/lib/types";
 
 /**
  * What Deploy shows for an agent that is already live (or paused): its status,
- * a Pause / Resume switch, and a summary of how it's deployed. Changing those
+ * a Pause / Resume switch, and a summary of how it’s deployed. Changing those
  * settings re-opens the wizard.
  */
 export function DeployStatusPanel({
@@ -22,7 +22,7 @@ export function DeployStatusPanel({
 }: {
   agent: Agent;
   config: DeployConfig;
-  /** Current projected spend at this agent's configured volume and providers. */
+  /** Current projected spend at this agent’s configured volume and providers. */
   monthlyCost?: number;
   onPause?: () => void;
   onResume?: () => void;
@@ -77,7 +77,7 @@ export function DeployStatusPanel({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="text-[14px] font-semibold text-ink-950">Status</p>
-              <Badge tone={statusTone[agent.status]} dot>
+              <Badge tone={statusTone[agent.status]} dot live={live}>
                 {statusLabel[agent.status]}
               </Badge>
             </div>

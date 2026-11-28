@@ -1,3 +1,6 @@
+import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
+import { WizardFooter } from "@/components/ui/WizardFooter";
 import { BuilderNav, type PrimarySection } from "@/features/agent-builder/BuilderNav";
 import type { DeployConfig } from "@/lib/deploy";
 import { withLiveGreeting } from "@/lib/persona";
@@ -40,7 +43,7 @@ export function TestEvaluateScreen({
   agent: Agent;
   transcript: TranscriptTurn[];
   scenarios: Scenario[];
-  /** The agent's current config — scenarios and chat replies are derived from it. */
+  /** The agent’s current config — scenarios and chat replies are derived from it. */
   businessRules?: BusinessRule[];
   tools?: ToolDef[];
   knowledge?: KnowledgeSource[];
@@ -53,10 +56,26 @@ export function TestEvaluateScreen({
   const [list, setList] = useControllable(scenarios, onScenariosChange);
   const context: AgentContext = { agent, rules: businessRules, tools, knowledge, safety, deploy };
 
-  // A flagged reply becomes a test scenario so it's re-checked after every change.
+  // A flagged reply becomes a test scenario so it’s re-checked after every change.
   const onFlag = (turn: TranscriptTurn, details: FlagDetails = {}) => {
     const other = agent.direction === "outbound" ? "recipient" : "caller";
     const callerLine = details.callerLine?.trim();
+
+    if (details.breach && details.breach.length > 0) {
+      const [first, ...rest] = details.breach;
+      setList([
+        ...list,
+        {
+          id: newId("sc"),
+          title: `Guardrail breach: “${first.rule.label}”`,
+          criteria: [first.reason, ...rest.map((b) => b.reason)].join(" ") + " Re-check after any change to this agent’s rules or replies.",
+          source: "manual",
+          verdict: "not-run",
+        },
+      ]);
+      return;
+    }
+
     setList([
       ...list,
       {
@@ -83,6 +102,16 @@ export function TestEvaluateScreen({
         />
         <ScenarioPool scenarios={list} onScenariosChange={setList} context={context} />
       </div>
+      <WizardFooter
+        backLabel="Back to Build"
+        onBack={() => onNavigate?.("build")}
+        maxWidthClassName="max-w-none"
+      >
+        <Button className="gap-1.5" onClick={() => onNavigate?.("deploy")}>
+          Continue to Deploy
+          <Icon name="chevron-right" className="size-4" />
+        </Button>
+      </WizardFooter>
     </div>
   );
 }

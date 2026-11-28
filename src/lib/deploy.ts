@@ -18,7 +18,7 @@ export interface PhoneCountryInfo {
 
 /**
  * Illustrative provisioning only — no carrier is actually reserved for any of
- * these. Each country's area-code shape is simplified (a single numeric code),
+ * these. Each country’s area-code shape is simplified (a single numeric code),
  * not a precise model of its real numbering plan.
  */
 export const PHONE_COUNTRIES: PhoneCountryInfo[] = [
@@ -53,7 +53,7 @@ export interface DayHours {
 /** Everything the Deploy wizard collects, held per agent in App state. */
 export interface DeployConfig {
   numberMethod: NumberMethod;
-  /** Which country's numbering plan the area code and provisioned/ported number follow. */
+  /** Which country’s numbering plan the area code and provisioned/ported number follow. */
   country: PhoneCountry;
   areaCode: string;
   /** The number reserved for "new" — generated, unique across the workspace. */
@@ -100,11 +100,11 @@ export const PER_MIN_RATE = 0.14;
 const STT_BASE_RATE = 0.022;
 const TTS_BASE_RATE = 0.023;
 const LLM_BASE_RATE = 0.065;
-const TELEPHONY_BASE_RATE = 0.03; // Doesn't vary with AI provider choice.
+const TELEPHONY_BASE_RATE = 0.03; // Doesn’t vary with AI provider choice.
 
 type ProviderSelection = Pick<Agent, "llmProvider" | "sttProvider" | "ttsProvider">;
 
-/** The per-minute rate this agent's chosen providers actually produce. */
+/** The per-minute rate this agent’s chosen providers actually produce. */
 export function effectivePerMinRate(providers?: ProviderSelection): number {
   if (!providers) return PER_MIN_RATE;
   return (
@@ -141,13 +141,27 @@ export function costBreakdown(
 export interface ContactList {
   name: string;
   count: number;
+  /**
+   * Whether this list's own source visibly records consent/opt-in per
+   * contact (e.g. a "consent" column in an uploaded CSV). This only checks
+   * whether that signal is present — it never verifies that an individual
+   * consent record is genuine, current, or legally sufficient to call on.
+   */
+  consentTracked: boolean;
 }
 
 export const WORKSPACE_CONTACT_LISTS: ContactList[] = [
-  { name: "Past-due March", count: 1800 },
-  { name: "Q4 renewals", count: 640 },
-  { name: "New patient follow-ups", count: 320 },
+  { name: "Past-due March", count: 1800, consentTracked: true },
+  { name: "Q4 renewals", count: 640, consentTracked: true },
+  { name: "New patient follow-ups", count: 320, consentTracked: false },
 ];
+
+const CONSENT_COLUMN_RE = /\b(consent|opt[\s_-]?in|opted[\s_-]?in|tcpa[\s_-]?consent)\b/i;
+
+/** Does a CSV header row contain a column that looks like a consent/opt-in flag? */
+export function csvHasConsentColumn(headerLine: string): boolean {
+  return CONSENT_COLUMN_RE.test(headerLine);
+}
 
 /** Numbers already owned by the workspace but not attached to an agent. */
 export const WORKSPACE_POOL = ["(503) 555-0112", "(971) 555-0164", "(360) 555-0185"];
@@ -203,7 +217,7 @@ export function contactCountLabel(count: number) {
   return `${count.toLocaleString()} contact${count === 1 ? "" : "s"}`;
 }
 
-/** "Past-due March — 1,800 contacts", or null while the list isn't set. */
+/** "Past-due March — 1,800 contacts", or null while the list isn’t set. */
 export function contactListSummary(config: DeployConfig): string | null {
   if (!config.contactListName.trim() || !(config.contactCount > 0)) return null;
   return `${config.contactListName.trim()} — ${contactCountLabel(config.contactCount)}`;
@@ -229,7 +243,7 @@ export function formatPhone(country: PhoneCountry, raw: string): string | null {
     return `(${nanp.slice(0, 3)}) ${nanp.slice(3, 6)}-${nanp.slice(6)}`;
   }
   // Generic international fallback — accepts a plausible national-number length
-  // and displays it with the country's dial code, without modelling the exact
+  // and displays it with the country’s dial code, without modelling the exact
   // numbering plan the way the NANP branch above does.
   if (d.length < 7 || d.length > 12) return null;
   return `${phoneCountryInfo[country].dialCode} ${d}`;
@@ -293,7 +307,7 @@ export const numberSourceNote: Record<NumberMethod, string> = {
 export function channelError(config: DeployConfig, currentNumber?: string): string | null {
   const country = phoneCountryInfo[config.country];
   if (config.numberMethod === "new" && !isValidAreaCode(config.country, config.areaCode))
-    return `Enter a valid ${country.label} code (numeric, up to ${country.areaCodeMaxLength} digits, can't start with 0).`;
+    return `Enter a valid ${country.label} code (numeric, up to ${country.areaCodeMaxLength} digits, can’t start with 0).`;
   if (config.numberMethod === "port" && !formatPhone(config.country, config.portNumber))
     return config.country === "US"
       ? "Enter the full 10-digit number you want to port, e.g. (503) 555-0123."
@@ -396,7 +410,7 @@ export interface CostSuggestion {
   swaps: ProviderSwap[];
   newMonthlyCost: number;
   monthlySavings: number;
-  /** True if even the cheapest available combination can't bring cost back under budget. */
+  /** True if even the cheapest available combination can’t bring cost back under budget. */
   stillOverBudget: boolean;
 }
 

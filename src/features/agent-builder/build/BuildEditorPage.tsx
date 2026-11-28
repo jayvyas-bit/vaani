@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Tabs, type TabItem } from "@/components/ui/Tabs";
+import { WizardFooter } from "@/components/ui/WizardFooter";
 import { BuilderNav, type PrimarySection } from "@/features/agent-builder/BuilderNav";
 import { applyPersonaPatch, HUMOR_TOGGLE_ID } from "@/lib/persona";
 import type {
@@ -149,7 +151,7 @@ export function BuildEditorPage({
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
         <div
           key={tab}
-          className="animate-step-in mx-auto flex min-h-full w-full max-w-[720px] flex-col justify-center lg:max-w-[880px] xl:max-w-[1040px]"
+          className="animate-step-in mx-auto flex w-full max-w-[720px] flex-col lg:max-w-[880px] xl:max-w-[1040px]"
           role="tabpanel"
           aria-label={tabs.find((t) => t.id === tab)?.label}
         >
@@ -190,6 +192,12 @@ export function BuildEditorPage({
           )}
         </div>
       </div>
+      <WizardFooter showBack={false} maxWidthClassName="max-w-[720px] lg:max-w-[880px] xl:max-w-[1040px]">
+        <Button className="gap-1.5" onClick={() => onNavigate?.("test")}>
+          Continue to Test & Evaluate
+          <Icon name="chevron-right" className="size-4" />
+        </Button>
+      </WizardFooter>
     </div>
   );
 }

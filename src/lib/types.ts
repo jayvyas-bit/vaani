@@ -4,7 +4,7 @@ export type AgentStatus = "draft" | "testing" | "live" | "paused";
 
 /**
  * "hi" and "en-hi" only control the instruction baked into the compiled
- * system prompt (see `persona.ts`) — they don't verify that the chosen voice,
+ * system prompt (see `persona.ts`) — they don’t verify that the chosen voice,
  * STT or TTS provider actually supports Hindi. Confirm that separately before
  * relying on it for real calls.
  */
@@ -99,7 +99,7 @@ export interface ToolDef {
   /**
    * Booking tools only: true once a real calendar account has been connected.
    * Configuring a provider above does not set this — it only becomes true
-   * through an actual OAuth/connection step, which this demo doesn't perform.
+   * through an actual OAuth/connection step, which this demo doesn’t perform.
    */
   calendarConnected?: boolean;
   /** Present on custom webhook tools (e.g. generated from a cURL command). */

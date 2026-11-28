@@ -48,7 +48,7 @@ function OutcomeRow({
           aria-label="Delete this outcome field?"
           className="flex flex-col gap-2 rounded-md border border-error-200 bg-error-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
         >
-          <p className="text-[12.5px] text-ink-800">Delete this outcome field? It won't be checked for anymore.</p>
+          <p className="text-[12.5px] text-ink-800">Delete this outcome field? It won’t be checked for anymore.</p>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(false)}>
               Keep it
@@ -163,7 +163,7 @@ function OutcomeForm({
         <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-ink-800">Required by end of call</p>
           <p className="mt-0.5 text-[12px] text-ink-500">
-            Flag calls where this wasn't captured, instead of treating it as optional.
+            Flag calls where this wasn’t captured, instead of treating it as optional.
           </p>
         </div>
       </div>

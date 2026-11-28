@@ -147,7 +147,7 @@ export const clinicTools: ToolDef[] = [
   {
     id: "tool_1",
     name: "Book / reschedule appointment",
-    description: "Reads and writes the practice's scheduling calendar.",
+    description: "Reads and writes the practice’s scheduling calendar.",
     kind: "builtin",
     enabled: true,
     calendarProvider: "google",
@@ -162,7 +162,7 @@ export const clinicTools: ToolDef[] = [
     destination: "Front desk, ext. 101",
   },
   { id: "tool_3", name: "Send text confirmation", description: "Texts the caller their appointment details after booking.", kind: "builtin", enabled: true },
-  { id: "tool_4", name: "Verify insurance eligibility", description: "Custom webhook into the practice's insurance clearinghouse.", kind: "custom", enabled: true },
+  { id: "tool_4", name: "Verify insurance eligibility", description: "Custom webhook into the practice’s insurance clearinghouse.", kind: "custom", enabled: true },
 ];
 
 export const clinicOutcomes: OutcomeField[] = [
@@ -222,9 +222,9 @@ export const scenarioPool: Scenario[] = [
 
 export const clinicTranscript: TranscriptTurn[] = [
   { id: "t1", speaker: "agent", text: "Thanks for calling Riverside Dental, this is Maya. How can I help you today?" },
-  { id: "t2", speaker: "caller", text: "Hi, I need to move my cleaning appointment, I think it's next week." },
+  { id: "t2", speaker: "caller", text: "Hi, I need to move my cleaning appointment, I think it’s next week." },
   { id: "t3", speaker: "agent", text: "Happy to help. Can I get your name and date of birth to pull up the appointment?" },
-  { id: "t4", speaker: "caller", text: "Sure, it's Dana Price, March 3rd." },
+  { id: "t4", speaker: "caller", text: "Sure, it’s Dana Price, March 3rd." },
   { id: "t5", speaker: "agent", text: "Found it — Tuesday the 14th at 10:30 with Dr. Oyelaran. I have openings Thursday at 9, Friday at 2, or next Monday at 11. Which works best?" },
 ];
 
@@ -235,7 +235,7 @@ export const collectionsKnowledge: KnowledgeSource[] = [
 ];
 
 export const collectionsTools: ToolDef[] = [
-  { id: "tool_c1", name: "Look up account balance", description: "Reads the verified recipient's current balance and days past due.", kind: "builtin", enabled: true },
+  { id: "tool_c1", name: "Look up account balance", description: "Reads the verified recipient’s current balance and days past due.", kind: "builtin", enabled: true },
   { id: "tool_c2", name: "Create payment plan", description: "Writes an approved plan (term, amount, first date) to the account.", kind: "custom", enabled: true },
   {
     id: "tool_c3",
@@ -278,7 +278,7 @@ export const collectionsScenarios: Scenario[] = [
   },
   {
     id: "sc_c3",
-    title: "Recipient says \"this isn't my debt\"",
+    title: "Recipient says \"this isn’t my debt\"",
     criteria: "Stops collection language and offers a transfer to a teammate.",
     source: "auto-seeded",
     verdict: "fail",
@@ -303,7 +303,7 @@ export const collectionsScenarios: Scenario[] = [
 
 export const collectionsTranscript: TranscriptTurn[] = [
   { id: "c1", speaker: "agent", text: "Hi, may I speak with Jordan Ellis? This is Daniel from Meridian Financial Services." },
-  { id: "c2", speaker: "caller", text: "Speaking. What's this about?" },
+  { id: "c2", speaker: "caller", text: "Speaking. What’s this about?" },
   { id: "c3", speaker: "agent", text: "Thanks, Jordan. Before I share any details, can you confirm your date of birth and the last four digits of your Social Security number?" },
   { id: "c4", speaker: "caller", text: "June 2nd, 1988 — and 4417." },
   { id: "c5", speaker: "agent", text: "Thank you, Jordan. Your balance is $1,240. I can set up a plan as low as $207 a month over six months. Would that work for you?" },

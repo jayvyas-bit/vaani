@@ -52,7 +52,7 @@ export function ChannelNumberStep({
   const countryInfo = phoneCountryInfo[config.country];
   const areaErr =
     config.numberMethod === "new" && !isValidAreaCode(config.country, config.areaCode)
-      ? `Enter a valid ${countryInfo.label} code (numeric, up to ${countryInfo.areaCodeMaxLength} digits, can't start with 0).`
+      ? `Enter a valid ${countryInfo.label} code (numeric, up to ${countryInfo.areaCodeMaxLength} digits, can’t start with 0).`
       : null;
   const portErr =
     config.numberMethod === "port" && (showErrors || config.portNumber.trim()) && !formatPhone(config.country, config.portNumber)
@@ -71,7 +71,7 @@ export function ChannelNumberStep({
             : "Recipients will see this number on caller ID."}
         </p>
         <p className="mt-2 text-[12.5px] text-ink-400">
-          Voice calls only. Chat and SMS aren't enabled on this workspace.
+          Voice calls only. Chat and SMS aren’t enabled on this workspace.
         </p>
       </div>
 
@@ -94,7 +94,7 @@ export function ChannelNumberStep({
             onSelect={() => choose("new")}
             icon={<Icon name="plus" className="size-4" />}
             title="Get a new local number"
-            description="We'll reserve one in the area code you choose."
+            description="We’ll reserve one in the area code you choose."
           />
           <RadioCard
             selected={config.numberMethod === "port"}
@@ -164,6 +164,10 @@ export function ChannelNumberStep({
               </p>
             )}
           </div>
+          <p className="text-[12.5px] text-ink-400">
+            Illustrative provisioning only — no carrier is actually reserving a number here. Going live would require
+            connecting a real telephony provider.
+          </p>
         </div>
       )}
       {config.numberMethod === "port" && (
@@ -185,7 +189,7 @@ export function ChannelNumberStep({
             </Select>
           </div>
           <div>
-            <FieldLabel htmlFor={`${id}-port`} hint="We'll start the carrier porting process after you continue">
+            <FieldLabel htmlFor={`${id}-port`} hint="We’ll start the carrier porting process after you continue">
               Existing number
             </FieldLabel>
             <Input
@@ -206,6 +210,10 @@ export function ChannelNumberStep({
             />
             <FieldError id={`${id}-port-err`}>{portErr}</FieldError>
           </div>
+          <p className="text-[12.5px] text-ink-400">
+            Illustrative only — no carrier porting request is actually filed here. A real port needs your current
+            carrier account details and typically takes days to complete.
+          </p>
         </div>
       )}
       {config.numberMethod === "pool" && pool.length > 0 && (

@@ -29,7 +29,9 @@ export type IconName =
   | "message"
   | "more-vertical"
   | "copy"
-  | "trash";
+  | "trash"
+  | "loader"
+  | "grid";
 
 const paths: Record<IconName, string> = {
   "phone-inbound": "M16 2v6h-6 M22 2l-6 6 M2 16.9v2a2 2 0 0 0 2.2 2 19.8 19.8 0 0 0 8.6-3.1 19.5 19.5 0 0 0 6-6 19.8 19.8 0 0 0 3.1-8.7A2 2 0 0 1 20.1 1h2",
@@ -60,6 +62,8 @@ const paths: Record<IconName, string> = {
   "more-vertical": "M12 12h.01 M12 5h.01 M12 19h.01",
   copy: "M9 9h11v11H9z M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1",
   trash: "M4 7h16 M9 7V4h6v3 M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13 M10 11v6 M14 11v6",
+  loader: "M12 2a10 10 0 0 1 10 10",
+  grid: "M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h6v6h-6z",
 };
 
 export function Icon({

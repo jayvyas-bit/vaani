@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { AppShell } from "@/components/ui/AppShell";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
@@ -231,7 +232,7 @@ function buildRecord(values: CreateFormValues): AgentRecord {
     {
       id: newId("sc"),
       title: inbound ? "Caller asks what this line can help with" : "Recipient asks who is calling and why",
-      criteria: "Explains the agent's purpose in one or two sentences, without inventing details.",
+      criteria: "Explains the agent’s purpose in one or two sentences, without inventing details.",
       source: "manual",
       verdict: "not-run",
     },
@@ -246,7 +247,7 @@ function buildRecord(values: CreateFormValues): AgentRecord {
       id: newId("sc"),
       title: inbound ? "Caller goes silent for 10 seconds" : "Call reaches voicemail",
       criteria: inbound
-        ? "Checks in once, then politely ends the call if there's still no response."
+        ? "Checks in once, then politely ends the call if there’s still no response."
         : "Leaves your name and callback number only — no account details.",
       source: "manual",
       verdict: "not-run",
@@ -254,7 +255,7 @@ function buildRecord(values: CreateFormValues): AgentRecord {
   ];
 
   // Empty transcript: the Test panel renders a sample call that always opens
-  // with the agent's *current* greeting.
+  // with the agent’s *current* greeting.
   return {
     agent,
     businessRules: [],
@@ -320,7 +321,7 @@ function AgentRowMenu({
         >
           {confirming ? (
             <div key="confirm" className="animate-fade-in px-3 py-2.5">
-              <p className="text-[12.5px] text-ink-700">Delete {agent.name.trim() || "this agent"}? This can't be undone.</p>
+              <p className="text-[12.5px] text-ink-700">Delete {agent.name.trim() || "this agent"}? This can’t be undone.</p>
               <div className="mt-2 flex justify-end gap-1.5">
                 <button
                   type="button"
@@ -426,7 +427,7 @@ function AgentRow({
       className="group flex cursor-pointer items-center gap-3 px-4 py-4 outline-none transition-colors hover:bg-paper-50 focus-visible:bg-paper-50 sm:gap-4 sm:px-5"
     >
       <div
-        className={`flex size-10 shrink-0 items-center justify-center rounded-md ${
+        className={`flex size-10 shrink-0 items-center justify-center rounded-md transition-transform duration-200 ease-[var(--ease-out-quart)] group-hover:scale-105 ${
           agent.direction === "inbound" ? "bg-inbound-100 text-inbound-600" : "bg-outbound-100 text-outbound-600"
         }`}
       >
@@ -434,11 +435,11 @@ function AgentRow({
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="min-w-0 truncate text-[14px] font-semibold text-ink-950">{agent.name.trim() || "Untitled agent"}</p>
+          <p className="min-w-[120px] max-w-full truncate text-[14px] font-semibold text-ink-950">{agent.name.trim() || "Untitled agent"}</p>
           <Badge tone={agent.direction === "inbound" ? "inbound" : "outbound"}>
             {agent.direction === "inbound" ? "Inbound" : "Outbound"}
           </Badge>
-          <Badge tone={statusTone[agent.status]} dot>
+          <Badge tone={statusTone[agent.status]} dot live={agent.status === "live"}>
             {statusLabel[agent.status]}
           </Badge>
           {linkedAgentName && (
@@ -453,7 +454,7 @@ function AgentRow({
           <p className="mt-0.5 text-[12.5px] tabular-nums text-ink-400">{agent.phoneNumber}</p>
         )}
       </div>
-      <div className="hidden shrink-0 gap-6 text-right sm:flex">
+      <div className="hidden shrink-0 gap-6 text-right lg:flex">
         <div className="w-[86px] shrink-0">
           <p className="whitespace-nowrap text-[12px] text-ink-400">Calls this week</p>
           <p className="whitespace-nowrap text-[13px] font-medium tabular-nums text-ink-900">{agent.callsThisWeek ?? 0}</p>
@@ -482,7 +483,7 @@ function AgentRow({
       <AgentRowMenu agent={agent} onDuplicate={onDuplicate} onDelete={onDelete} onAddCounterpart={onAddCounterpart} />
       <Icon
         name="chevron-right"
-        className="size-4 shrink-0 text-ink-300 transition-colors group-hover:text-ink-600 group-focus-visible:text-ink-600"
+        className="size-4 shrink-0 text-ink-300 transition-[color,transform] duration-200 ease-[var(--ease-out-quart)] group-hover:translate-x-0.5 group-hover:text-brand-600 group-focus-visible:translate-x-0.5 group-focus-visible:text-brand-600"
       />
     </div>
   );
@@ -490,11 +491,11 @@ function AgentRow({
 
 function liveBannerText(agent: Agent, deploy?: DeployConfig) {
   if (agent.direction === "inbound") {
-    return agent.phoneNumber ? ` — calls to ${agent.phoneNumber} now reach it.` : " — it's answering calls now.";
+    return agent.phoneNumber ? ` — calls to ${agent.phoneNumber} now reach it.` : " — it’s answering calls now.";
   }
   const from = agent.phoneNumber ? ` from ${agent.phoneNumber}` : "";
   if (deploy?.contactListName.trim() && deploy.contactCount > 0) {
-    return ` — it's calling the ${contactCountLabel(deploy.contactCount)} in ${deploy.contactListName.trim()}${from} between ${formatTime(deploy.windowStart)} and ${formatTime(deploy.windowEnd)}.`;
+    return ` — it’s calling the ${contactCountLabel(deploy.contactCount)} in ${deploy.contactListName.trim()}${from} between ${formatTime(deploy.windowStart)} and ${formatTime(deploy.windowEnd)}.`;
   }
   return ` — it will start calling${from} within its calling window.`;
 }
@@ -764,7 +765,7 @@ export default function App() {
         .map((r) => (linkedId && r.agent.id === linkedId ? { ...r, agent: { ...r.agent, linkedAgentId: undefined } } : r));
     });
 
-  /** The other direction's job description, derived mechanically — not a guess at the real business flow. */
+  /** The other direction’s job description, derived mechanically — not a guess at the real business flow. */
   const createCounterpart = (id: string) => {
     setRecords((rs) => {
       const rec = rs.find((r) => r.agent.id === id);
@@ -819,67 +820,75 @@ export default function App() {
     const liveRecord = justWentLive ? findRecord(justWentLive) : undefined;
     const liveAgent = liveRecord ? { agent: liveRecord.agent, deploy: liveRecord.deploy } : null;
     return (
-      <AgentsList
-        records={records}
-        justWentLive={liveAgent}
-        onNew={() => {
-          setJustWentLive(null);
-          navigate({ name: "create-method" });
-        }}
-        onOpen={(id) => {
-          setJustWentLive(null);
-          navigate({ name: "build", agentId: id });
-        }}
-        onDismissBanner={() => setJustWentLive(null)}
-        onDuplicate={duplicateRecord}
-        onDelete={deleteRecord}
-        onAddCounterpart={createCounterpart}
-      />
+      <AppShell onGoHome={goList}>
+        <AgentsList
+          records={records}
+          justWentLive={liveAgent}
+          onNew={() => {
+            setJustWentLive(null);
+            navigate({ name: "create-method" });
+          }}
+          onOpen={(id) => {
+            setJustWentLive(null);
+            navigate({ name: "build", agentId: id });
+          }}
+          onDismissBanner={() => setJustWentLive(null)}
+          onDuplicate={duplicateRecord}
+          onDelete={deleteRecord}
+          onAddCounterpart={createCounterpart}
+        />
+      </AppShell>
     );
   }
 
   /* ---------- Create ---------- */
   if (screen.name === "create-method") {
     return (
-      <CreateShell activeId="method" completedIds={[]} onExit={goList}>
-        <MethodChooser
-          onContinue={(method) =>
-            navigate(method === "template" ? { name: "template-gallery" } : { name: "create-form", method })
-          }
-        />
-      </CreateShell>
+      <AppShell onGoHome={goList}>
+        <CreateShell activeId="method" completedIds={[]} onExit={goList}>
+          <MethodChooser
+            onContinue={(method) =>
+              navigate(method === "template" ? { name: "template-gallery" } : { name: "create-form", method })
+            }
+          />
+        </CreateShell>
+      </AppShell>
     );
   }
 
   if (screen.name === "template-gallery") {
     return (
-      <CreateShell activeId="method" completedIds={[]} onExit={goList}>
-        <TemplateGallery
-          onBack={() => navigate({ name: "create-method" })}
-          onSelect={(template) => navigate({ name: "create-form", method: "template", templateId: template.id })}
-        />
-      </CreateShell>
+      <AppShell onGoHome={goList}>
+        <CreateShell activeId="method" completedIds={[]} onExit={goList}>
+          <TemplateGallery
+            onBack={() => navigate({ name: "create-method" })}
+            onSelect={(template) => navigate({ name: "create-form", method: "template", templateId: template.id })}
+          />
+        </CreateShell>
+      </AppShell>
     );
   }
 
   if (screen.name === "create-form") {
     const template = screen.templateId ? agentTemplates.find((t) => t.id === screen.templateId) : undefined;
     return (
-      <CreateShell activeId="basics" completedIds={["method"]} onExit={goList}>
-        <MinimalCreateForm
-          key={screen.templateId ?? screen.method}
-          onBack={() =>
-            navigate(screen.method === "template" ? { name: "template-gallery" } : { name: "create-method" })
-          }
-          initialValues={template?.values ?? blankValues}
-          onCreate={(values) => {
-            const rec = buildRecord(values);
-            setRecords((rs) => [rec, ...rs]);
-            // Replace the form entry so Back can't re-submit it.
-            navigate({ name: "create-success", agentId: rec.agent.id, method: screen.method }, { replace: true });
-          }}
-        />
-      </CreateShell>
+      <AppShell onGoHome={goList}>
+        <CreateShell activeId="basics" completedIds={["method"]} onExit={goList}>
+          <MinimalCreateForm
+            key={screen.templateId ?? screen.method}
+            onBack={() =>
+              navigate(screen.method === "template" ? { name: "template-gallery" } : { name: "create-method" })
+            }
+            initialValues={template?.values ?? blankValues}
+            onCreate={(values) => {
+              const rec = buildRecord(values);
+              setRecords((rs) => [rec, ...rs]);
+              // Replace the form entry so Back can’t re-submit it.
+              navigate({ name: "create-success", agentId: rec.agent.id, method: screen.method }, { replace: true });
+            }}
+          />
+        </CreateShell>
+      </AppShell>
     );
   }
 
@@ -887,57 +896,63 @@ export default function App() {
   if (!record) {
     // e.g. a history entry for an agent that no longer exists — never render a blank screen.
     return (
-      <AgentsList
-        records={records}
-        justWentLive={null}
-        onNew={() => navigate({ name: "create-method" })}
-        onOpen={(id) => navigate({ name: "build", agentId: id })}
-        onDismissBanner={() => undefined}
-        onDuplicate={duplicateRecord}
-        onDelete={deleteRecord}
-        onAddCounterpart={createCounterpart}
-      />
+      <AppShell onGoHome={goList}>
+        <AgentsList
+          records={records}
+          justWentLive={null}
+          onNew={() => navigate({ name: "create-method" })}
+          onOpen={(id) => navigate({ name: "build", agentId: id })}
+          onDismissBanner={() => undefined}
+          onDuplicate={duplicateRecord}
+          onDelete={deleteRecord}
+          onAddCounterpart={createCounterpart}
+        />
+      </AppShell>
     );
   }
   const { agent } = record;
 
   if (screen.name === "create-success") {
     return (
-      <CreateShell activeId="done" completedIds={["method", "basics"]} onExit={goList}>
-        <CreateSuccess
-          agent={agent}
-          name={agent.name}
-          direction={agent.direction}
-          onTest={() => navigateSection(agent.id)("test")}
-          onOpenBuild={() => navigate({ name: "build", agentId: agent.id })}
-        />
-      </CreateShell>
+      <AppShell onGoHome={goList}>
+        <CreateShell activeId="done" completedIds={["method", "basics"]} onExit={goList}>
+          <CreateSuccess
+            agent={agent}
+            name={agent.name}
+            direction={agent.direction}
+            onTest={() => navigateSection(agent.id)("test")}
+            onOpenBuild={() => navigate({ name: "build", agentId: agent.id })}
+          />
+        </CreateShell>
+      </AppShell>
     );
   }
 
   /* ---------- Build ---------- */
   if (screen.name === "build") {
     return (
-      <BuildEditorPage
-        key={agent.id}
-        agent={agent}
-        safety={record.safety}
-        businessRules={record.businessRules}
-        knowledge={record.knowledge}
-        knowledgeSettings={record.knowledgeSettings}
-        tools={record.tools}
-        outcomes={record.outcomes}
-        initialTab={screen.tab}
-        onAgentChange={(patch) => updateAgent(agent.id, patch)}
-        onSafetyChange={(safety) => patchRecord(agent.id, { safety })}
-        onBusinessRulesChange={(businessRules) => patchRecord(agent.id, { businessRules })}
-        onKnowledgeChange={(knowledge) => patchRecord(agent.id, { knowledge })}
-        onKnowledgeSettingsChange={(knowledgeSettings) => patchRecord(agent.id, { knowledgeSettings })}
-        onToolsChange={(tools) => updateTools(agent.id, tools)}
-        onOutcomesChange={(outcomes) => patchRecord(agent.id, { outcomes })}
-        onNavigate={navigateSection(agent.id)}
-        onBack={goList}
-      />
+      <AppShell onGoHome={goList}>
+        <BuildEditorPage
+          key={agent.id}
+          agent={agent}
+          safety={record.safety}
+          businessRules={record.businessRules}
+          knowledge={record.knowledge}
+          knowledgeSettings={record.knowledgeSettings}
+          tools={record.tools}
+          outcomes={record.outcomes}
+          initialTab={screen.tab}
+          onAgentChange={(patch) => updateAgent(agent.id, patch)}
+          onSafetyChange={(safety) => patchRecord(agent.id, { safety })}
+          onBusinessRulesChange={(businessRules) => patchRecord(agent.id, { businessRules })}
+          onKnowledgeChange={(knowledge) => patchRecord(agent.id, { knowledge })}
+          onKnowledgeSettingsChange={(knowledgeSettings) => patchRecord(agent.id, { knowledgeSettings })}
+          onToolsChange={(tools) => updateTools(agent.id, tools)}
+          onOutcomesChange={(outcomes) => patchRecord(agent.id, { outcomes })}
+          onNavigate={navigateSection(agent.id)}
+          onBack={goList}
+        />
+      </AppShell>
     );
   }
 
@@ -947,45 +962,49 @@ export default function App() {
   /* ---------- Test ---------- */
   if (screen.name === "test") {
     return (
-      <TestEvaluateScreen
-        key={agent.id}
-        agent={agent}
-        transcript={record.transcript}
-        scenarios={record.scenarios}
-        businessRules={record.businessRules}
-        tools={record.tools}
-        knowledge={record.knowledge}
-        safety={record.safety}
-        deploy={record.deploy}
-        onScenariosChange={(scenarios) => patchRecord(agent.id, { scenarios })}
-        onNavigate={navigateSection(agent.id)}
-        onBack={goList}
-      />
+      <AppShell onGoHome={goList}>
+        <TestEvaluateScreen
+          key={agent.id}
+          agent={agent}
+          transcript={record.transcript}
+          scenarios={record.scenarios}
+          businessRules={record.businessRules}
+          tools={record.tools}
+          knowledge={record.knowledge}
+          safety={record.safety}
+          deploy={record.deploy}
+          onScenariosChange={(scenarios) => patchRecord(agent.id, { scenarios })}
+          onNavigate={navigateSection(agent.id)}
+          onBack={goList}
+        />
+      </AppShell>
     );
   }
 
   /* ---------- Deploy ---------- */
   if ((agent.status === "live" || agent.status === "paused") && !screen.live && !screen.edit) {
     return (
-      <DeployWizardLayout
-        agent={agent}
-        activeId="golive"
-        completedIds={[]}
-        hideStepper
-        hideFooter
-        onNavigate={navigateSection(agent.id)}
-        onExit={goList}
-      >
-        <DeployStatusPanel
+      <AppShell onGoHome={goList}>
+        <DeployWizardLayout
           agent={agent}
-          config={deployConfig}
-          monthlyCost={estimatedMonthlyCost(deployConfig, agent)}
-          onPause={() => updateAgent(agent.id, { status: "paused" })}
-          onResume={() => updateAgent(agent.id, { status: "live" })}
-          onEditSettings={() => navigate({ ...screen, step: "channel", edit: true })}
-          onEditBudget={() => navigate({ ...screen, step: "cost", edit: true })}
-        />
-      </DeployWizardLayout>
+          activeId="golive"
+          completedIds={[]}
+          hideStepper
+          hideFooter
+          onNavigate={navigateSection(agent.id)}
+          onExit={goList}
+        >
+          <DeployStatusPanel
+            agent={agent}
+            config={deployConfig}
+            monthlyCost={estimatedMonthlyCost(deployConfig, agent)}
+            onPause={() => updateAgent(agent.id, { status: "paused" })}
+            onResume={() => updateAgent(agent.id, { status: "live" })}
+            onEditSettings={() => navigate({ ...screen, step: "channel", edit: true })}
+            onEditBudget={() => navigate({ ...screen, step: "cost", edit: true })}
+          />
+        </DeployWizardLayout>
+      </AppShell>
     );
   }
 
@@ -1029,66 +1048,68 @@ export default function App() {
     (screen.step === "cost" && !costAcknowledged);
 
   return (
-    <DeployWizardLayout
-      agent={agent}
-      activeId={screen.live ? "golive" : screen.step}
-      completedIds={completedIds}
-      continueLabel={continueLabel}
-      continueDisabled={stepBlocked}
-      continueHint={screen.step === "cost" && !costAcknowledged ? "Check the box above to continue" : undefined}
-      showBack={stepIndex > 0 && !screen.live}
-      showContinue={!(screen.step === "golive" && !screen.live)}
-      onContinue={onContinue}
-      onStepBack={onStepBack}
-      onNavigate={navigateSection(agent.id)}
-      onExit={goList}
-    >
-      {screen.step === "channel" && (
-        <ChannelNumberStep
-          direction={agent.direction}
-          currentNumber={agent.phoneNumber}
-          takenNumbers={taken}
-          config={deployConfig}
-          onConfigChange={setDeployConfig}
-        />
-      )}
-      {screen.step === "compliance" && (
-        <ComplianceStep
-          direction={agent.direction}
-          config={deployConfig}
-          onConfigChange={setDeployConfig}
-          canBook={!!bookingTool(record.tools)}
-        />
-      )}
-      {screen.step === "cost" && (
-        <CostEstimateStep
-          direction={agent.direction}
-          providers={agent}
-          config={deployConfig}
-          onConfigChange={setDeployConfig}
-          acknowledged={costAcknowledged}
-          onAcknowledgedChange={handleAcknowledged}
-          onEstimateChange={handleEstimate}
-          onApplyProviders={(patch) => updateAgent(agent.id, patch)}
-        />
-      )}
-      {screen.step === "golive" && (
-        <GoLiveStep
-          agent={agent}
-          live={screen.live}
-          config={deployConfig}
-          monthlyCost={monthlyCost}
-          scenarios={record.scenarios}
-          knowledge={record.knowledge}
-          businessRules={record.businessRules}
-          tools={record.tools}
-          onGoLive={goLive}
-          onReviewTests={() => navigateSection(agent.id)("test")}
-          onReviewKnowledge={() => navigate({ name: "build", agentId: agent.id, tab: "knowledge" })}
-          onReviewGuardrails={() => navigate({ name: "build", agentId: agent.id, tab: "guardrails" })}
-          onReviewTools={() => navigate({ name: "build", agentId: agent.id, tab: "tools" })}
-        />
-      )}
-    </DeployWizardLayout>
+    <AppShell onGoHome={goList}>
+      <DeployWizardLayout
+        agent={agent}
+        activeId={screen.live ? "golive" : screen.step}
+        completedIds={completedIds}
+        continueLabel={continueLabel}
+        continueDisabled={stepBlocked}
+        continueHint={screen.step === "cost" && !costAcknowledged ? "Check the box above to continue" : undefined}
+        showBack={stepIndex > 0 && !screen.live}
+        showContinue={!(screen.step === "golive" && !screen.live)}
+        onContinue={onContinue}
+        onStepBack={onStepBack}
+        onNavigate={navigateSection(agent.id)}
+        onExit={goList}
+      >
+        {screen.step === "channel" && (
+          <ChannelNumberStep
+            direction={agent.direction}
+            currentNumber={agent.phoneNumber}
+            takenNumbers={taken}
+            config={deployConfig}
+            onConfigChange={setDeployConfig}
+          />
+        )}
+        {screen.step === "compliance" && (
+          <ComplianceStep
+            direction={agent.direction}
+            config={deployConfig}
+            onConfigChange={setDeployConfig}
+            canBook={!!bookingTool(record.tools)}
+          />
+        )}
+        {screen.step === "cost" && (
+          <CostEstimateStep
+            direction={agent.direction}
+            providers={agent}
+            config={deployConfig}
+            onConfigChange={setDeployConfig}
+            acknowledged={costAcknowledged}
+            onAcknowledgedChange={handleAcknowledged}
+            onEstimateChange={handleEstimate}
+            onApplyProviders={(patch) => updateAgent(agent.id, patch)}
+          />
+        )}
+        {screen.step === "golive" && (
+          <GoLiveStep
+            agent={agent}
+            live={screen.live}
+            config={deployConfig}
+            monthlyCost={monthlyCost}
+            scenarios={record.scenarios}
+            knowledge={record.knowledge}
+            businessRules={record.businessRules}
+            tools={record.tools}
+            onGoLive={goLive}
+            onReviewTests={() => navigateSection(agent.id)("test")}
+            onReviewKnowledge={() => navigate({ name: "build", agentId: agent.id, tab: "knowledge" })}
+            onReviewGuardrails={() => navigate({ name: "build", agentId: agent.id, tab: "guardrails" })}
+            onReviewTools={() => navigate({ name: "build", agentId: agent.id, tab: "tools" })}
+          />
+        )}
+      </DeployWizardLayout>
+    </AppShell>
   );
 }

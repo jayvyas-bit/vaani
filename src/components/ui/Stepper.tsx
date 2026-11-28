@@ -10,6 +10,8 @@ export function Stepper({
   activeId,
   completedIds,
   compact = false,
+  showCount = true,
+  variant = "dots",
   onStepClick,
 }: {
   steps: StepItem[];
@@ -17,10 +19,50 @@ export function Stepper({
   completedIds: string[];
   /** Condensed dots + "Step N of M — label" for tight single-row headers. */
   compact?: boolean;
+  /** Set false when an ancestor header already shows its own "Step N of M" — avoids two stacked step counters reading as contradictory. */
+  showCount?: boolean;
+  /**
+   * "dots" is the glowing progress-bar look for a journey's one primary stepper.
+   * "breadcrumb" is a quieter numbered-chip list for a sub-wizard nested under
+   * that primary stepper, so the two never read as two competing progress bars.
+   */
+  variant?: "dots" | "breadcrumb";
   /** When given, each step becomes a button so the stepper doubles as free-roam navigation. */
   onStepClick?: (id: string) => void;
 }) {
   const activeIndex = steps.findIndex((s) => s.id === activeId);
+
+  if (variant === "breadcrumb") {
+    return (
+      <ol className="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none]">
+        {steps.map((step, i) => {
+          const done = completedIds.includes(step.id);
+          const active = step.id === activeId;
+          return (
+            <li key={step.id} className="flex shrink-0 items-center gap-1">
+              {i > 0 && <Icon name="chevron-right" className="size-3 shrink-0 text-ink-300" />}
+              <span className="flex items-center gap-1.5 whitespace-nowrap px-1 py-0.5 text-[12px]">
+                <span
+                  className={`flex size-[17px] shrink-0 items-center justify-center rounded-full text-[9.5px] font-semibold transition-colors duration-200 ${
+                    active
+                      ? "bg-brand-600 text-white"
+                      : done
+                        ? "bg-brand-100 text-brand-700"
+                        : "border border-ink-950/15 text-ink-400"
+                  }`}
+                >
+                  {done ? <Icon name="check" className="size-2.5" strokeWidth={3} /> : i + 1}
+                </span>
+                <span className={`font-medium ${active ? "text-ink-900" : done ? "text-ink-600" : "text-ink-400"}`}>
+                  {step.label}
+                </span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    );
+  }
 
   if (compact) {
     return (
@@ -31,8 +73,14 @@ export function Stepper({
             const active = step.id === activeId;
             const dot = (
               <span
-                className={`h-1.5 w-6 rounded-full transition-colors ${
-                  done || active ? "bg-brand-600" : i < activeIndex ? "bg-brand-200" : "bg-gray-200"
+                className={`inline-block h-[5px] rounded-full transition-[width,background-color,box-shadow] duration-200 ease-[var(--ease-out-quart)] ${
+                  active
+                    ? "w-8 bg-brand-600 shadow-[0_0_6px_rgba(127,86,217,0.5)]"
+                    : done
+                      ? "w-5 bg-brand-600"
+                      : i < activeIndex
+                        ? "w-5 bg-brand-200"
+                        : "w-5 bg-gray-200"
                 } ${onStepClick ? "hover:bg-brand-400" : ""}`}
               />
             );
@@ -55,10 +103,14 @@ export function Stepper({
           })}
         </div>
         <span className="min-w-0 truncate whitespace-nowrap text-[12.5px] text-ink-500">
-          <span className="font-medium text-ink-900">
-            Step {activeIndex + 1} of {steps.length}
-          </span>
-          <span className="mx-1.5 text-ink-300">·</span>
+          {showCount && (
+            <>
+              <span className="font-medium text-ink-900">
+                Step {activeIndex + 1} of {steps.length}
+              </span>
+              <span className="mx-1.5 text-ink-300">·</span>
+            </>
+          )}
           <span className="font-medium text-ink-700">{steps[activeIndex]?.label}</span>
         </span>
       </div>
@@ -74,7 +126,7 @@ export function Stepper({
           <li key={step.id} className="flex shrink-0 items-center" aria-current={active ? "step" : undefined}>
             <div className="flex items-center gap-2.5">
               <div
-                className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors duration-200 ${
                   done
                     ? "bg-brand-600 text-white"
                     : active
@@ -82,10 +134,14 @@ export function Stepper({
                       : "border border-gray-200 bg-white text-gray-500"
                 }`}
               >
-                {done ? <Icon name="check" className="size-4" strokeWidth={2.5} /> : i + 1}
+                {done ? (
+                  <Icon name="check" className="size-4 animate-step-in" strokeWidth={2.5} />
+                ) : (
+                  i + 1
+                )}
               </div>
               <span
-                className={`whitespace-nowrap text-sm font-semibold ${
+                className={`whitespace-nowrap text-sm font-semibold transition-colors duration-200 ${
                   active ? "text-brand-700" : done ? "text-gray-700" : "text-gray-500"
                 }`}
               >
@@ -94,7 +150,7 @@ export function Stepper({
             </div>
             {i < steps.length - 1 && (
               <div
-                className={`mx-2 h-0.5 w-5 rounded-full sm:mx-3 sm:w-10 ${i < activeIndex ? "bg-brand-600" : "bg-gray-200"}`}
+                className={`mx-2 h-0.5 w-5 rounded-full transition-colors duration-300 sm:mx-3 sm:w-10 ${i < activeIndex ? "bg-brand-600" : "bg-gray-200"}`}
               />
             )}
           </li>

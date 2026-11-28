@@ -27,7 +27,7 @@ export function MethodChooser({ onContinue }: { onContinue?: (method: Method) =>
           <div className="mb-8">
             <h1 className="text-[22px] font-semibold text-ink-950">Create a new agent</h1>
             <p className="mt-1.5 text-[14px] text-ink-600">
-              You'll end up with a draft agent you can start a test call with.
+              You’ll end up with a draft agent you can start a test call with.
             </p>
           </div>
 

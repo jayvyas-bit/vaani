@@ -33,23 +33,22 @@ export function CreateSuccess({
       value: agent ? `“${agent.greeting}”` : "Auto-generated from the purpose you entered",
     },
     { label: "AI settings", value: "Standard (balanced cost and speed)" },
-    { label: "Guardrails", value: "Safety defaults on, no business rules yet" },
-    { label: "Knowledge & tools", value: "None attached — add them any time" },
-    outbound
-      ? { label: "Calling window & DNC", value: "Set in Deploy — nothing is dialed until then" }
-      : { label: "Phone number", value: "Not reserved yet — you'll pick one in Deploy" },
   ];
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-[640px] px-4 py-10 sm:px-0 sm:py-14">
-          <div className="flex items-center gap-2 text-[12.5px] font-medium text-success-700">
-            <Icon name="check" className="size-3.5" />
-            Agent created
+          <div className="flex items-center gap-3">
+            <div className="animate-success-pop flex size-11 shrink-0 items-center justify-center rounded-full bg-success-100 text-success-700">
+              <Icon name="check" className="size-5" strokeWidth={2.5} />
+            </div>
+            <div className="animate-step-in [animation-delay:90ms]">
+              <p className="text-[12.5px] font-medium text-success-700">Agent created</p>
+              <h1 className="text-[22px] font-semibold text-ink-950">{agentName} is ready to test</h1>
+            </div>
           </div>
-          <h1 className="mt-1 text-[22px] font-semibold text-ink-950">{agentName} is ready to test</h1>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[14px] text-ink-600">
+          <div className="animate-step-in mt-4 flex flex-wrap items-center gap-2 text-[14px] text-ink-600 [animation-delay:140ms]">
             <Badge tone={dir}>{outbound ? "Outbound" : "Inbound"}</Badge>
             <Badge tone="neutral" dot>
               Draft
@@ -61,7 +60,7 @@ export function CreateSuccess({
             </p>
           </div>
 
-          <div className="mt-7 rounded-lg border border-ink-950/10 bg-paper-0">
+          <div className="animate-step-in mt-7 rounded-lg border border-ink-950/10 bg-paper-0 [animation-delay:190ms]">
             <h2 className="border-b border-ink-950/10 px-4 py-3 text-[13px] font-medium text-ink-700 sm:px-5">
               What we defaulted for you
             </h2>
@@ -78,7 +77,7 @@ export function CreateSuccess({
             </dl>
           </div>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="animate-step-in mt-6 flex flex-col gap-3 sm:flex-row sm:items-center [animation-delay:230ms]">
             <Button size="lg" className="gap-2" onClick={onTest}>
               <Icon name="play" className="size-4" />
               Start test call
@@ -89,8 +88,8 @@ export function CreateSuccess({
           </div>
           <p className="mt-3 text-[12.5px] text-ink-400">
             {outbound
-              ? "Nothing is live yet — this agent won't dial anyone until you finish Deploy."
-              : "Nothing is live yet — calls won't reach this agent until you finish Deploy."}
+              ? "Nothing is live yet — this agent won’t dial anyone until you finish Deploy."
+              : "Nothing is live yet — calls won’t reach this agent until you finish Deploy."}
           </p>
         </div>
       </div>

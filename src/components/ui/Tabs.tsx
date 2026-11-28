@@ -4,7 +4,7 @@ export interface TabItem {
   id: string;
   label: string;
   icon?: ReactNode;
-  /** Shown as a hover/focus tooltip so the label's meaning doesn't depend on clicking in first. */
+  /** Shown as a hover/focus tooltip so the label’s meaning doesn’t depend on clicking in first. */
   description?: string;
 }
 
@@ -47,8 +47,8 @@ export function Tabs({
             role="tab"
             aria-selected={isActive}
             onClick={() => onChange(item.id)}
-            className={`group relative flex shrink-0 items-center gap-2 px-1 pt-3 pb-3 text-sm font-semibold whitespace-nowrap outline-none transition-colors focus-visible:text-gray-900 ${
-              isActive ? "text-gray-900" : "text-gray-500 hover:text-gray-700"
+            className={`group relative flex shrink-0 items-center gap-2 px-1 pt-3 pb-3 text-sm whitespace-nowrap outline-none transition-[color,font-weight] focus-visible:text-gray-900 ${
+              isActive ? "font-bold text-gray-900" : "font-medium text-gray-500 hover:text-gray-700"
             }`}
           >
             {item.icon}
@@ -68,7 +68,7 @@ export function Tabs({
       {indicator && (
         <span
           aria-hidden="true"
-          className="absolute bottom-0 left-0 h-0.5 bg-brand-600 transition-[transform,width] duration-200 ease-[var(--ease-out-quart)]"
+          className="absolute bottom-0 left-0 h-[3px] rounded-full bg-brand-600 shadow-[0_0_8px_rgba(127,86,217,0.45)] transition-[transform,width] duration-200 ease-[var(--ease-out-quart)]"
           style={{ width: indicator.width, transform: `translateX(${indicator.left}px)` }}
         />
       )}

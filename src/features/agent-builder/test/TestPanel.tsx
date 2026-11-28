@@ -2,7 +2,8 @@ import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Field";
-import { simulateReply, type AgentContext } from "@/lib/simulate";
+import { VoiceWaveform } from "@/components/ui/VoiceWaveform";
+import { auditReply, simulateReply, type AgentContext, type GuardrailBreach } from "@/lib/simulate";
 import type { Agent, TranscriptTurn } from "@/lib/types";
 import { newId } from "@/lib/useControllable";
 
@@ -12,6 +13,8 @@ type Session = "idle" | "live" | "ended";
 export interface FlagDetails {
   /** What the caller (or recipient) said right before the flagged reply, if anything. */
   callerLine?: string;
+  /** Set when this flag comes from an automatic guardrail breach, not a manual flag. */
+  breach?: GuardrailBreach[];
 }
 
 /**
@@ -44,6 +47,8 @@ export function TestPanel({
   const [draft, setDraft] = useState("");
   const [conversation, setConversation] = useState<TranscriptTurn[]>([]);
   const [typing, setTyping] = useState(false);
+  const [breaches, setBreaches] = useState<Map<string, GuardrailBreach[]>>(() => new Map());
+  const [addedToScenarios, setAddedToScenarios] = useState<Set<string>>(() => new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const replyTimer = useRef<number | undefined>(undefined);
   const canSpeak = typeof window !== "undefined" && "speechSynthesis" in window;
@@ -90,6 +95,8 @@ export function TestPanel({
     setShowSample(false);
     setElapsed(0);
     setConversation([{ id: newId("test"), speaker: "agent", text: agent.greeting }]);
+    setBreaches(new Map());
+    setAddedToScenarios(new Set());
     setSession("live");
     speak(agent.greeting);
   };
@@ -109,6 +116,8 @@ export function TestPanel({
     setMode(next);
     setSession("idle");
     setConversation([]);
+    setBreaches(new Map());
+    setAddedToScenarios(new Set());
   };
 
   const send = (e: FormEvent) => {
@@ -121,7 +130,12 @@ export function TestPanel({
     const ctx: AgentContext = context ?? { agent, rules: [], tools: [], knowledge: [] };
     replyTimer.current = window.setTimeout(() => {
       const reply = simulateReply(text, ctx);
-      setConversation((c) => [...c, { id: newId("test"), speaker: "agent", text: reply }]);
+      const replyId = newId("test");
+      setConversation((c) => [...c, { id: replyId, speaker: "agent", text: reply }]);
+      const breach = auditReply(reply, ctx);
+      if (breach.length > 0) {
+        setBreaches((m) => new Map(m).set(replyId, breach));
+      }
       setTyping(false);
       speak(reply);
     }, 650);
@@ -132,6 +146,13 @@ export function TestPanel({
     const callerLine = [...turns.slice(0, lastAgentIndex)].reverse().find((t) => t.speaker !== "agent")?.text;
     setFlagged((s) => new Set(s).add(lastAgentTurn.id));
     onFlag?.(lastAgentTurn, { callerLine });
+  };
+
+  const addBreachToScenarios = (turn: TranscriptTurn) => {
+    const breach = breaches.get(turn.id);
+    if (!breach || addedToScenarios.has(turn.id)) return;
+    setAddedToScenarios((s) => new Set(s).add(turn.id));
+    onFlag?.(turn, { breach });
   };
 
   const startLabel = mode === "call" ? "Start test call" : "Start test chat";
@@ -158,10 +179,14 @@ export function TestPanel({
         {session === "live" ? (
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-2 text-[12.5px] font-medium tabular-nums text-ink-700">
-              <span className="size-1.5 rounded-full bg-error-500" />
+              {mode === "call" ? (
+                <VoiceWaveform variant="live" className="h-3 w-3.5 text-error-500" />
+              ) : (
+                <span className="size-1.5 rounded-full bg-error-500" />
+              )}
               {mode === "call" ? `Test call · ${clock}` : "Test chat"}
             </span>
-            <Button size="sm" variant="destructive" onClick={end}>
+            <Button size="sm" variant="secondary" onClick={end}>
               {mode === "call" ? "End call" : "End chat"}
             </Button>
           </div>
@@ -177,12 +202,12 @@ export function TestPanel({
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ink-950/8 bg-paper-50 px-4 py-2">
           <p className="text-[12.5px] text-ink-700">
             <span className="font-semibold">Sample conversation</span> — an example of how this agent might
-            sound. It isn't a test.
+            sound. It isn’t a test.
           </p>
           <button
             type="button"
             onClick={() => setShowSample(false)}
-            className="text-[12.5px] font-semibold text-brand-700 underline-offset-2 hover:underline"
+            className="text-[12.5px] font-semibold text-brand-700 underline-offset-[0.2em] hover:underline"
           >
             Hide sample
           </button>
@@ -191,15 +216,21 @@ export function TestPanel({
 
       {session === "idle" && !showSample ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-10 text-center">
-          <div className="flex size-10 items-center justify-center rounded-full bg-paper-100 text-ink-600">
-            <Icon name={mode === "call" ? (agent.direction === "outbound" ? "phone-outbound" : "phone-inbound") : "message"} className="size-4.5" />
-          </div>
+          {mode === "call" ? (
+            <div className="flex size-14 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+              <VoiceWaveform className="h-6 w-7" />
+            </div>
+          ) : (
+            <div className="flex size-10 items-center justify-center rounded-full bg-paper-100 text-ink-600">
+              <Icon name="message" className="size-4.5" />
+            </div>
+          )}
           <p className="max-w-[300px] text-[14px] font-medium text-ink-900">
             Talk to your agent the way a customer would.
           </p>
           <p className="max-w-[320px] text-[12.5px] text-ink-500">
             {mode === "call"
-              ? `You play the ${other} and type what you'd say; the agent's replies are read aloud.`
+              ? `You play the ${other} and type what you’d say; the agent’s replies are read aloud.`
               : `You play the ${other}; the agent replies in text.`}
           </p>
           <Button className="mt-1 gap-1.5" onClick={start}>
@@ -210,7 +241,7 @@ export function TestPanel({
             <button
               type="button"
               onClick={() => setShowSample(true)}
-              className="text-[12.5px] font-semibold text-brand-700 underline-offset-2 hover:underline"
+              className="text-[12.5px] font-semibold text-brand-700 underline-offset-[0.2em] hover:underline"
             >
               Show a sample conversation
             </button>
@@ -234,13 +265,44 @@ export function TestPanel({
                   Flagged — added to Test scenarios
                 </span>
               )}
+              {breaches.has(t.id) && (
+                <div
+                  role="alert"
+                  className="mt-1.5 flex max-w-[85%] flex-col gap-1.5 rounded-md border border-error-200 bg-error-50 px-3 py-2 text-[12px] text-error-700"
+                >
+                  {breaches.get(t.id)!.map((b) => (
+                    <p key={b.rule.id} className="flex items-start gap-1.5">
+                      <Icon name="alert" className="mt-0.5 size-3.5 shrink-0" />
+                      <span>
+                        <span className="font-semibold">Guardrail breach — “{b.rule.label}”.</span> {b.reason}
+                      </span>
+                    </p>
+                  ))}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="w-fit gap-1.5"
+                    disabled={addedToScenarios.has(t.id)}
+                    onClick={() => addBreachToScenarios(t)}
+                  >
+                    <Icon name="flag" className="size-3.5" />
+                    {addedToScenarios.has(t.id) ? "Added to Test scenarios" : "Add to Test scenarios"}
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
           {typing && (
             <div className="flex justify-start">
-              <div className="rounded-lg bg-paper-100 px-3.5 py-2.5 text-[13px] text-ink-500">
+              <div className="flex items-center gap-1 rounded-lg bg-paper-100 px-3.5 py-3">
                 <span className="sr-only">The agent is replying</span>
-                <span aria-hidden="true">…</span>
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="animate-typing-dot size-1.5 rounded-full bg-ink-400"
+                    style={{ animationDelay: `${i * 160}ms` }}
+                  />
+                ))}
               </div>
             </div>
           )}

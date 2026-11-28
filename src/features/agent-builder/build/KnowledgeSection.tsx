@@ -17,7 +17,7 @@ const kindIcon: Record<KnowledgeSource["kind"], IconName> = {
 /**
  * "Chunk size" / "top-k" are raw RAG internals with no actionable meaning to
  * any user — nobody, technical or not, can reason about "800 tokens" without
- * already knowing how this agent's retrieval is implemented. These two
+ * already knowing how this agent’s retrieval is implemented. These two
  * presets give the same underlying tuning as an outcome instead.
  */
 export const knowledgeAnswerStylePresets = {
@@ -29,9 +29,16 @@ export type KnowledgeAnswerStyle = keyof typeof knowledgeAnswerStylePresets;
 
 export const defaultKnowledgeSettings: KnowledgeSettings = knowledgeAnswerStylePresets.quick;
 
-/** Settings from before this preset existed won't match either exactly — nearest by topK. */
+/** Settings from before this preset existed won’t match either exactly — nearest by topK. */
 function answerStyleOf(settings: KnowledgeSettings): KnowledgeAnswerStyle {
   return settings.topK >= 5 ? "thorough" : "quick";
+}
+
+/** Splits "Pricing-Sheet-2024.pdf" into base + extension so the extension survives truncation. */
+function splitFileName(name: string): { base: string; ext: string } {
+  const dot = name.lastIndexOf(".");
+  if (dot <= 0 || dot === name.length - 1) return { base: name, ext: "" };
+  return { base: name.slice(0, dot), ext: name.slice(dot) };
 }
 
 function formatBytes(bytes: number) {
@@ -54,13 +61,17 @@ function normalizeUrl(raw: string): string | null {
 }
 
 function SourceRow({ source, onToggle }: { source: KnowledgeSource; onToggle: (attached: boolean) => void }) {
+  const { base, ext } = source.kind === "url" ? { base: source.name, ext: "" } : splitFileName(source.name);
   return (
     <div className="flex items-center gap-3 px-6 py-3">
       <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-paper-100 text-ink-500">
         <Icon name={kindIcon[source.kind]} className="size-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13.5px] font-medium text-ink-950">{source.name}</p>
+        <p className="flex min-w-0 text-[13.5px] font-medium text-ink-950">
+          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{base}</span>
+          {ext && <span className="shrink-0">{ext}</span>}
+        </p>
         <p className="text-[12.5px] text-ink-500">
           {source.kind === "url" ? "Web page" : `${source.kind.toUpperCase()} · ${source.sizeLabel}`}
           {!source.attached && " · not used on calls"}

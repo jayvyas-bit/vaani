@@ -3,7 +3,7 @@ import type { Agent, AgentLanguage, CallDirection, ToolDef, TranscriptTurn } fro
 
 /**
  * Persona "compiler": the greeting and system prompt are written from the
- * agent's business name, voice, tone and purpose (and, for the prompt, which
+ * agent’s business name, voice, tone and purpose (and, for the prompt, which
  * tools exist). Every persona edit goes through `applyPersonaPatch` so those
  * derived strings never go stale.
  */
@@ -36,7 +36,7 @@ const WARM_PURPOSE_WORDS = ["spa", "concierge", "wellness", "support", "salon", 
 /**
  * A guess at starting voice/tone from the purpose text the user already
  * typed, instead of every agent starting as the same Ava/Sam-at-50. Still
- * fully editable afterward in Build -> Persona — this only changes what's
+ * fully editable afterward in Build -> Persona — this only changes what’s
  * pre-filled.
  */
 export function inferPersonaDefaults(purpose: string, direction: CallDirection): { voice: string; tone: number } {
@@ -74,7 +74,7 @@ export function toneBand(tone: number): ToneBand {
   return "balanced";
 }
 
-/** The "Allow light humor" toggle is a tone choice, so it's edited in Persona, not Guardrails. */
+/** The "Allow light humor" toggle is a tone choice, so it’s edited in Persona, not Guardrails. */
 export const HUMOR_TOGGLE_ID = "safety_4";
 
 export const toneBandLabel: Record<ToneBand, string> = {
@@ -92,7 +92,7 @@ function stripPeriod(s: string) {
 }
 
 /**
- * Words that describe the agent's job rather than the business. Everything
+ * Words that describe the agent’s job rather than the business. Everything
  * from the first of these on is dropped: "Northside Auto Missed-Appointment
  * Callback" → "Northside Auto", "Riverside Dental Front Desk" → "Riverside Dental".
  */
@@ -125,13 +125,13 @@ function displayName(agent: Pick<Agent, "name" | "businessName">) {
 
 /**
  * Outbound calls are unsolicited, so the recipient needs a reason before
- * they're asked for a minute of their time — without it they're as likely to
- * hang up as to hear the agent out. Inbound doesn't get this: the caller
+ * they’re asked for a minute of their time — without it they’re as likely to
+ * hang up as to hear the agent out. Inbound doesn’t get this: the caller
  * already knows why they dialed, and will say so.
  */
 function outboundPurposeClause(purpose: string): string {
   const body = lowerFirst(stripPeriod(purpose));
-  return body ? ` I'm calling to ${body}.` : "";
+  return body ? ` I’m calling to ${body}.` : "";
 }
 
 export function compileGreeting(agent: Agent): string {
@@ -147,7 +147,7 @@ export function compileGreeting(agent: Agent): string {
   if (band === "formal")
     return `Good day. This is ${who}, an automated assistant calling on behalf of ${name}.${purpose} Is this a convenient time to speak?`;
   if (band === "warm")
-    return `Hi! This is ${who}, an automated assistant with ${name} — hope your day's going well.${purpose} Do you have a quick minute to chat?`;
+    return `Hi! This is ${who}, an automated assistant with ${name} — hope your day’s going well.${purpose} Do you have a quick minute to chat?`;
   return `Hi, this is ${who}, an automated assistant with ${name}.${purpose} Do you have a quick minute?`;
 }
 
@@ -160,13 +160,13 @@ const toneInstruction: Record<ToneBand, string> = {
 /**
  * The handoff line only promises a transfer when a Transfer call tool is
  * actually enabled — otherwise the agent would promise something on a real
- * call that it can't do. Without one it offers a callback instead.
+ * call that it can’t do. Without one it offers a callback instead.
  */
 export function compileSystemPrompt(agent: Agent, tools: ToolDef[] = []): string {
   const name = displayName(agent);
   const who = voiceFirstName(agent.voice);
   const purpose = agent.purpose.trim() ? ` Your job: ${lowerFirst(stripPeriod(agent.purpose))}.` : "";
-  const other = agent.direction === "inbound" ? "the caller" : "the person you're calling";
+  const other = agent.direction === "inbound" ? "the caller" : "the person you’re calling";
   const handoff = enabledTransferTool(tools)
     ? `If you are unsure or ${other} asks for a person, offer to transfer them to a teammate.`
     : `If you are unsure or ${other} asks for a person, take their name and number so a teammate can call them back.`;
@@ -180,7 +180,7 @@ export function compileSystemPrompt(agent: Agent, tools: ToolDef[] = []): string
   return `You are ${who}, the ${agent.direction} voice assistant for ${name}.${purpose} ${toneInstruction[toneBand(agent.tone)]}${languageInstruction} ${handoff}`;
 }
 
-/** Re-write a still-generated system prompt after the agent's tools change. */
+/** Re-write a still-generated system prompt after the agent’s tools change. */
 export function recompileForTools(agent: Agent, tools: ToolDef[]): Agent {
   if (agent.promptCustom) return agent;
   const systemPrompt = compileSystemPrompt(agent, tools);
@@ -211,7 +211,7 @@ const identityKeys: (keyof Agent)[] = ["name", "businessName", "voice", "tone", 
  * Apply an edit to an agent and keep the compiled greeting / system prompt in
  * sync. Typing into the greeting or prompt directly marks it custom; setting
  * `greetingCustom: false` / `promptCustom: false` regenerates from fields.
- * Pass the agent's tools so a regenerated prompt knows whether it can transfer.
+ * Pass the agent’s tools so a regenerated prompt knows whether it can transfer.
  */
 export function applyPersonaPatch(agent: Agent, patch: Partial<Agent>, tools: ToolDef[] = []): Agent {
   const next: Agent = { ...agent, ...patch };
@@ -240,21 +240,21 @@ export function sampleCallTranscript(agent: Agent): TranscriptTurn[] {
   if (agent.direction === "inbound") {
     return [
       { id: "s1", speaker: "agent", text: agent.greeting },
-      { id: "s2", speaker: "caller", text: "Hi, I wasn't sure who to ask — what can you help me with?" },
+      { id: "s2", speaker: "caller", text: "Hi, I wasn’t sure who to ask — what can you help me with?" },
       {
         id: "s3",
         speaker: "agent",
-        text: `Happy to help — I'm the automated assistant for ${name}. What can I do for you today?`,
+        text: `Happy to help — I’m the automated assistant for ${name}. What can I do for you today?`,
       },
     ];
   }
   return [
     { id: "s1", speaker: "agent", text: agent.greeting },
-    { id: "s2", speaker: "caller", text: "Uh, sure. What's this about?" },
+    { id: "s2", speaker: "caller", text: "Uh, sure. What’s this about?" },
     {
       id: "s3",
       speaker: "agent",
-      text: `Thanks — I'm calling from ${name}, and it should only take a minute. Before I go on, can I confirm I'm speaking with the right person?`,
+      text: `Thanks — I’m calling from ${name}, and it should only take a minute. Before I go on, can I confirm I’m speaking with the right person?`,
     },
   ];
 }

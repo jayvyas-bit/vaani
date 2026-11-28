@@ -40,9 +40,9 @@ export function CostEstimateStep({
   onApplyProviders,
 }: {
   direction: CallDirection;
-  /** The agent's chosen AI providers — each one's own rate drives the breakdown below. */
+  /** The agent’s chosen AI providers — each one’s own rate drives the breakdown below. */
   providers?: Pick<Agent, "llmProvider" | "sttProvider" | "ttsProvider">;
-  /** Volume lives in the agent's deploy config so the review step shows the same numbers. */
+  /** Volume lives in the agent’s deploy config so the review step shows the same numbers. */
   config?: DeployConfig;
   onConfigChange?: (next: DeployConfig) => void;
   acknowledged?: boolean;
@@ -133,7 +133,7 @@ export function CostEstimateStep({
         </p>
         {currency !== "USD" && (
           <p className="mt-1 text-[11.5px] text-ink-400">
-            Illustrative conversion at a fixed rate for display only — you're billed in USD, and this is not a live or
+            Illustrative conversion at a fixed rate for display only — you’re billed in USD, and this is not a live or
             verified exchange rate.
           </p>
         )}
@@ -190,11 +190,15 @@ export function CostEstimateStep({
             </div>
           ))}
         </dl>
+        <p className="mt-2 text-[11.5px] text-ink-400">
+          Modeled per-minute rates for illustration — not live prices from these vendors. No AI provider or telephony
+          carrier is actually connected here, and real billing depends on the rates you contract with each one.
+        </p>
 
         <div className="mt-5 border-t border-ink-950/10 pt-4">
           <FieldLabel
             htmlFor={`${id}-budget`}
-            hint="Optional — we'll warn you before going live if you're projected to exceed it"
+            hint="Optional — we’ll warn you before going live if you’re projected to exceed it"
           >
             Monthly budget
           </FieldLabel>
@@ -302,7 +306,7 @@ export function CostEstimateStep({
           {acknowledged && <Icon name="check" className="size-3.5 text-paper-0" strokeWidth={2.6} />}
         </div>
         <span className="text-[13px] text-ink-800">
-          <span className="font-medium">I understand this is a usage-based estimate.</span> You're billed
+          <span className="font-medium">I understand this is a usage-based estimate.</span> You’re billed
           for real call minutes, so the total moves with actual volume and call length.{" "}
           <span className={acknowledged ? "text-ink-500" : "font-medium text-warning-700"}>Required to go live.</span>
         </span>

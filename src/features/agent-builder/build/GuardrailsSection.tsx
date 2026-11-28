@@ -2,7 +2,7 @@ import { useId, useState, type FormEvent } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FieldError, FieldLabel, Input, Select } from "@/components/ui/Field";
-import { Icon } from "@/components/ui/Icon";
+import { Icon, type IconName } from "@/components/ui/Icon";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Switch } from "@/components/ui/Switch";
 import { HUMOR_TOGGLE_ID } from "@/lib/persona";
@@ -24,6 +24,53 @@ const limitTypeTone: Record<LimitType, "accent" | "clay" | "amber" | "neutral"> 
   payment_plan_limit: "neutral",
   follow_up_limit: "accent",
 };
+
+const limitTypeIcon: Record<LimitType, IconName> = {
+  discount_limit: "ruler",
+  forbidden_promise: "x",
+  escalation_trigger: "user",
+  payment_plan_limit: "ruler",
+  follow_up_limit: "clock",
+};
+
+const chipToneClasses: Record<"accent" | "clay" | "amber" | "neutral", string> = {
+  accent: "border-brand-200 bg-brand-50 text-brand-700",
+  clay: "border-error-200 bg-error-50 text-error-700",
+  amber: "border-warning-200 bg-warning-50 text-warning-700",
+  neutral: "border-gray-200 bg-gray-50 text-gray-700",
+};
+
+/**
+ * One rule as a small, clickable chip — lets you scan everything this agent
+ * is guarded by without reading every row, and jumps straight to editing it.
+ */
+function GuardrailChip({ rule, onEdit }: { rule: BusinessRule; onEdit: () => void }) {
+  const tone = limitTypeTone[rule.limitType];
+  return (
+    <button
+      type="button"
+      onClick={onEdit}
+      title={`${limitTypeLabel[rule.limitType]}: ${ruleSentence(rule).action}${rule.enabled ? "" : " (off)"}`}
+      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12.5px] font-medium transition-colors hover:border-gray-300 ${
+        rule.enabled ? chipToneClasses[tone] : "border-dashed border-gray-200 bg-transparent text-gray-400"
+      }`}
+    >
+      <Icon name={limitTypeIcon[rule.limitType]} className="size-3.5" />
+      <span className="max-w-[180px] truncate">{rule.label}</span>
+    </button>
+  );
+}
+
+function GuardrailRail({ rules, onEdit }: { rules: BusinessRule[]; onEdit: (id: string) => void }) {
+  if (rules.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-b border-ink-950/8 bg-paper-25 px-6 py-4">
+      {rules.map((r) => (
+        <GuardrailChip key={r.id} rule={r} onEdit={() => onEdit(r.id)} />
+      ))}
+    </div>
+  );
+}
 
 const hasLimit = (t: LimitType) => t === "discount_limit" || t === "payment_plan_limit";
 
@@ -56,7 +103,12 @@ export function ruleSentence(
   const floor = rule.priceFloor?.trim();
   switch (rule.limitType) {
     case "forbidden_promise":
-      return { condition: `${sentenceEnd(capitalize(label))} If it comes up`, action };
+      return {
+        condition: threshold
+          ? `${sentenceEnd(capitalize(label))} If it comes up (${threshold})`
+          : `${sentenceEnd(capitalize(label))} If it comes up`,
+        action,
+      };
     case "escalation_trigger": {
       const body = /^(if|when|whenever)\b/i.test(label) ? capitalize(label) : `If ${lowerFirst(label)}`;
       return { condition: threshold ? `${body} (${threshold})` : body, action };
@@ -155,7 +207,7 @@ const labelPlaceholder: Record<LimitType, string> = {
   escalation_trigger: "e.g. The caller asks for a manager",
   discount_limit: "e.g. Loyalty discount",
   payment_plan_limit: "e.g. Payment plans the agent can offer alone",
-  follow_up_limit: "e.g. Lead doesn't answer after 3 attempts",
+  follow_up_limit: "e.g. Lead doesn’t answer after 3 attempts",
 };
 
 /** Inline, flat form region in the rules list — used both to add and to edit a rule. */
@@ -220,7 +272,7 @@ function RuleForm({
     <form
       onSubmit={submit}
       noValidate
-      aria-label={initial ? "Edit business rule" : "Add a business rule"}
+      aria-label={initial ? "Edit guardrail" : "Add a guardrail"}
       className="flex flex-col gap-3 border-t border-ink-950/8 bg-paper-50 px-6 py-5 first:border-t-0"
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -354,11 +406,18 @@ export function GuardrailsSection({
   return (
     <div className="flex flex-col gap-4">
       <SectionCard
-        title="Business rules"
+        title="Guardrails"
         description="Things this agent must never do, or must hand to a person."
         defaultAdvancedOpen={defaultAdvanced}
         guided={
           <div className="-mx-6 -mb-6 mt-1 border-t border-ink-950/8">
+            <GuardrailRail
+              rules={businessRules}
+              onEdit={(id) => {
+                setAdding(false);
+                setEditingId(id);
+              }}
+            />
             {businessRules.length > 0 ? (
               <div className="divide-y divide-ink-950/8">
                 {businessRules.map((r) =>
@@ -419,7 +478,7 @@ export function GuardrailsSection({
                   }}
                 >
                   <Icon name="plus" className="size-3.5" />
-                  Add a business rule
+                  Add a guardrail
                 </Button>
               </div>
             )}
@@ -429,7 +488,7 @@ export function GuardrailsSection({
           <div>
             <FieldLabel hint="The same rules, in the form the agent and your tests read them">Rules as data (JSON)</FieldLabel>
             <pre
-              aria-label="Business rules as JSON"
+              aria-label="Guardrails as JSON"
               className="overflow-x-auto rounded-md bg-ink-950 p-3 text-[12px] leading-relaxed text-paper-100"
             >
 {JSON.stringify(
@@ -452,7 +511,7 @@ export function GuardrailsSection({
 
       <SectionCard
         title="Content safety"
-        description="Protections that apply to every agent. Required ones can't be turned off."
+        description="Protections that apply to every agent. Required ones can’t be turned off."
         quiet
         guided={
           <div className="-mx-6 -mb-4 divide-y divide-ink-950/8 border-t border-ink-950/8">

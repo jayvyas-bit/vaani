@@ -1,6 +1,6 @@
 /**
  * AI provider choices and what each one actually changes: latency/accuracy
- * tradeoffs, and a cost multiplier applied against that component's base
+ * tradeoffs, and a cost multiplier applied against that component’s base
  * rate in `lib/deploy.ts` — so picking "Highest accuracy" visibly costs more.
  *
  * Each option names the real vendor/model behind its tradeoff rather than a

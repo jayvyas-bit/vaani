@@ -11,7 +11,7 @@ export interface CreateFormValues {
   name: string;
   purpose: string;
   direction: CallDirection;
-  /** What callers hear. Left blank, it's derived from the agent name. */
+  /** What callers hear. Left blank, it’s derived from the agent name. */
   businessName?: string;
 }
 
@@ -146,6 +146,10 @@ export function MinimalCreateForm({
               description="Places calls out"
             />
           </div>
+          <p className="mt-2 text-[12.5px] text-ink-400">
+            One agent only ever handles one direction. Need both? Create this one, then use "Add
+            inbound/outbound counterpart" from its menu to link a second agent for the other direction.
+          </p>
         </fieldset>
           </div>
 

@@ -6,7 +6,7 @@ import { WizardFooter } from "@/components/ui/WizardFooter";
 import { BuilderNav, type PrimarySection } from "@/features/agent-builder/BuilderNav";
 import type { Agent, CallDirection } from "@/lib/types";
 
-/** Step labels match each step's heading: inbound sets hours, outbound sets calling rules. */
+/** Step labels match each step’s heading: inbound sets hours, outbound sets calling rules. */
 export function deployStepsFor(direction: CallDirection): StepItem[] {
   return [
     { id: "channel", label: "Phone number" },
@@ -39,12 +39,12 @@ export function DeployWizardLayout({
   activeId: string;
   completedIds: string[];
   children: ReactNode;
-  /** The live/paused status panel isn't a wizard step, so it has no stepper or footer. */
+  /** The live/paused status panel isn’t a wizard step, so it has no stepper or footer. */
   hideStepper?: boolean;
   hideFooter?: boolean;
   continueLabel?: string;
   continueDisabled?: boolean;
-  /** Shown beside Continue while it's disabled — explain why, since the field that caused it may be scrolled out of view. */
+  /** Shown beside Continue while it’s disabled — explain why, since the field that caused it may be scrolled out of view. */
   continueHint?: ReactNode;
   showBack?: boolean;
   showContinue?: boolean;
@@ -79,13 +79,18 @@ export function DeployWizardLayout({
       {!hideStepper && (
         <div className="border-b border-ink-950/10 bg-paper-50 px-4 py-2.5 sm:px-6">
           <div className="mx-auto flex w-full max-w-[640px] lg:max-w-[760px] xl:max-w-[880px] justify-center">
-            <Stepper steps={deployStepsFor(agent.direction)} activeId={activeId} completedIds={completedIds} compact />
+            <Stepper
+              steps={deployStepsFor(agent.direction)}
+              activeId={activeId}
+              completedIds={completedIds}
+              variant="breadcrumb"
+            />
           </div>
         </div>
       )}
       <div className="relative flex-1 overflow-hidden">
         <div ref={scrollRef} className="h-full overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
-          <div className="mx-auto flex min-h-full w-full max-w-[640px] flex-col justify-center lg:max-w-[760px] xl:max-w-[880px]">
+          <div className="mx-auto flex w-full max-w-[640px] flex-col lg:max-w-[760px] xl:max-w-[880px]">
             <div key={activeId} className="animate-step-in">
               {children}
             </div>

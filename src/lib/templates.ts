@@ -80,7 +80,7 @@ export const agentTemplates: AgentTemplate[] = [
     id: "promo-sales-outreach",
     icon: "sparkles",
     title: "Sale & promo outreach",
-    tagline: "Tells past customers about a sale or offer and notes who's interested",
+    tagline: "Tells past customers about a sale or offer and notes who’s interested",
     values: {
       name: "Sale & Promo Outreach",
       purpose: "Tell past customers about our current sale, mention the discount, and note down who wants to come in or order",
