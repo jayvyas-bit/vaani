@@ -52,6 +52,7 @@ export function CreateBrief({
   const [purpose, setPurpose] = useState(initial?.purpose ?? "");
   const [picked, setPicked] = useState<string | undefined>();
   const [businessName, setBusinessName] = useState(initial?.businessName ?? "");
+  const [customName, setCustomName] = useState("");
   const [offerings, setOfferings] = useState<Offering[]>([emptyOffering()]);
   const [hours, setHours] = useState("");
   const [handoff, setHandoff] = useState("");
@@ -60,6 +61,7 @@ export function CreateBrief({
   const [tried, setTried] = useState(false);
 
   const inbound = direction === "inbound";
+  const autoName = businessName.trim() ? `${businessName.trim()} ${inbound ? "inbound" : "outbound"} agent` : "";
   const purposeErr = tried && step === "job" && !purpose.trim() ? "Say what the agent should do on a call." : null;
   const businessErr = tried && step === "business" && !businessName.trim() ? "Callers hear this, so it can’t be blank." : null;
 
@@ -83,7 +85,7 @@ export function CreateBrief({
     const amount = Number(budget.replace(/[^0-9.]/g, ""));
     const template = agentTemplates.find((t) => t.id === picked);
     onCreate?.({
-      name: template?.values.name ?? `${businessName.trim()} ${inbound ? "inbound" : "outbound"} agent`,
+      name: customName.trim() || template?.values.name || autoName,
       purpose: purpose.trim(),
       direction,
       businessName: businessName.trim(),
@@ -232,6 +234,14 @@ export function CreateBrief({
                   hint={businessErr ?? `What ${inbound ? "callers" : "recipients"} hear`}
                 />
 
+                <Input
+                  label="Agent name"
+                  value={customName}
+                  onChange={setCustomName}
+                  placeholder={autoName || "e.g. Riverside Dental inbound agent"}
+                  hint="Only you see this. Defaults to the business name and direction."
+                />
+
                 <fieldset>
                   <legend className="mb-1.5 flex w-full items-baseline justify-between text-sm font-medium text-secondary">
                     Products or services
@@ -325,7 +335,7 @@ export function CreateBrief({
             onClick={() => {
               if (!businessName.trim()) return setTried(true);
               onCreate?.({
-                name: `${businessName.trim()} ${inbound ? "inbound" : "outbound"} agent`,
+                name: customName.trim() || autoName,
                 purpose: purpose.trim(),
                 direction,
                 businessName: businessName.trim(),
